@@ -1,122 +1,15 @@
 #include "netparse/http.h"
-#include "netparse/error.h"
+#include "common.h"
 
 #include <stdio.h>
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
 
-#include "pcmp/eq16.h"
-#include "pcmp/leq.h"
-#include "pcmp/leq16.h"
-#include "pcmp/set16.h"
-#include "pcmp/range16.h"
-
-
-
 // TODO: add support for strings and lws within header field values
 
-
-
-#define LEQ(cmp, off, len) \
-	(len == sizeof cmp - 1 && pcmp_leq (off, (uint8_t *)cmp, sizeof cmp - 1))
-
-#define LEQ16(cmp, off, len) \
-	(len == sizeof cmp - 1 && pcmp_leq16 (off, (uint8_t *)cmp, sizeof cmp - 1))
-
-
-
-#define YIELD_ERROR(err) do { \
-	p->cs = DONE;             \
-	return err;               \
-} while (0)
-
-#define YIELD(typ, next) do { \
-	p->cs = next;             \
-	p->off = 0;               \
-	p->type = typ;            \
-	return end - m;           \
-} while (0)
-
-
-
-#define EXPECT_MAX_OFFSET(max) do {                                 \
-	if (pcmp_unlikely (p->off > (size_t)max)) {                     \
-		YIELD_ERROR (NP_ESIZE);                                     \
-	}                                                               \
-} while (0)
-
-#define EXPECT_RANGE_THEN_CHAR(rng, ch, max) do {                   \
-	end = pcmp_range16 (m+p->off, len-p->off, rng, sizeof rng - 1); \
-	if (end == NULL) {                                              \
-		p->off = len;                                               \
-		EXPECT_MAX_OFFSET (max);                                    \
-		return 0;                                                   \
-	}                                                               \
-	if (pcmp_unlikely (*end != ch)) {                               \
-		YIELD_ERROR (NP_ESYNTAX);                                   \
-	}                                                               \
-	end++;                                                          \
-	p->off = end - m;                                               \
-	EXPECT_MAX_OFFSET (max+1);                                      \
-} while (0)
-
-#define EXPECT_RANGE(rng, max) do {                                 \
-	end = pcmp_range16 (m+p->off, len-p->off, rng, sizeof rng - 1); \
-	if (end == NULL) {                                              \
-		p->off = len;                                               \
-		EXPECT_MAX_OFFSET (max);                                    \
-		return 0;                                                   \
-	}                                                               \
-	p->off = end - m;                                               \
-	EXPECT_MAX_OFFSET (max);                                        \
-} while (0)
-
-#define EXPECT_CHAR(ch) do {                                        \
-	if (len == p->off) return 0;                                    \
-	if (pcmp_unlikely (m[p->off] != ch)) {                          \
-		YIELD_ERROR (NP_ESYNTAX);                                   \
-	}                                                               \
-	end++;                                                          \
-	p->off++;                                                       \
-} while (0)
-
-#define EXPECT_PREFIX(pre, extra) do {                              \
-	if (len-p->off < sizeof pre - 1 + extra) {                      \
-		return 0;                                                   \
-	}                                                               \
-	if (!pcmp_eq16 (m+p->off, pre, sizeof pre - 1)) {               \
-		YIELD_ERROR (NP_ESYNTAX);                                   \
-	}                                                               \
-	end = m + p->off + sizeof pre - 1;                              \
-	p->off += (sizeof pre - 1) + extra;                             \
-} while (0)
-
-#define EXPECT_EOL(max) do {                                        \
-	end = pcmp_set16 (m+p->off, len-p->off, crlf, 1);               \
-	if (end == NULL) {                                              \
-		p->off = len;                                               \
-		EXPECT_MAX_OFFSET (max);                                    \
-		return 0;                                                   \
-	}                                                               \
-	if (pcmp_unlikely ((size_t)(end - m) == len - 1)) {             \
-		p->off = len - 1;                                           \
-		return 0;                                                   \
-	}                                                               \
-	if (pcmp_unlikely (end[1] != crlf[1])) {                        \
-		YIELD_ERROR (NP_ESYNTAX);                                   \
-	}                                                               \
-	end += 2;                                                       \
-	p->off = end - m;                                               \
-	EXPECT_MAX_OFFSET (max+2);                                      \
-} while (0)
-
-
-
-static const uint8_t crlf[] = "\r\n";
 static const uint8_t version_start[] = "HTTP/1.";
-
-
+static const uint8_t crlf[] = "\r\n";
 
 #define REQ      0x00000F
 #define REQ_METH 0x000001
@@ -263,7 +156,7 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->cs = RES_MSG;
 
 	case RES_MSG:
-		EXPECT_EOL (NP_HTTP_MAX_REASON + p->as.response.reason_off);
+		EXPECT_CRLF (NP_HTTP_MAX_REASON + p->as.response.reason_off);
 		p->as.response.reason_len = (uint16_t)(p->off - p->as.response.reason_off - (sizeof crlf - 1));
 		YIELD (NP_HTTP_RESPONSE, FLD);
 
@@ -312,7 +205,7 @@ parse_field (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->cs = FLD_VAL;
 
 	case FLD_VAL:
-		EXPECT_EOL (NP_HTTP_MAX_VALUE + p->as.field.value_off);
+		EXPECT_CRLF (NP_HTTP_MAX_VALUE + p->as.field.value_off);
 		p->as.field.value_len = (uint16_t)(p->off - p->as.field.value_off - (sizeof crlf - 1));
 		if (!p->trailers) {
 			scrape_field (p, m);
