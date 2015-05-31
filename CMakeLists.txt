@@ -9,6 +9,7 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 add_library(
 	netparse
 	include/netparse/http.h lib/http.c
+	include/netparse/error.h lib/error.c
 )
 
 include_directories(BEFORE include)

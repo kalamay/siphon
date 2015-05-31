@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "netparse/http.h"
+#include "netparse/error.h"
 #include "mu/mu.h"
 
 typedef struct {
@@ -355,7 +356,7 @@ test_invalid_header (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
 		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_HTTP_EPROTO);
+		mu_assert_int_eq (rc, NP_ESYNTAX);
 	}
 }
 
@@ -390,7 +391,7 @@ test_exceed_method_size (void)
 
 	np_http_init_request (&p);
 	rc = np_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, NP_HTTP_ESIZE);
+	mu_assert_int_eq (rc, NP_ESIZE);
 }
 
 static void
@@ -433,7 +434,7 @@ test_exceed_name_size (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
 		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_HTTP_ESIZE);
+		mu_assert_int_eq (rc, NP_ESIZE);
 	}
 }
 
@@ -477,7 +478,7 @@ test_exceed_value_size (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
 		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_HTTP_ESIZE);
+		mu_assert_int_eq (rc, NP_ESIZE);
 	}
 }
 

@@ -1,4 +1,5 @@
 #include "netparse/http.h"
+#include "netparse/error.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -41,7 +42,7 @@
 
 #define EXPECT_MAX_OFFSET(max) do {                                 \
 	if (pcmp_unlikely (p->off > (size_t)max)) {                     \
-		YIELD_ERROR (NP_HTTP_ESIZE);                                \
+		YIELD_ERROR (NP_ESIZE);                                     \
 	}                                                               \
 } while (0)
 
@@ -53,7 +54,7 @@
 		return 0;                                                   \
 	}                                                               \
 	if (pcmp_unlikely (*end != ch)) {                               \
-		YIELD_ERROR (NP_HTTP_EPROTO);                               \
+		YIELD_ERROR (NP_ESYNTAX);                                   \
 	}                                                               \
 	end++;                                                          \
 	p->off = end - m;                                               \
@@ -74,7 +75,7 @@
 #define EXPECT_CHAR(ch) do {                                        \
 	if (len == p->off) return 0;                                    \
 	if (pcmp_unlikely (m[p->off] != ch)) {                          \
-		YIELD_ERROR (NP_HTTP_EPROTO);                               \
+		YIELD_ERROR (NP_ESYNTAX);                                   \
 	}                                                               \
 	end++;                                                          \
 	p->off++;                                                       \
@@ -85,7 +86,7 @@
 		return 0;                                                   \
 	}                                                               \
 	if (!pcmp_eq16 (m+p->off, pre, sizeof pre - 1)) {               \
-		YIELD_ERROR (NP_HTTP_EPROTO);                               \
+		YIELD_ERROR (NP_ESYNTAX);                                   \
 	}                                                               \
 	end = m + p->off + sizeof pre - 1;                              \
 	p->off += (sizeof pre - 1) + extra;                             \
@@ -103,7 +104,7 @@
 		return 0;                                                   \
 	}                                                               \
 	if (pcmp_unlikely (end[1] != crlf[1])) {                        \
-		YIELD_ERROR (NP_HTTP_EPROTO);                               \
+		YIELD_ERROR (NP_ESYNTAX);                                   \
 	}                                                               \
 	end += 2;                                                       \
 	p->off = end - m;                                               \
@@ -150,14 +151,14 @@ scrape_field (NpHttp *restrict p, const uint8_t *restrict m)
 
 	if (LEQ16 ("content-length", m + p->as.field.name_off, p->as.field.name_len)) {
 		if (p->as.field.value_len == 0) {
-			YIELD_ERROR (NP_HTTP_EPROTO);
+			YIELD_ERROR (NP_ESYNTAX);
 		}
 		size_t num = 0;
 		const uint8_t *s = m + p->as.field.value_off;
 		const uint8_t *e = s + p->as.field.value_len;
 		while (s < e) {
 			if (!isdigit (*s)) {
-				YIELD_ERROR (NP_HTTP_EPROTO);
+				YIELD_ERROR (NP_ESYNTAX);
 			}
 			num = num * 10 + (*s - '0');
 			s++;
@@ -204,7 +205,7 @@ parse_request_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	case REQ_VER:
 		EXPECT_PREFIX (version_start, 1);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (NP_HTTP_EPROTO);
+			YIELD_ERROR (NP_ESYNTAX);
 		}
 		p->as.request.version = (uint8_t)(*end - '0');
 		p->cs = REQ_EOL;
@@ -214,7 +215,7 @@ parse_request_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		YIELD (NP_HTTP_REQUEST, FLD);
 
 	default:
-		YIELD_ERROR (NP_HTTP_ESTATE);
+		YIELD_ERROR (NP_ESTATE);
 	}
 }
 
@@ -232,7 +233,7 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	case RES_VER:
 		EXPECT_PREFIX (version_start, 1);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (NP_HTTP_EPROTO);
+			YIELD_ERROR (NP_ESYNTAX);
 		}
 		p->as.response.version = (uint8_t)(*end - '0');
 		p->cs = RES_SEP;
@@ -255,7 +256,7 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 				p->off++;
 			}
 			else {
-				YIELD_ERROR (NP_HTTP_EPROTO);
+				YIELD_ERROR (NP_ESYNTAX);
 			}
 		} while (true);
 		p->as.response.reason_off = p->off;
@@ -267,7 +268,7 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		YIELD (NP_HTTP_RESPONSE, FLD);
 
 	default:
-		YIELD_ERROR (NP_HTTP_ESTATE);
+		YIELD_ERROR (NP_ESTATE);
 	}
 }
 
@@ -319,7 +320,7 @@ parse_field (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		YIELD (NP_HTTP_FIELD, FLD);
 
 	default:
-		YIELD_ERROR (NP_HTTP_ESTATE);
+		YIELD_ERROR (NP_ESTATE);
 	}
 }
 
@@ -375,7 +376,7 @@ again:
 		goto again;
 
 	default:
-		YIELD_ERROR (NP_HTTP_ESTATE);
+		YIELD_ERROR (NP_ESTATE);
 	}
 }
 
@@ -402,7 +403,7 @@ np_http_next (NpHttp *p, const void *restrict buf, size_t len)
 	if (p->cs & RES) return parse_response_line (p, buf, len);
 	if (p->cs & FLD) return parse_field (p, buf, len);
 	if (p->cs & CHK) return parse_chunk (p, buf, len);
-	YIELD_ERROR (NP_HTTP_ESTATE);
+	YIELD_ERROR (NP_ESTATE);
 }
 
 bool
