@@ -1,0 +1,6 @@
+[submodule "lib/pcmp"]
+	path = lib/pcmp
+	url = git@github.com:kalamay/pcmp.git
+[submodule "test/mu"]
+	path = test/mu
+	url = git@github.com:kalamay/mu.git
