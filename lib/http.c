@@ -276,6 +276,8 @@ again:
 void
 np_http_init_request (NpHttp *p)
 {
+	assert (p != NULL);
+
 	memset (p, 0, sizeof *p);
 	p->cs = REQ;
 }
@@ -283,14 +285,31 @@ np_http_init_request (NpHttp *p)
 void
 np_http_init_response (NpHttp *p)
 {
+	assert (p != NULL);
+
 	memset (p, 0, sizeof *p);
 	p->cs = RES;
 	p->response = true;
 }
 
+void
+np_http_reset (NpHttp *p)
+{
+	assert (p != NULL);
+
+	if (p->response) {
+		np_http_init_response (p);
+	}
+	else {
+		np_http_init_request (p);
+	}
+}
+
 ssize_t
 np_http_next (NpHttp *p, const void *restrict buf, size_t len)
 {
+	assert (p != NULL);
+
 	p->scans++;
 	if (p->cs & REQ) return parse_request_line (p, buf, len);
 	if (p->cs & RES) return parse_response_line (p, buf, len);

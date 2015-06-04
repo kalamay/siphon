@@ -83,6 +83,9 @@ np_http_init_request (NpHttp *p);
 extern void
 np_http_init_response (NpHttp *p);
 
+extern void
+np_http_reset (NpHttp *p);
+
 extern ssize_t
 np_http_next (NpHttp *p, const void *restrict buf, size_t len);
 
