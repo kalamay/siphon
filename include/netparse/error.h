@@ -6,7 +6,7 @@
 #define NP_ESIZE   -3 /* size of value exceeded maximum allowed */
 
 extern const char *
-np_strerror (int err);
+np_strerror (int code);
 
 #endif
 
