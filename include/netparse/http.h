@@ -5,11 +5,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#define NP_HTTP_EPROTO  -1 /* HTTP protocol error */
-#define NP_HTTP_ESIZE   -2 /* size of value exceeded maximum allowed */
-#define NP_HTTP_ETYPE   -3 /* parser type was invalid */
-#define NP_HTTP_ESTATE  -4 /* parser state was invalid */
-
 #define NP_HTTP_MAX_METHOD 32
 #define NP_HTTP_MAX_URI 8192
 #define NP_HTTP_MAX_REASON 256
