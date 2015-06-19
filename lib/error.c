@@ -1,4 +1,4 @@
-#include "netparse/error.h"
+#include "siphon/error.h"
 
 #include <errno.h>
 #include <string.h>
@@ -12,7 +12,7 @@ static const char *str[] = {
 };
 
 const char *
-np_strerror (int code)
+sp_strerror (int code)
 {
 	if (code == -1) {
 		return strerror (errno);

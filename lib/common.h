@@ -1,4 +1,4 @@
-#include "netparse/error.h"
+#include "siphon/error.h"
 
 #include "pcmp/eq16.h"
 #include "pcmp/leq.h"
@@ -33,7 +33,7 @@
 #define VERIFY_END(max, done) do {       \
 	if (pcmp_unlikely (end == NULL)) {   \
 		if (pcmp_unlikely (done)) {      \
-			YIELD_ERROR (NP_ESYNTAX);    \
+			YIELD_ERROR (SP_ESYNTAX);    \
 		}                                \
 		p->off = len;                    \
 		EXPECT_MAX_OFFSET (max);         \
@@ -44,7 +44,7 @@
 
 #define EXPECT_MAX_OFFSET(max) do {                            \
 	if (pcmp_unlikely (p->off > (size_t)max)) {                \
-		YIELD_ERROR (NP_ESIZE);                                \
+		YIELD_ERROR (SP_ESIZE);                                \
 	}                                                          \
 } while (0)
 
@@ -66,7 +66,7 @@
 	end = pcmp_range16 (end, len-p->off, rng, sizeof rng - 1); \
 	VERIFY_END (max, done);                                    \
 	if (pcmp_unlikely (*end != ch)) {                          \
-		YIELD_ERROR (NP_ESYNTAX);                              \
+		YIELD_ERROR (SP_ESYNTAX);                              \
 	}                                                          \
 	end++;                                                     \
 	p->off = end - m;                                          \
@@ -76,7 +76,7 @@
 #define EXPECT_SIZE(sz, done) do {                             \
 	if (pcmp_unlikely (p->off + (sz) > len)) {                 \
 		if (pcmp_unlikely (done)) {                            \
-			YIELD_ERROR (NP_ESYNTAX);                          \
+			YIELD_ERROR (SP_ESYNTAX);                          \
 		}                                                      \
 		return 0;                                              \
 	}                                                          \
@@ -85,7 +85,7 @@
 #define EXPECT_CHAR(ch, done) do {                             \
 	EXPECT_SIZE (1, done);                                     \
 	if (pcmp_unlikely (m[p->off] != ch)) {                     \
-		YIELD_ERROR (NP_ESYNTAX);                              \
+		YIELD_ERROR (SP_ESYNTAX);                              \
 	}                                                          \
 	end++;                                                     \
 	p->off++;                                                  \
@@ -94,12 +94,12 @@
 #define EXPECT_PREFIX(pre, extra, done) do {                   \
 	if (len-p->off < sizeof pre - 1 + extra) {                 \
 		if (pcmp_unlikely (done)) {                            \
-			YIELD_ERROR (NP_ESYNTAX);                          \
+			YIELD_ERROR (SP_ESYNTAX);                          \
 		}                                                      \
 		return 0;                                              \
 	}                                                          \
 	if (!pcmp_eq16 (end, pre, sizeof pre - 1)) {               \
-		YIELD_ERROR (NP_ESYNTAX);                              \
+		YIELD_ERROR (SP_ESYNTAX);                              \
 	}                                                          \
 	end = m + p->off + sizeof pre - 1;                         \
 	p->off += (sizeof pre - 1) + extra;                        \
@@ -113,7 +113,7 @@
 		return 0;                                              \
 	}                                                          \
 	if (pcmp_unlikely (end[1] != '\n')) {                      \
-		YIELD_ERROR (NP_ESYNTAX);                              \
+		YIELD_ERROR (SP_ESYNTAX);                              \
 	}                                                          \
 	end += 2;                                                  \
 	p->off = end - m;                                          \

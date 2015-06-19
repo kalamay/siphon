@@ -1,4 +1,4 @@
-#include "netparse/http.h"
+#include "siphon/http.h"
 #include "common.h"
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ static const uint8_t crlf[] = "\r\n";
 #define CHK_EOL2 0x003000
 
 static int
-scrape_field (NpHttp *restrict p, const uint8_t *restrict m)
+scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 {
 	if (p->trailers || p->body_len) {
 		return 0;
@@ -44,14 +44,14 @@ scrape_field (NpHttp *restrict p, const uint8_t *restrict m)
 
 	if (LEQ16 ("content-length", m + p->as.field.name_off, p->as.field.name_len)) {
 		if (p->as.field.value_len == 0) {
-			YIELD_ERROR (NP_ESYNTAX);
+			YIELD_ERROR (SP_ESYNTAX);
 		}
 		size_t num = 0;
 		const uint8_t *s = m + p->as.field.value_off;
 		const uint8_t *e = s + p->as.field.value_len;
 		while (s < e) {
 			if (!isdigit (*s)) {
-				YIELD_ERROR (NP_ESYNTAX);
+				YIELD_ERROR (SP_ESYNTAX);
 			}
 			num = num * 10 + (*s - '0');
 			s++;
@@ -70,14 +70,14 @@ scrape_field (NpHttp *restrict p, const uint8_t *restrict m)
 }
 
 static ssize_t
-parse_request_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 {
 	static const uint8_t method_sep[] = "\0@[`{\xff"; // must match ' '
 	static const uint8_t uri_sep[] = "\0 \x7f\xff"; // must match ' '
 
 	const uint8_t *end = m + p->off;
 
-	p->type = NP_HTTP_NONE;
+	p->type = SP_HTTP_NONE;
 
 	switch (p->cs) {
 	case REQ:
@@ -85,20 +85,20 @@ parse_request_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->as.request.method_off = (uint8_t)p->off;
 
 	case REQ_METH:
-		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', NP_HTTP_MAX_METHOD, false);
+		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', SP_HTTP_MAX_METHOD, false);
 		p->as.request.method_len = (uint8_t)(p->off - 1);
 		p->cs = REQ_URI;
 		p->as.request.uri_off = p->off;
 
 	case REQ_URI:
-		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', NP_HTTP_MAX_URI, false);
+		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', SP_HTTP_MAX_URI, false);
 		p->as.request.uri_len = (uint16_t)(p->off - 1 - p->as.request.uri_off);
 		p->cs = REQ_VER;
 
 	case REQ_VER:
 		EXPECT_PREFIX (version_start, 1, false);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (NP_ESYNTAX);
+			YIELD_ERROR (SP_ESYNTAX);
 		}
 		p->as.request.version = (uint8_t)(*end - '0');
 		p->cs = REQ_EOL;
@@ -106,19 +106,19 @@ parse_request_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 
 	case REQ_EOL:
 		EXPECT_PREFIX (crlf, 0, false);
-		YIELD (NP_HTTP_REQUEST, FLD);
+		YIELD (SP_HTTP_REQUEST, FLD);
 
 	default:
-		YIELD_ERROR (NP_ESTATE);
+		YIELD_ERROR (SP_ESTATE);
 	}
 }
 
 static ssize_t
-parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 {
 	const uint8_t *end = m + p->off;
 
-	p->type = NP_HTTP_NONE;
+	p->type = SP_HTTP_NONE;
 
 	switch (p->cs) {
 	case RES:
@@ -127,7 +127,7 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	case RES_VER:
 		EXPECT_PREFIX (version_start, 1, false);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (NP_ESYNTAX);
+			YIELD_ERROR (SP_ESYNTAX);
 		}
 		p->as.response.version = (uint8_t)(*end - '0');
 		p->cs = RES_SEP;
@@ -152,31 +152,31 @@ parse_response_line (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 				end++;
 			}
 			else {
-				YIELD_ERROR (NP_ESYNTAX);
+				YIELD_ERROR (SP_ESYNTAX);
 			}
 		} while (true);
 		p->as.response.reason_off = p->off;
 		p->cs = RES_MSG;
 
 	case RES_MSG:
-		EXPECT_CRLF (NP_HTTP_MAX_REASON + p->as.response.reason_off, false);
+		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason_off, false);
 		p->as.response.reason_len = (uint16_t)(p->off - p->as.response.reason_off - (sizeof crlf - 1));
-		YIELD (NP_HTTP_RESPONSE, FLD);
+		YIELD (SP_HTTP_RESPONSE, FLD);
 
 	default:
-		YIELD_ERROR (NP_ESTATE);
+		YIELD_ERROR (SP_ESTATE);
 	}
 }
 
 static ssize_t
-parse_field (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 {
 	static const uint8_t field_sep[] = ":@\0 \"\"()[]//{{}}"; // must match ':', allows commas
 	static const uint8_t field_lws[] = "\0\x08\x0A\x1f!\xff";
 
 	const uint8_t *end = m + p->off;
 
-	p->type = NP_HTTP_NONE;
+	p->type = SP_HTTP_NONE;
 
 	switch (p->cs) {
 	case FLD:
@@ -188,40 +188,40 @@ parse_field (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 			p->as.body_start.chunked = p->chunked;
 			p->as.body_start.content_length = p->body_len;
 			if (p->trailers) {
-				YIELD (NP_HTTP_TRAILER_END, DONE);
+				YIELD (SP_HTTP_TRAILER_END, DONE);
 			}
 			else {
-				YIELD (NP_HTTP_BODY_START, p->chunked ? CHK : DONE);
+				YIELD (SP_HTTP_BODY_START, p->chunked ? CHK : DONE);
 			}
 		}
 		p->cs = FLD_KEY;
 		p->as.field.name_off = 0;
 
 	case FLD_KEY:
-		EXPECT_RANGE_THEN_CHAR (field_sep, ':', NP_HTTP_MAX_FIELD, false);
+		EXPECT_RANGE_THEN_CHAR (field_sep, ':', SP_HTTP_MAX_FIELD, false);
 		p->as.field.name_len = (uint16_t)(p->off - 1);
 		p->cs = FLD_LWS;
 
 	case FLD_LWS:
-		EXPECT_RANGE (field_lws, NP_HTTP_MAX_VALUE + p->as.field.value_off, false);
+		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value_off, false);
 		p->as.field.value_off = (uint16_t)p->off;
 		p->cs = FLD_VAL;
 
 	case FLD_VAL:
-		EXPECT_CRLF (NP_HTTP_MAX_VALUE + p->as.field.value_off, false);
+		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value_off, false);
 		p->as.field.value_len = (uint16_t)(p->off - p->as.field.value_off - (sizeof crlf - 1));
 		if (!p->trailers) {
 			scrape_field (p, m);
 		}
-		YIELD (NP_HTTP_FIELD, FLD);
+		YIELD (SP_HTTP_FIELD, FLD);
 
 	default:
-		YIELD_ERROR (NP_ESTATE);
+		YIELD_ERROR (SP_ESTATE);
 	}
 }
 
 static ssize_t
-parse_chunk (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_chunk (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 {
 	static const uint8_t hex[] = {
 		['0'] = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -232,7 +232,7 @@ parse_chunk (NpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	const uint8_t *end = m + p->off;
 
 again:
-	p->type = NP_HTTP_NONE;
+	p->type = SP_HTTP_NONE;
 
 	switch (p->cs) {
 	case CHK:
@@ -258,12 +258,12 @@ again:
 		EXPECT_PREFIX (crlf, 0, false);
 		if (p->body_len == 0) {
 			p->trailers = true;
-			YIELD (NP_HTTP_BODY_END, FLD);
+			YIELD (SP_HTTP_BODY_END, FLD);
 		}
 		else {
 			p->as.body_chunk.length = p->body_len;
 			p->body_len = 0;
-			YIELD (NP_HTTP_BODY_CHUNK, CHK_EOL2);
+			YIELD (SP_HTTP_BODY_CHUNK, CHK_EOL2);
 		}
 
 	case CHK_EOL2:
@@ -272,12 +272,12 @@ again:
 		goto again;
 
 	default:
-		YIELD_ERROR (NP_ESTATE);
+		YIELD_ERROR (SP_ESTATE);
 	}
 }
 
 void
-np_http_init_request (NpHttp *p)
+sp_http_init_request (SpHttp *p)
 {
 	assert (p != NULL);
 
@@ -286,7 +286,7 @@ np_http_init_request (NpHttp *p)
 }
 
 void
-np_http_init_response (NpHttp *p)
+sp_http_init_response (SpHttp *p)
 {
 	assert (p != NULL);
 
@@ -296,20 +296,20 @@ np_http_init_response (NpHttp *p)
 }
 
 void
-np_http_reset (NpHttp *p)
+sp_http_reset (SpHttp *p)
 {
 	assert (p != NULL);
 
 	if (p->response) {
-		np_http_init_response (p);
+		sp_http_init_response (p);
 	}
 	else {
-		np_http_init_request (p);
+		sp_http_init_request (p);
 	}
 }
 
 ssize_t
-np_http_next (NpHttp *p, const void *restrict buf, size_t len)
+sp_http_next (SpHttp *p, const void *restrict buf, size_t len)
 {
 	assert (p != NULL);
 
@@ -318,11 +318,11 @@ np_http_next (NpHttp *p, const void *restrict buf, size_t len)
 	if (p->cs & RES) return parse_response_line (p, buf, len);
 	if (p->cs & FLD) return parse_field (p, buf, len);
 	if (p->cs & CHK) return parse_chunk (p, buf, len);
-	YIELD_ERROR (NP_ESTATE);
+	YIELD_ERROR (SP_ESTATE);
 }
 
 bool
-np_http_is_done (const NpHttp *p)
+sp_http_is_done (const SpHttp *p)
 {
 	assert (p != NULL);
 

@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "netparse/http.h"
-#include "netparse/error.h"
+#include "siphon/siphon.h"
 #include "mu/mu.h"
 
 typedef struct {
@@ -45,7 +44,7 @@ print_string (FILE *out, const void *val, size_t len)
 }
 
 static bool
-parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
+parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 {
 	memset (msg, 0, sizeof *msg);
 
@@ -61,7 +60,7 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 		len = inlen;
 	}
 
-	while (body > 0 || !np_http_is_done (p)) {
+	while (body > 0 || !sp_http_is_done (p)) {
 		mu_assert_uint_ge (len, trim);
 		if (len < trim) return false;
 
@@ -74,7 +73,7 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 			body -= rc;
 		}
 		else {
-			rc = np_http_next (p, buf, len - trim);
+			rc = sp_http_next (p, buf, len - trim);
 
 			// normally rc could equal 0 if a full scan couldn't be completed
 			mu_assert_int_ge (rc, 0);
@@ -84,7 +83,7 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 				return false;
 			}
 
-			if (p->type == NP_HTTP_REQUEST) {
+			if (p->type == SP_HTTP_REQUEST) {
 				strncat (msg->as.request.method,
 						(char *)buf + p->as.request.method_off,
 						p->as.request.method_len);
@@ -93,14 +92,14 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 						p->as.request.uri_len);
 				msg->as.request.version = p->as.request.version;
 			}
-			else if (p->type == NP_HTTP_RESPONSE) {
+			else if (p->type == SP_HTTP_RESPONSE) {
 				msg->as.response.version = p->as.response.version;
 				msg->as.response.status = p->as.response.status;
 				strncat (msg->as.response.reason,
 						(char *)buf + p->as.response.reason_off,
 						p->as.response.reason_len);
 			}
-			else if (p->type == NP_HTTP_FIELD) {
+			else if (p->type == SP_HTTP_FIELD) {
 				strncat (msg->fields[msg->field_count].name,
 						(char *)buf + p->as.field.name_off,
 						p->as.field.name_len);
@@ -109,12 +108,12 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 						p->as.field.value_len);
 				msg->field_count++;
 			}
-			else if (p->type == NP_HTTP_BODY_START) {
+			else if (p->type == SP_HTTP_BODY_START) {
 				if (!p->as.body_start.chunked) {
 					body = p->as.body_start.content_length;
 				}
 			}
-			else if (p->type == NP_HTTP_BODY_CHUNK) {
+			else if (p->type == SP_HTTP_BODY_CHUNK) {
 				body = p->as.body_chunk.length;
 			}
 		}
@@ -137,8 +136,8 @@ parse (NpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 static void
 test_request (ssize_t speed)
 {
-	NpHttp p;
-	np_http_init_request (&p);
+	SpHttp p;
+	sp_http_init_request (&p);
 
 	static const uint8_t request[] = 
 		"GET /some/path HTTP/1.1\r\n"
@@ -184,8 +183,8 @@ test_request (ssize_t speed)
 static void
 test_chunked_request (ssize_t speed)
 {
-	NpHttp p;
-	np_http_init_request (&p);
+	SpHttp p;
+	sp_http_init_request (&p);
 
 	static const uint8_t request[] = 
 		"GET /some/path HTTP/1.1\r\n"
@@ -239,8 +238,8 @@ test_chunked_request (ssize_t speed)
 static void
 test_response (ssize_t speed)
 {
-	NpHttp p;
-	np_http_init_response (&p);
+	SpHttp p;
+	sp_http_init_response (&p);
 
 	static const uint8_t response[] = 
 		"HTTP/1.1 200 OK\r\n"
@@ -286,8 +285,8 @@ test_response (ssize_t speed)
 static void
 test_chunked_response (ssize_t speed)
 {
-	NpHttp p;
-	np_http_init_response (&p);
+	SpHttp p;
+	sp_http_init_response (&p);
 
 	static const uint8_t response[] = 
 		"HTTP/1.1 200 OK\r\n"
@@ -347,16 +346,16 @@ test_invalid_header (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 25);
 	if (rc > 0) {
-		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
-		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_ESYNTAX);
+		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+		mu_assert_int_eq (rc, SP_ESYNTAX);
 	}
 }
 
@@ -369,11 +368,11 @@ test_limit_method_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 54);
 }
 
@@ -386,12 +385,12 @@ test_exceed_method_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, NP_ESIZE);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
+	mu_assert_int_eq (rc, SP_ESIZE);
 }
 
 static void
@@ -403,15 +402,15 @@ test_limit_name_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 25);
 	if (rc > 0) {
-		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
-		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
+		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
 		mu_assert_int_eq (rc, 265);
 	}
 }
@@ -425,16 +424,16 @@ test_exceed_name_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 25);
 	if (rc > 0) {
-		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
-		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_ESIZE);
+		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+		mu_assert_int_eq (rc, SP_ESIZE);
 	}
 }
 
@@ -447,15 +446,15 @@ test_limit_value_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 25);
 	if (rc > 0) {
-		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
-		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
+		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
 		mu_assert_int_eq (rc, 1031);
 	}
 }
@@ -469,16 +468,16 @@ test_exceed_value_size (void)
 		"\r\n"
 		;
 
-	NpHttp p;
+	SpHttp p;
 	ssize_t rc;
 
-	np_http_init_request (&p);
-	rc = np_http_next (&p, request, sizeof request - 1);
+	sp_http_init_request (&p);
+	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 25);
 	if (rc > 0) {
-		mu_assert_int_eq (p.type, NP_HTTP_REQUEST);
-		rc = np_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, NP_ESIZE);
+		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+		mu_assert_int_eq (rc, SP_ESIZE);
 	}
 }
 

@@ -1,11 +1,11 @@
-#include "netparse/http.h"
+#include "siphon/http.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
 
 static const char data[] =
-    "POST /kalamay/netparse HTTP/1.1\r\n"
+    "POST /kalamay/siphon HTTP/1.1\r\n"
     "Host: github.com\r\n"
     "DNT: 1\r\n"
     "Accept-Encoding: gzip, deflate, sdch\r\n"
@@ -15,7 +15,7 @@ static const char data[] =
 		"Chrome/43.0.2357.81 Safari/537.36\r\n"
     "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,"
 		"image/webp,*/*;q=0.8\r\n"
-    "Referer: https://github.com/kalamay/netparse\r\n"
+    "Referer: https://github.com/kalamay/siphon\r\n"
     "Connection: keep-alive\r\n"
     "Transfer-Encoding: chunked\r\n"
     "Cache-Control: max-age=0\r\n"
@@ -28,7 +28,7 @@ static const char data[] =
 static int
 bench (int iter_count, int silent)
 {
-	NpHttp parser;
+	SpHttp parser;
 	int i;
 	int err;
 	struct timeval start;
@@ -44,15 +44,15 @@ bench (int iter_count, int silent)
 		const char *p = data;
 		const char *pe = data + (sizeof (data) - 1);
 
-		np_http_init_request (&parser);
+		sp_http_init_request (&parser);
 		while (p < pe) {
-			ssize_t o = np_http_next (&parser, p, pe - p);
+			ssize_t o = sp_http_next (&parser, p, pe - p);
 			if (o < 0) {
 				printf ("ERR: %zd\n", o);
 				return 1;
 			}
 			p += o;
-			if (parser.type == NP_HTTP_BODY_CHUNK) {
+			if (parser.type == SP_HTTP_BODY_CHUNK) {
 				p += parser.as.body_chunk.length;
 			}
 		}

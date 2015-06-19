@@ -1,15 +1,17 @@
-#ifndef NETPARSE_HTTP_H
-#define NETPARSE_HTTP_H
+#ifndef SIPHON_HTTP_H
+#define SIPHON_HTTP_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-#define NP_HTTP_MAX_METHOD 32
-#define NP_HTTP_MAX_URI 8192
-#define NP_HTTP_MAX_REASON 256
-#define NP_HTTP_MAX_FIELD 256
-#define NP_HTTP_MAX_VALUE 1024
+#include "common.h"
+
+#define SP_HTTP_MAX_METHOD 32
+#define SP_HTTP_MAX_URI 8192
+#define SP_HTTP_MAX_REASON 256
+#define SP_HTTP_MAX_FIELD 256
+#define SP_HTTP_MAX_VALUE 1024
 
 typedef union {
 	// request line values
@@ -47,22 +49,22 @@ typedef union {
 	struct {
 		size_t length;
 	} body_chunk;
-} NpHttpValue;
+} SpHttpValue;
 
 typedef enum {
-	NP_HTTP_NONE = -1,
-	NP_HTTP_REQUEST,     // complete request line
-	NP_HTTP_RESPONSE,    // complete response line
-	NP_HTTP_FIELD,       // header or trailer field name and value
-	NP_HTTP_BODY_START,  // start of the body
-	NP_HTTP_BODY_CHUNK,  // size for chunked body
-	NP_HTTP_BODY_END,    // end of the body chunks
-	NP_HTTP_TRAILER_END  // complete request or response
-} NpHttpType;
+	SP_HTTP_NONE = -1,
+	SP_HTTP_REQUEST,     // complete request line
+	SP_HTTP_RESPONSE,    // complete response line
+	SP_HTTP_FIELD,       // header or trailer field name and value
+	SP_HTTP_BODY_START,  // start of the body
+	SP_HTTP_BODY_CHUNK,  // size for chunked body
+	SP_HTTP_BODY_END,    // end of the body chunks
+	SP_HTTP_TRAILER_END  // complete request or response
+} SpHttpType;
 
 typedef struct {
-	NpHttpValue as;   // captured value
-	NpHttpType type;  // type of the captured value
+	SpHttpValue as;   // captured value
+	SpHttpType type;  // type of the captured value
 	unsigned cs;      // current scanner state
 	size_t off;       // internal offset mark
 	size_t body_len;  // content length or current chunk size
@@ -70,22 +72,22 @@ typedef struct {
 	bool response;    // true if response, false if request
 	bool chunked;     // set by field scanner
 	bool trailers;    // parsing trailers
-} NpHttp;
+} SpHttp;
 
-extern void
-np_http_init_request (NpHttp *p);
+extern void SP_EXPORT
+sp_http_init_request (SpHttp *p);
 
-extern void
-np_http_init_response (NpHttp *p);
+extern void SP_EXPORT
+sp_http_init_response (SpHttp *p);
 
-extern void
-np_http_reset (NpHttp *p);
+extern void SP_EXPORT
+sp_http_reset (SpHttp *p);
 
-extern ssize_t
-np_http_next (NpHttp *p, const void *restrict buf, size_t len);
+extern ssize_t SP_EXPORT
+sp_http_next (SpHttp *p, const void *restrict buf, size_t len);
 
-extern bool
-np_http_is_done (const NpHttp *p);
+extern bool SP_EXPORT
+sp_http_is_done (const SpHttp *p);
 
 #endif
 

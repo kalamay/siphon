@@ -1,4 +1,4 @@
-# netparse
+# siphon
 
 Library of pull parsers for common network formats.
 
