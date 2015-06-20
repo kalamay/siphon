@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "http.h"
+#include "json.h"
 
 #endif
 

@@ -8,7 +8,12 @@ static const char *str[] = {
 	"parser state is invalid",
 	"invalid syntax",
 	"size of value exceeded maximum allowed",
-	"stack size exceeded"
+	"stack size exceeded",
+	"invalid escape sequence",
+	"invalid code point",
+	"invalid encoding",
+	"invalid surrogate pair",
+	"input is too short"
 };
 
 const char *

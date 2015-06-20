@@ -5,31 +5,22 @@
 #include <string.h>
 #include <sys/time.h>
 
-static const char data[] =
-    "POST /kalamay/siphon HTTP/1.1\r\n"
-    "Host: github.com\r\n"
-    "DNT: 1\r\n"
-    "Accept-Encoding: gzip, deflate, sdch\r\n"
-    "Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4\r\n"
-    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) "
-		"AppleWebKit/537.36 (KHTML, like Gecko) "
-		"Chrome/43.0.2357.81 Safari/537.36\r\n"
-    "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,"
-		"image/webp,*/*;q=0.8\r\n"
-    "Referer: https://github.com/kalamay/siphon\r\n"
-    "Connection: keep-alive\r\n"
-    "Transfer-Encoding: chunked\r\n"
-    "Cache-Control: max-age=0\r\n"
-	"\r\n"
-	"b\r\n"
-	"hello world\r\n"
-	"0\r\n"
-	"\r\n";
+static const char data[] = "{\
+	\"test\":\"value\",\
+	\"foo\":\"b\\\"a and \\\\ r\",\
+	\"array\":[1,2,\"three\",4],\
+	\"baz\":{\"a\":\"b\"},\
+	\"num\":123.45,\
+	\"bool\":true,\
+	\"utf8\":\"$¢€𤪤\",\
+	\"key\":\"value\\n\\\"newline\\\"\",\
+	\"obj\":{\"true\":true}\
+}";
 
 static int
 bench (int iter_count, int silent)
 {
-	SpHttp parser;
+	SpJson parser;
 	int i;
 	int err;
 	struct timeval start;
@@ -45,17 +36,14 @@ bench (int iter_count, int silent)
 		const char *p = data;
 		const char *pe = data + (sizeof (data) - 1);
 
-		sp_http_init_request (&parser);
+		sp_json_init (&parser);
 		while (p < pe) {
-			ssize_t o = sp_http_next (&parser, p, pe - p);
+			ssize_t o = sp_json_next (&parser, p, pe - p, true);
 			if (o < 0) {
-				printf ("ERR: %zd\n", o);
+				printf ("ERR: %zd\n", sp_strerror (o));
 				return 1;
 			}
 			p += o;
-			if (parser.type == SP_HTTP_BODY_CHUNK) {
-				p += parser.as.body_chunk.length;
-			}
 		}
 		assert (p == pe);
 	}
@@ -83,10 +71,10 @@ main (int argc, char** argv)
 {
 	if (argc == 2 && strcmp(argv[1], "infinite") == 0) {
 		for (;;)
-			bench(5000000, 1);
+			bench(1000000, 1);
 		return 0;
 	} else {
-		return bench(5000000, 0);
+		return bench(1000000, 0);
 	}
 }
 
