@@ -33,22 +33,22 @@ set_target_properties(static shared PROPERTIES
 include_directories(BEFORE include)
 
 add_executable(bench-http bench/http.c)
-target_link_libraries (bench-http static)
+target_link_libraries(bench-http static)
 
 add_executable(bench-json bench/json.c)
-target_link_libraries (bench-json static)
+target_link_libraries(bench-json static)
 
 enable_testing()
 
 add_test(NAME utf8 COMMAND test-utf8)
 add_executable(test-utf8 test/utf8.c)
-target_link_libraries (test-utf8 static)
+target_link_libraries(test-utf8 static)
 
 add_test(NAME http COMMAND test-http)
 add_executable(test-http test/http.c)
-target_link_libraries (test-http static)
+target_link_libraries(test-http static)
 
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
-target_link_libraries (test-json static)
+target_link_libraries(test-json static)
 
