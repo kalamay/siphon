@@ -17,43 +17,43 @@ typedef struct {
 
 #define SP_UTF8_JSON_RANGE "\\\\\x00\x1F\x7F\xFF"
 
-extern int
+SP_LOCAL void
 sp_utf8_init (SpUtf8 *u);
 
-extern void
+SP_LOCAL void
 sp_utf8_reset (SpUtf8 *u);
 
-extern void
+SP_LOCAL void
 sp_utf8_final (SpUtf8 *u);
 
-extern uint8_t *
+SP_LOCAL uint8_t *
 sp_utf8_steal (SpUtf8 *u, size_t *len, size_t *cap);
 
-extern int
+SP_LOCAL int
 sp_utf8_ensure (SpUtf8 *u, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_add_raw (SpUtf8 *u, const void *src, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_add_codepoint (SpUtf8 *u, int cp);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_json_decode_next (SpUtf8 *u, const void *src, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len);
 
-extern ssize_t
+SP_LOCAL ssize_t
 sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len);
 
-extern int
+SP_LOCAL int
 sp_utf8_codepoint (const void *src, size_t len);
 
 #endif

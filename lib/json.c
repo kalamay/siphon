@@ -339,13 +339,41 @@ again:
 	YIELD_ERROR (SP_ESYNTAX);
 }
 
-int
+static inline void
+init_values (SpJson *p)
+{
+	p->number = 0.0;
+	p->type = SP_JSON_NONE;
+	p->cs = 0;
+	p->off = 0;
+	p->mark = 0;
+	p->depth = 0;
+}
+
+void
 sp_json_init (SpJson *p)
 {
 	assert (p != NULL);
 
-	memset (p, 0, sizeof (*p));
-	return sp_utf8_init (&p->utf8);
+	sp_utf8_init (&p->utf8);
+	init_values (p);
+}
+
+void
+sp_json_reset (SpJson *p)
+{
+	assert (p != NULL);
+
+	sp_utf8_reset (&p->utf8);
+	init_values (p);
+}
+
+void
+sp_json_final (SpJson *p)
+{
+	assert (p != NULL);
+
+	sp_utf8_final (&p->utf8);
 }
 
 ssize_t
@@ -380,5 +408,13 @@ sp_json_is_done (const SpJson *p)
 	assert (p != NULL);
 
 	return IS_DONE (p->cs);
+}
+
+uint8_t *
+sp_json_steal_string (SpJson *p, size_t *len, size_t *cap)
+{
+	assert (p != NULL);
+
+	return sp_utf8_steal (&p->utf8, len, cap);
 }
 

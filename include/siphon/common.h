@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <string.h>
 
-#define SP_EXPORT __attribute__ ((visibility ("default")))
+#define SP_EXPORT extern __attribute__ ((visibility ("default")))
 #define SP_LOCAL  __attribute__ ((visibility ("hidden")))
 
 typedef struct {

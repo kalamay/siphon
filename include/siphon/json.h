@@ -30,14 +30,23 @@ typedef struct {
 	uint8_t stack[64];  // object/array bit stack
 } SpJson;
 
-extern int
+SP_EXPORT void
 sp_json_init (SpJson *p);
 
-extern ssize_t
+SP_EXPORT void
+sp_json_reset (SpJson *p);
+
+SP_EXPORT void
+sp_json_final (SpJson *p);
+
+SP_EXPORT ssize_t
 sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof);
 
-extern bool
+SP_EXPORT bool
 sp_json_is_done (const SpJson *p);
+
+SP_EXPORT uint8_t *
+sp_json_steal_string (SpJson *p, size_t *len, size_t *cap);
 
 #endif
 

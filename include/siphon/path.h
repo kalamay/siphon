@@ -10,25 +10,25 @@ typedef enum {
 	SP_PATH_URI = SP_PATH_TRAIL_SLASH | SP_PATH_ALLOW_EMPTY
 } SpPathMode;
 
-extern void
+SP_EXPORT void
 sp_path_pop (const char *path, SpRange16 *rng, int n);
 
-extern void
+SP_EXPORT void
 sp_path_split (SpRange16 *a, SpRange16 *b, const char *path, uint16_t plen, int n);
 
-extern void
+SP_EXPORT void
 sp_path_splitext (SpRange16 *a, SpRange16 *b, const char *path, uint16_t plen);
 
-extern uint16_t
+SP_EXPORT uint16_t
 sp_path_join (char *out, size_t len,
 		const char *a, uint16_t alen,
 		const char *b, uint16_t blen,
 		SpPathMode mode);
 
-extern uint16_t
+SP_EXPORT uint16_t
 sp_path_clean (char *path, uint16_t len, SpPathMode mode);
 
-extern bool
+SP_EXPORT bool
 sp_path_match (const char *path, const char *match);
 
 #endif

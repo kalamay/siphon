@@ -35,7 +35,7 @@ static const uint8_t byte_counts[] = {
 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0
 };
 
-int
+void
 sp_utf8_init (SpUtf8 *u)
 {
 	assert (u != NULL);
@@ -43,7 +43,6 @@ sp_utf8_init (SpUtf8 *u)
 	u->buf = NULL;
 	u->cap = 0;
 	u->len = 0;
-	return 0;
 }
 
 void

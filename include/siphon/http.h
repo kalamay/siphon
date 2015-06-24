@@ -65,19 +65,19 @@ typedef struct {
 	bool trailers;    // parsing trailers
 } SpHttp;
 
-extern void SP_EXPORT
+SP_EXPORT void
 sp_http_init_request (SpHttp *p);
 
-extern void SP_EXPORT
+SP_EXPORT void
 sp_http_init_response (SpHttp *p);
 
-extern void SP_EXPORT
+SP_EXPORT void
 sp_http_reset (SpHttp *p);
 
-extern ssize_t SP_EXPORT
+SP_EXPORT ssize_t
 sp_http_next (SpHttp *p, const void *restrict buf, size_t len);
 
-extern bool SP_EXPORT
+SP_EXPORT bool
 sp_http_is_done (const SpHttp *p);
 
 #endif

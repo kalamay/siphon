@@ -36,42 +36,42 @@ typedef struct {
 	SpHost host:8;
 } SpUri;
 
-extern ssize_t
+SP_EXPORT ssize_t
 sp_uri_parse (SpUri *u, const char *restrict buf, size_t len);
 
-extern ssize_t
+SP_EXPORT ssize_t
 sp_uri_copy (
 		const SpUri *u, const char *buf,
 		SpUri *out, char *outbuf, size_t len);
 
-extern ssize_t
+SP_EXPORT ssize_t
 sp_uri_join (
 		const SpUri *a, const char *abuf,
 		const SpUri *b, const char *bbuf,
 		SpUri *out, char *outbuf, size_t len);
 
-extern bool
+SP_EXPORT bool
 sp_uri_eq (const SpUri *a, const char *abuf, const SpUri *b, const char *bbuf);
 
-extern uint16_t
+SP_EXPORT uint16_t
 sp_uri_length (const SpUri *u);
 
-extern int
+SP_EXPORT int
 sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, bool valid, SpRange16 *out);
 
-extern int
+SP_EXPORT int
 sp_uri_adjust_range (const SpUri *u, SpUriSegment *start, SpUriSegment *end, bool valid);
 
-extern SpUriSegment
+SP_EXPORT SpUriSegment
 sp_uri_find_segment (const SpUri *self, SpUriSegment start, bool nonempty);
 
-extern SpUriSegment
+SP_EXPORT SpUriSegment
 sp_uri_rfind_segment (const SpUri *self, SpUriSegment start, bool nonempty);
 
-extern bool
+SP_EXPORT bool
 sp_uri_has_segment (const SpUri *u, SpUriSegment seg);
 
-extern bool
+SP_EXPORT bool
 sp_uri_is_absolute (const SpUri *u);
 
 #endif

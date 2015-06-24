@@ -14,7 +14,7 @@
 #define SP_ESURROGATE -9  /* invalid surrogate pair */
 #define SP_ETOOSHORT  -10 /* input is too short */
 
-extern const char * SP_EXPORT
+SP_EXPORT const char *
 sp_strerror (int code);
 
 #endif
