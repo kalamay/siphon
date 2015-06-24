@@ -17,12 +17,6 @@ typedef struct {
 	uint16_t off, len;
 } SpRange16;
 
-#define SP_RANGE_ADD(a, b) __extension__ ({     \
-	__typeof(a) r;                              \
-	{ (a).off, (b).off - (a).off + (b).len }    \
-	r;                                          \
-})
-
 #define SP_RANGE_EQ_MEM(r, rbuf, buf, blen) \
 	((r).len == (blen) && \
 	 memcmp ((rbuf)+(r).off, (buf), (blen)) == 0)
