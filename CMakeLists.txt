@@ -12,6 +12,14 @@ set(SIPHON_VERSION_MINOR 1)
 set(SIPHON_VERSION_PATCH 1)
 set(SIPHON_VERSION_STRING ${SIPHON_VERSION_MAJOR}.${SIPHON_VERSION_MINOR}.${SIPHON_VERSION_PATCH})
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
+	COMMAND ragel -G2 -o
+		${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
+		${PROJECT_SOURCE_DIR}/lib/uri_parser.rl 
+	DEPENDS
+		${PROJECT_SOURCE_DIR}/lib/uri_parser.rl
+)
+
 add_library(
 	objects
 	OBJECT
@@ -19,6 +27,9 @@ add_library(
 	lib/utf8.c
 	lib/http.c
 	lib/json.c
+	lib/path.c
+	lib/uri.c
+	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 )
 
 add_library(static STATIC $<TARGET_OBJECTS:objects>)
@@ -51,4 +62,12 @@ target_link_libraries(test-http static)
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
 target_link_libraries(test-json static)
+
+add_test(NAME path COMMAND test-path)
+add_executable(test-path test/path.c)
+target_link_libraries(test-path static)
+
+add_test(NAME uri COMMAND test-uri)
+add_executable(test-uri test/uri.c)
+target_link_libraries(test-uri static)
 
