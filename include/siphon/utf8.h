@@ -1,10 +1,6 @@
 #ifndef SIPHON_UTF8_H
 #define SIPHON_UTF8_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/types.h>
-
 #include "common.h"
 
 typedef enum {

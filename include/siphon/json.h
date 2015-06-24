@@ -1,10 +1,6 @@
 #ifndef SIPHON_JSON_H
 #define SIPHON_JSON_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/types.h>
-
 #include "common.h"
 #include "utf8.h"
 

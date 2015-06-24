@@ -42,13 +42,13 @@ scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 		return 0;
 	}
 
-	if (LEQ16 ("content-length", m + p->as.field.name_off, p->as.field.name_len)) {
-		if (p->as.field.value_len == 0) {
+	if (LEQ16 ("content-length", m + p->as.field.name.off, p->as.field.name.len)) {
+		if (p->as.field.value.len == 0) {
 			YIELD_ERROR (SP_ESYNTAX);
 		}
 		size_t num = 0;
-		const uint8_t *s = m + p->as.field.value_off;
-		const uint8_t *e = s + p->as.field.value_len;
+		const uint8_t *s = m + p->as.field.value.off;
+		const uint8_t *e = s + p->as.field.value.len;
 		while (s < e) {
 			if (!isdigit (*s)) {
 				YIELD_ERROR (SP_ESYNTAX);
@@ -60,8 +60,8 @@ scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 		return 0;
 	}
 
-	if (LEQ ("transfer-encoding", m + p->as.field.name_off, p->as.field.name_len) &&
-			LEQ16 ("chunked", m + p->as.field.value_off, p->as.field.value_len)) {
+	if (LEQ ("transfer-encoding", m + p->as.field.name.off, p->as.field.name.len) &&
+			LEQ16 ("chunked", m + p->as.field.value.off, p->as.field.value.len)) {
 		p->chunked = true;
 		return 0;
 	}
@@ -82,17 +82,17 @@ parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	switch (p->cs) {
 	case REQ:
 		p->cs = REQ_METH;
-		p->as.request.method_off = (uint8_t)p->off;
+		p->as.request.method.off = (uint8_t)p->off;
 
 	case REQ_METH:
 		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', SP_HTTP_MAX_METHOD, false);
-		p->as.request.method_len = (uint8_t)(p->off - 1);
+		p->as.request.method.len = (uint8_t)(p->off - 1);
 		p->cs = REQ_URI;
-		p->as.request.uri_off = p->off;
+		p->as.request.uri.off = p->off;
 
 	case REQ_URI:
 		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', SP_HTTP_MAX_URI, false);
-		p->as.request.uri_len = (uint16_t)(p->off - 1 - p->as.request.uri_off);
+		p->as.request.uri.len = (uint16_t)(p->off - 1 - p->as.request.uri.off);
 		p->cs = REQ_VER;
 
 	case REQ_VER:
@@ -155,12 +155,12 @@ parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 				YIELD_ERROR (SP_ESYNTAX);
 			}
 		} while (true);
-		p->as.response.reason_off = p->off;
+		p->as.response.reason.off = p->off;
 		p->cs = RES_MSG;
 
 	case RES_MSG:
-		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason_off, false);
-		p->as.response.reason_len = (uint16_t)(p->off - p->as.response.reason_off - (sizeof crlf - 1));
+		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason.off, false);
+		p->as.response.reason.len = (uint16_t)(p->off - p->as.response.reason.off - (sizeof crlf - 1));
 		YIELD (SP_HTTP_RESPONSE, FLD);
 
 	default:
@@ -195,21 +195,21 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 			}
 		}
 		p->cs = FLD_KEY;
-		p->as.field.name_off = 0;
+		p->as.field.name.off = 0;
 
 	case FLD_KEY:
 		EXPECT_RANGE_THEN_CHAR (field_sep, ':', SP_HTTP_MAX_FIELD, false);
-		p->as.field.name_len = (uint16_t)(p->off - 1);
+		p->as.field.name.len = (uint16_t)(p->off - 1);
 		p->cs = FLD_LWS;
 
 	case FLD_LWS:
-		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value_off, false);
-		p->as.field.value_off = (uint16_t)p->off;
+		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value.off, false);
+		p->as.field.value.off = (uint16_t)p->off;
 		p->cs = FLD_VAL;
 
 	case FLD_VAL:
-		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value_off, false);
-		p->as.field.value_len = (uint16_t)(p->off - p->as.field.value_off - (sizeof crlf - 1));
+		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value.off, false);
+		p->as.field.value.len = (uint16_t)(p->off - p->as.field.value.off - (sizeof crlf - 1));
 		if (!p->trailers) {
 			scrape_field (p, m);
 		}

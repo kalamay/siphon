@@ -1,10 +1,6 @@
 #ifndef SIPHON_HTTP_H
 #define SIPHON_HTTP_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/types.h>
-
 #include "common.h"
 
 #define SP_HTTP_MAX_METHOD 32
@@ -16,27 +12,22 @@
 typedef union {
 	// request line values
 	struct {
-		uint8_t method_off;
-		uint8_t method_len;
-		uint16_t uri_off;
-		uint16_t uri_len;
+		SpRange8 method;
+		SpRange16 uri;
 		uint8_t version;
 	} request;
 
 	// response line values
 	struct {
-		uint16_t reason_off;
-		uint16_t reason_len;
+		SpRange16 reason;
 		uint16_t status;
 		uint8_t version;
 	} response;
 
 	// header field name and value
 	struct {
-		uint16_t name_off;
-		uint16_t name_len;
-		uint16_t value_off;
-		uint16_t value_len;
+		SpRange16 name;
+		SpRange16 value;
 	} field;
 
 	// beginning of body

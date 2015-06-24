@@ -85,27 +85,27 @@ parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 
 			if (p->type == SP_HTTP_REQUEST) {
 				strncat (msg->as.request.method,
-						(char *)buf + p->as.request.method_off,
-						p->as.request.method_len);
+						(char *)buf + p->as.request.method.off,
+						p->as.request.method.len);
 				strncat (msg->as.request.uri,
-						(char *)buf + p->as.request.uri_off,
-						p->as.request.uri_len);
+						(char *)buf + p->as.request.uri.off,
+						p->as.request.uri.len);
 				msg->as.request.version = p->as.request.version;
 			}
 			else if (p->type == SP_HTTP_RESPONSE) {
 				msg->as.response.version = p->as.response.version;
 				msg->as.response.status = p->as.response.status;
 				strncat (msg->as.response.reason,
-						(char *)buf + p->as.response.reason_off,
-						p->as.response.reason_len);
+						(char *)buf + p->as.response.reason.off,
+						p->as.response.reason.len);
 			}
 			else if (p->type == SP_HTTP_FIELD) {
 				strncat (msg->fields[msg->field_count].name,
-						(char *)buf + p->as.field.name_off,
-						p->as.field.name_len);
+						(char *)buf + p->as.field.name.off,
+						p->as.field.name.len);
 				strncat (msg->fields[msg->field_count].value,
-						(char *)buf + p->as.field.value_off,
-						p->as.field.value_len);
+						(char *)buf + p->as.field.value.off,
+						p->as.field.value.len);
 				msg->field_count++;
 			}
 			else if (p->type == SP_HTTP_BODY_START) {
