@@ -58,7 +58,6 @@ sp_uri_join (
 
 	// if the first segment of the join URI is a path, join the paths
 	if (seg == SP_URI_PATH) {
-
 		rng = a->seg[SP_URI_PATH];
 		sp_path_pop (abuf, &rng, 1);
 
@@ -81,7 +80,7 @@ sp_uri_join (
 	}
 
 	// add any remaining segments from the join URI
-	if (sp_uri_range (b, seg, SP_URI_SEGMENT_LAST, true, &rng) == 0 && rng.len > 0) {
+	if (sp_uri_range (b, seg, b->last, true, &rng) == 0 && rng.len > 0) {
 		memcpy (p, bbuf + rng.off, rng.len);
 		p += rng.len;
 		*p = '\0';
@@ -207,7 +206,7 @@ sp_uri_find_segment (const SpUri *u, SpUriSegment start, bool nonempty)
 		stop = def = SP_URI_PATH;
 	}
 	else {
-		stop = SP_URI_SEGMENT_LAST;
+		stop = u->last;
 		def = SP_URI_NONE;
 	}
 
@@ -236,7 +235,7 @@ sp_uri_rfind_segment (const SpUri *u, SpUriSegment start, bool nonempty)
 		stop = def = SP_URI_PATH;
 	}
 	else {
-		stop = SP_URI_SEGMENT_FIRST;
+		stop = u->first;
 		def = SP_URI_NONE;
 	}
 

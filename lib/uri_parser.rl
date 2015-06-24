@@ -155,6 +155,9 @@ sp_uri_parse (SpUri *u, const char *restrict buf, size_t len)
 	u->host = SP_HOST_NONE;
 
 #define SET(name, back) do {              \
+	if (u->first == SP_URI_NONE) {        \
+		u->first = SP_URI_##name;         \
+	}                                     \
 	u->last = SP_URI_##name;              \
 	u->seg[SP_URI_##name] = (SpRange16) { \
 		mark-buf,                         \
