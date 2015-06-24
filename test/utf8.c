@@ -9,6 +9,7 @@ test_err1 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -19,6 +20,7 @@ test_err2 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -29,6 +31,7 @@ test_err3 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -39,6 +42,7 @@ test_err4 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -49,6 +53,7 @@ test_err5 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -59,6 +64,7 @@ test_err6 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -69,6 +75,7 @@ test_err7 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -79,6 +86,7 @@ test_err8 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -89,6 +97,7 @@ test_err9 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -99,6 +108,7 @@ test_err10 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -109,6 +119,7 @@ test_err11 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -119,6 +130,7 @@ test_err12 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -129,6 +141,7 @@ test_err13 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -139,6 +152,7 @@ test_err14 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -149,6 +163,7 @@ test_err15 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -159,6 +174,7 @@ test_err16 (void)
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
 	mu_assert_int_eq (n, SP_EENCODING);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -236,6 +252,7 @@ test_invalid_codepoints (void)
 
 	n = sp_utf8_add_codepoint (&u, 0x110000);
 	mu_assert_int_eq (n, SP_ECODEPOINT);
+	sp_utf8_final (&u);
 }
 
 static void
@@ -248,6 +265,7 @@ test_unescape (void)
 	ssize_t n = sp_utf8_json_decode (&u, in, sizeof (in) - 1);
 	mu_assert_int_eq (n, (ssize_t)(sizeof (cmp) - 1));
 	mu_assert_str_eq (u.buf, cmp);
+	sp_utf8_final (&u);
 }
 
 int
