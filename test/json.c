@@ -72,11 +72,13 @@ parse_value (const uint8_t *m, ssize_t len, uint16_t depth)
 			if (debug) {
 				printf ("ERROR: %s, %zd\n", sp_strerror (n), off);
 			}
-			return n;
+			values = n;
+			goto out;
 		}
 		else if (n > 0) {
 			if (p.depth >= depth) {
-				return SP_ESYNTAX;
+				values = SP_ESYNTAX;
+				goto out;
 			}
 			if (p.type != SP_JSON_NONE) {
 				values++;
@@ -94,8 +96,11 @@ parse_value (const uint8_t *m, ssize_t len, uint16_t depth)
 
 	ssize_t rem = len - off;
 	if (rem > 1 || (rem == 1 && !isspace (*m))) {
-		return SP_ESYNTAX;
+		values = SP_ESYNTAX;
 	}
+
+out:
+	sp_json_final (&p);
 	return values;
 }
 
