@@ -64,10 +64,13 @@ enable_testing()
 
 set(MEMORYCHECK_TYPE Valgrind)
 find_program(VALGRIND_COMMAND valgrind)
-set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50 --error-exitcode=2")
+set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50")
 if(APPLE)
 	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
 endif()
+find_file(MEMORYCHECK_SUPPRESSIONS_FILE ${CMAKE_SYSTEM_NAME}.supp
+	PATHS ${PROJECT_SOURCE_DIR}/test
+	NO_DEFAULT_PATH)
 
 include(CTest)
 

@@ -1,0 +1,8 @@
+{
+	strtod_l
+	Memcheck:Leak
+	fun:malloc
+	...
+	fun:strtod_l
+	...
+}
