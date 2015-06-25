@@ -12,8 +12,15 @@ set(SIPHON_VERSION_MINOR 1)
 set(SIPHON_VERSION_PATCH 1)
 set(SIPHON_VERSION_STRING ${SIPHON_VERSION_MAJOR}.${SIPHON_VERSION_MINOR}.${SIPHON_VERSION_PATCH})
 
+
+
+find_program(RAGEL_COMMAND ragel)
+if(NOT RAGEL_COMMAND)
+	message(FATAL_ERROR "'ragel' not found")
+endif()
+
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
-	COMMAND ragel -G2 -o
+	COMMAND ${RAGEL_COMMAND} -G2 -o
 		${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 		${PROJECT_SOURCE_DIR}/lib/uri_parser.rl 
 	DEPENDS
