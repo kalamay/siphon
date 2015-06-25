@@ -43,13 +43,25 @@ set_target_properties(static shared PROPERTIES
 
 include_directories(BEFORE include)
 
+
+
 add_executable(bench-http bench/http.c)
 target_link_libraries(bench-http static)
 
 add_executable(bench-json bench/json.c)
 target_link_libraries(bench-json static)
 
+
+
 enable_testing()
+include(CTest)
+
+set(MEMORYCHECK_TYPE Valgrind)
+find_program(VALGRIND_COMMAND valgrind)
+set(VALGRIND_COMMAND_OPTIONS "--leak-check=full --error-exitcode=2")
+if(APPLE)
+	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
+endif()
 
 add_test(NAME utf8 COMMAND test-utf8)
 add_executable(test-utf8 test/utf8.c)
