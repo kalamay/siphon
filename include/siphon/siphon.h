@@ -6,6 +6,7 @@
 #include "json.h"
 #include "path.h"
 #include "uri.h"
+#include "crc.h"
 
 #endif
 

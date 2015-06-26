@@ -36,6 +36,7 @@ add_library(
 	lib/json.c
 	lib/path.c
 	lib/uri.c
+	lib/crc.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 )
 
@@ -101,4 +102,8 @@ target_link_libraries(test-path siphon-static)
 add_test(NAME uri COMMAND test-uri)
 add_executable(test-uri test/uri.c)
 target_link_libraries(test-uri siphon-static)
+
+add_test(NAME crc COMMAND test-crc)
+add_executable(test-crc test/crc.c)
+target_link_libraries(test-crc siphon-static)
 
