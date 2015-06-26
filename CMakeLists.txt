@@ -31,12 +31,13 @@ add_library(
 	objects
 	OBJECT
 	lib/error.c
+	lib/crc.c
+	lib/hash.c
 	lib/utf8.c
 	lib/http.c
 	lib/json.c
 	lib/path.c
 	lib/uri.c
-	lib/crc.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 )
 
@@ -86,6 +87,14 @@ find_file(MEMORYCHECK_SUPPRESSIONS_FILE ${CMAKE_SYSTEM_NAME}.supp
 
 include(CTest)
 
+add_test(NAME crc COMMAND test-crc)
+add_executable(test-crc test/crc.c)
+target_link_libraries(test-crc siphon-static)
+
+add_test(NAME hash COMMAND test-hash)
+add_executable(test-hash test/hash.c)
+target_link_libraries(test-hash siphon-static)
+
 add_test(NAME utf8 COMMAND test-utf8)
 add_executable(test-utf8 test/utf8.c)
 target_link_libraries(test-utf8 siphon-static)
@@ -105,8 +114,4 @@ target_link_libraries(test-path siphon-static)
 add_test(NAME uri COMMAND test-uri)
 add_executable(test-uri test/uri.c)
 target_link_libraries(test-uri siphon-static)
-
-add_test(NAME crc COMMAND test-crc)
-add_executable(test-crc test/crc.c)
-target_link_libraries(test-crc siphon-static)
 

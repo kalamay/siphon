@@ -7,6 +7,7 @@
 #include "path.h"
 #include "uri.h"
 #include "crc.h"
+#include "hash.h"
 
 #endif
 
