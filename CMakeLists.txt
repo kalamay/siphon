@@ -5,7 +5,7 @@ project(siphon C)
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic")
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
-set(CMAKE_SHARED_LINKER_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden")
+set(CMAKE_SHARED_LINKER_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden -lm")
 
 set(SIPHON_VERSION_MAJOR 0)
 set(SIPHON_VERSION_MINOR 1)
@@ -33,6 +33,7 @@ add_library(
 	lib/error.c
 	lib/crc.c
 	lib/hash.c
+	lib/bloom.c
 	lib/utf8.c
 	lib/http.c
 	lib/json.c
