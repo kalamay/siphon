@@ -50,6 +50,14 @@ set_target_properties(static shared PROPERTIES
 
 include_directories(BEFORE include)
 
+install(TARGETS shared static
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib)
+
+install(DIRECTORY include/siphon
+	DESTINATION include/siphon
+	FILES_MATCHING PATTERN "*.h")
+
 
 
 add_executable(bench-http bench/http.c)
