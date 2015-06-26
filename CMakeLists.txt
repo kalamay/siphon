@@ -55,7 +55,7 @@ install(TARGETS shared static
 	ARCHIVE DESTINATION lib)
 
 install(DIRECTORY include/siphon
-	DESTINATION include/siphon
+	DESTINATION include
 	FILES_MATCHING PATTERN "*.h")
 
 
