@@ -67,6 +67,9 @@ target_link_libraries(bench-http siphon-static)
 add_executable(bench-json bench/json.c)
 target_link_libraries(bench-json siphon-static)
 
+add_executable(bench-crc bench/crc.c)
+target_link_libraries(bench-crc siphon-static)
+
 
 
 enable_testing()
