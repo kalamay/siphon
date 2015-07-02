@@ -141,11 +141,11 @@ sp_bloom_put_hash (SpBloom *self, uint64_t hash)
 
 	while (i-- > 0) {
 		x = (a + i*b) % self->bits;
-		n += !(self->bytes[x >> 3] & (1 << (x % 8)));
+		n += !!(self->bytes[x >> 3] & (1 << (x % 8)));
 		self->bytes[x >> 3] |= (1 << (x % 8));
 	}
 
-	if (n) {
+	if (n != self->hashes) {
 		self->count++;
 	}
 }
