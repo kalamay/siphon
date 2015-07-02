@@ -117,3 +117,7 @@ add_test(NAME uri COMMAND test-uri)
 add_executable(test-uri test/uri.c)
 target_link_libraries(test-uri siphon-static)
 
+add_test(NAME bloom COMMAND test-bloom)
+add_executable(test-bloom test/bloom.c)
+target_link_libraries(test-bloom siphon-static)
+

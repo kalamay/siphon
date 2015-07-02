@@ -40,7 +40,6 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 
 	SpBloom *self = calloc (1, sizeof *self + (bytes - 1));
 	if (self != NULL) {
-		self->fpp = fpp;
 		self->bits = bits;
 		self->seed = seed;
 		self->hashes = hashes;
@@ -120,10 +119,16 @@ sp_bloom_put_hash (SpBloom *self, uint64_t hash)
 	register uint32_t b = (uint32_t)(hash >> 32);
 	register uint32_t i = self->hashes;
 	register uint32_t x;
+	register uint32_t n = 0;
 
 	while (i-- > 0) {
 		x = (a + i*b) % self->bits;
+		n += !(self->bytes[x >> 3] & (1 << (x % 8)));
 		self->bytes[x >> 3] |= (1 << (x % 8));
+	}
+
+	if (n) {
+		self->count++;
 	}
 }
 

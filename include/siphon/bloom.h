@@ -5,6 +5,7 @@
 
 typedef struct {
 	double fpp;
+	uint64_t count;
 	uint64_t bits;
 	uint32_t seed;
 	uint8_t hashes;
