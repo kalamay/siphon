@@ -44,6 +44,14 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 	return self;
 }
 
+void
+sp_bloom_destroy (SpBloom *self)
+{
+	if (self != NULL) {
+		free (self);
+	}
+}
+
 bool
 sp_bloom_is_capable (SpBloom *self, size_t hint, double fpp)
 {

@@ -13,6 +13,9 @@ typedef struct {
 SP_EXPORT SpBloom *
 sp_bloom_create (size_t hint, double fpp, uint32_t seed);
 
+SP_EXPORT void
+sp_bloom_destroy (SpBloom *self);
+
 SP_EXPORT bool
 sp_bloom_is_capable (SpBloom *self, size_t hint, double fpp);
 
