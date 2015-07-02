@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define MIN_BYTES (64 - (sizeof (SpBloom) - sizeof (((SpBloom *)0)->bytes)))
+#define MIN_BITS (MIN_BYTES * 8)
+
 static inline void
 bloom_type (size_t hint, double fpp, uint64_t *bits, uint64_t *bytes, uint8_t *hashes)
 {
@@ -13,9 +16,9 @@ bloom_type (size_t hint, double fpp, uint64_t *bits, uint64_t *bytes, uint8_t *h
 	uint64_t nbits = (uint64_t)round ((double)hint * bpe);
 	uint64_t nbytes;
 
-	if (nbits < 408) {
-		*bits = 408;
-		*bytes = 51;
+	if (nbits < MIN_BITS) {
+		*bits = MIN_BITS;
+		*bytes = MIN_BYTES;
 	}
 	else {
 		nbytes = nbits % 8 ? (nbits / 8) + 1 : nbits / 8;
@@ -37,6 +40,7 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 
 	SpBloom *self = calloc (1, sizeof *self + (bytes - 1));
 	if (self != NULL) {
+		self->fpp = fpp;
 		self->bits = bits;
 		self->seed = seed;
 		self->hashes = hashes;

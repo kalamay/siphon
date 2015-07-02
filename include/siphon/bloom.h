@@ -4,10 +4,11 @@
 #include "common.h"
 
 typedef struct {
+	double fpp;
 	uint64_t bits;
 	uint32_t seed;
 	uint8_t hashes;
-	uint8_t bytes[1];
+	uint8_t bytes[3];
 } SpBloom;
 
 SP_EXPORT SpBloom *
