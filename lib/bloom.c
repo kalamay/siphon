@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define MIN_BYTES (64 - (sizeof (SpBloom) - sizeof (((SpBloom *)0)->bytes)))
+#define BASE_SIZE (sizeof (SpBloom) - sizeof (((SpBloom *)0)->bytes))
+#define MIN_BYTES (64 - BASE_SIZE)
 #define MIN_BITS (MIN_BYTES * 8)
 
 static inline void
@@ -22,7 +23,7 @@ bloom_type (size_t hint, double fpp, uint64_t *bits, uint64_t *bytes, uint8_t *h
 	}
 	else {
 		nbytes = nbits % 8 ? (nbits / 8) + 1 : nbits / 8;
-		nbytes += (16 - (nbytes % 16));
+		nbytes += (16 - ((nbytes + BASE_SIZE) % 16));
 		*bits = nbytes * 8;
 		*bytes = nbytes;
 	}
@@ -38,7 +39,7 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 
 	bloom_type (hint, fpp, &bits, &bytes, &hashes);
 
-	SpBloom *self = calloc (1, sizeof *self + (bytes - 1));
+	SpBloom *self = calloc (1, BASE_SIZE + bytes);
 	if (self != NULL) {
 		self->bits = bits;
 		self->seed = seed;
@@ -155,5 +156,16 @@ sp_bloom_clear (SpBloom *self)
 	assert (self != NULL);
 
 	memset (self->bytes, 0, self->bits / 8);
+}
+
+SpBloom *
+sp_bloom_copy (SpBloom *self)
+{
+	size_t size = BASE_SIZE + self->bits/8;
+	SpBloom *copy = malloc (size);
+	if (copy != NULL) {
+		memcpy (copy, self, size);
+	}
+	return copy;
 }
 

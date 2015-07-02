@@ -42,5 +42,8 @@ sp_bloom_put_hash (SpBloom *self, uint64_t hash);
 SP_EXPORT void
 sp_bloom_clear (SpBloom *self);
 
+SP_EXPORT SpBloom *
+sp_bloom_copy (SpBloom *self);
+
 #endif
 

@@ -30,7 +30,6 @@ test_basic (void)
 static void
 test_large (void)
 {
-	if (true) return;
 	SpBloom *b = sp_bloom_create (10000, 0.001, 0);
 
 	char buf[16];
@@ -41,6 +40,8 @@ test_large (void)
 
 	mu_assert_uint_eq (b->count, 1000);
 
+	sp_bloom_destroy (sp_bloom_copy (b));
+
 	sp_bloom_destroy (b);
 }
 
@@ -50,6 +51,6 @@ main (void)
 	test_basic ();
 	test_large ();
 
-	mu_exit ("crc");
+	mu_exit ("bloom");
 }
 
