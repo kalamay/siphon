@@ -34,6 +34,7 @@ add_library(
 	lib/crc.c
 	lib/hash.c
 	lib/bloom.c
+	lib/rand.c
 	lib/utf8.c
 	lib/http.c
 	lib/json.c
