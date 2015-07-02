@@ -70,12 +70,29 @@ sp_bloom_is_capable (SpBloom *self, size_t hint, double fpp)
 }
 
 bool
+sp_bloom_can_hold (SpBloom *self, size_t more)
+{
+	assert (self != NULL);
+
+	return sp_bloom_is_capable (self, self->count + more, self->fpp);
+}
+
+uint64_t
+sp_bloom_hash (SpBloom *self, const void *restrict buf, size_t len)
+{
+	assert (self != NULL);
+	assert (buf != NULL);
+
+	return sp_metrohash64 (buf, len, self->seed);
+}
+
+bool
 sp_bloom_maybe (SpBloom *self, const void *restrict buf, size_t len)
 {
 	assert (self != NULL);
 	assert (buf != NULL);
 
-	uint64_t hash = sp_metrohash64 (buf, len, self->seed);
+	uint64_t hash = sp_bloom_hash (self, buf, len);
 	return sp_bloom_maybe_hash (self, hash);
 }
 
@@ -106,7 +123,7 @@ sp_bloom_put (SpBloom *self, const void *restrict buf, size_t len)
 	assert (self != NULL);
 	assert (buf != NULL);
 
-	uint64_t hash = sp_metrohash64 (buf, len, self->seed);
+	uint64_t hash = sp_bloom_hash (self, buf, len);
 	sp_bloom_put_hash (self, hash);
 }
 
