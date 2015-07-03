@@ -41,6 +41,7 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 
 	SpBloom *self = calloc (1, BASE_SIZE + bytes);
 	if (self != NULL) {
+		self->fpp = fpp;
 		self->bits = bits;
 		self->seed = seed;
 		self->hashes = hashes;
@@ -75,7 +76,8 @@ sp_bloom_can_hold (SpBloom *self, size_t more)
 {
 	assert (self != NULL);
 
-	return sp_bloom_is_capable (self, self->count + more, self->fpp);
+	uint64_t count = self->count * (1.0 + self->fpp);
+	return sp_bloom_is_capable (self, count + more, self->fpp);
 }
 
 uint64_t
