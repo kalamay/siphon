@@ -57,7 +57,10 @@ SP_EXPORT uint16_t
 sp_uri_length (const SpUri *u);
 
 SP_EXPORT int
-sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, bool valid, SpRange16 *out);
+sp_uri_sub (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out);
+
+SP_EXPORT int
+sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out);
 
 SP_EXPORT int
 sp_uri_adjust_range (const SpUri *u, SpUriSegment *start, SpUriSegment *end, bool valid);

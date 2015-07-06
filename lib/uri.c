@@ -50,7 +50,7 @@ sp_uri_join (
 	SpRange16 rng;
 
 	// get base URI up to first segment of join URI
-	if (sp_uri_range (a, SP_URI_SEGMENT_FIRST, seg-1, true, &rng) == 0 && rng.len > 0) {
+	if (sp_uri_sub (a, SP_URI_SEGMENT_FIRST, seg-1, &rng) == 0 && rng.len > 0) {
 		memcpy (p, abuf + rng.off, rng.len);
 		p += rng.len;
 		*p = '\0';
@@ -80,7 +80,7 @@ sp_uri_join (
 	}
 
 	// add any remaining segments from the join URI
-	if (sp_uri_range (b, seg, b->last, true, &rng) == 0 && rng.len > 0) {
+	if (sp_uri_sub (b, seg, b->last, &rng) == 0 && rng.len > 0) {
 		memcpy (p, bbuf + rng.off, rng.len);
 		p += rng.len;
 		*p = '\0';
@@ -120,11 +120,12 @@ sp_uri_length (const SpUri *u)
 }
 
 int
-sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, bool valid, SpRange16 *out)
+sp_uri_sub (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out)
 {
 	assert (u != NULL);
+	assert (out != NULL);
 
-	if (sp_uri_adjust_range (u, &start, &end, valid) < 0) {
+	if (sp_uri_adjust_range (u, &start, &end, true) < 0) {
 		return -1;
 	}
 
@@ -132,31 +133,42 @@ sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, bool valid, 
 		u->seg[start].off,
 		u->seg[end].off - u->seg[start].off + u->seg[end].len
 	};
-	if (valid) {
-		switch (start) {
-			case SP_URI_USER:
-			case SP_URI_PASSWORD:
-				if (sp_uri_find_segment (u, SP_URI_SEGMENT_FIRST, true) != start) {
-					break;
-				}
-				// fallthrough
-			case SP_URI_HOST:
-				r.off -= 2;
-				r.len += 2;
-				break;
-			case SP_URI_QUERY:
-			case SP_URI_FRAGMENT:
+	switch (start) {
+		case SP_URI_USER:
+		case SP_URI_PASSWORD:
+			// fallthrough
+		case SP_URI_HOST:
+			r.off -= 2;
+			r.len += 2;
+			break;
+		case SP_URI_QUERY:
+		case SP_URI_FRAGMENT:
+			if (u->seg[start].len > 0) {
 				r.off--;
 				r.len++;
-				break;
-			default:
-				break;
-		}
-		if (end == SP_URI_SCHEME) {
-			r.len++;
-		}
+			}
+			break;
+		default:
+			break;
+	}
+	if (end == SP_URI_SCHEME) {
+		r.len++;
 	}
 	memcpy (out, &r, sizeof r);
+	return 0;
+}
+
+int
+sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out)
+{
+	assert (u != NULL);
+	assert (out != NULL);
+
+	if (sp_uri_adjust_range (u, &start, &end, false) < 0) {
+		return -1;
+	}
+	out->off = u->seg[start].off;
+	out->len = u->seg[end].off - u->seg[start].off + u->seg[end].len;
 	return 0;
 }
 
@@ -167,11 +179,13 @@ sp_uri_adjust_range (const SpUri *u, SpUriSegment *start, SpUriSegment *end, boo
 
 	SpUriSegment s = *start, e = *end;
 
+	// verify that the expected range is reasonable
 	if (s > e || s < SP_URI_SEGMENT_FIRST || e > SP_URI_SEGMENT_LAST) {
 		errno = EINVAL;
 		return -1;
 	}
 
+	// a valid netloc-relative URL must start with '//'
 	if (valid && s > SP_URI_USER && s <= SP_URI_PORT) {
 		s = SP_URI_USER;
 	}
@@ -179,10 +193,12 @@ sp_uri_adjust_range (const SpUri *u, SpUriSegment *start, SpUriSegment *end, boo
 	for (; s < e && u->seg[s].len == 0; s++) {}
 	for (; e > s && u->seg[e].len == 0; e--) {}
 
-	if (valid && s == e && u->seg[s].len == 0) {
+#if 0
+	if (valid && s != SP_URI_PATH && s == e && u->seg[s].len == 0) {
 		errno = ERANGE;
 		return -1;
 	}
+#endif
 
 	*start = s;
 	*end = e;

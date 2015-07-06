@@ -39,6 +39,34 @@
 	assert_uri_segment (&parsed, u, FRAGMENT, f);        \
 } while (0)
 
+#define TEST_SUB(u, s1, s2, cmp) do {                    \
+	SpUri parsed;                                        \
+	assert_uri (&parsed, u);                             \
+	SpRange16 rng;                                       \
+	int rc = sp_uri_sub (&parsed, s1, s2, &rng);         \
+	mu_assert_int_eq (rc, 0);                            \
+	if (rc == 0) {                                       \
+		char buf[4096];                                  \
+		strncpy (buf, (const char *)u+rng.off, rng.len); \
+		buf[rng.len] = '\0';                             \
+		mu_assert_str_eq (buf, cmp);                     \
+	}                                                    \
+} while (0)
+
+#define TEST_RANGE(u, s1, s2, cmp) do {                  \
+	SpUri parsed;                                        \
+	assert_uri (&parsed, u);                             \
+	SpRange16 rng;                                       \
+	int rc = sp_uri_range (&parsed, s1, s2, &rng);       \
+	mu_assert_int_eq (rc, 0);                            \
+	if (rc == 0) {                                       \
+		char buf[4096];                                  \
+		strncpy (buf, (const char *)u+rng.off, rng.len); \
+		buf[rng.len] = '\0';                             \
+		mu_assert_str_eq (buf, cmp);                     \
+	}                                                    \
+} while (0)
+
 #define TEST_JOIN(a, b, exp) do {                            \
 	char buf[4096];                                          \
 	SpUri ua, ub, uexp, join;                                \
@@ -124,6 +152,666 @@ test_parse (void)
 		"http", NULL, NULL, "host", "8080", "/http://www.site.com/images/Mapy%20Region%C3%B3w/Polska.png", "a=b", NULL);
 	TEST_PARSE ("http://fonts.googleapis.com/css?family=Cabin+Condensed:600|Cabin:500,700,700italic,500italic",
 		"http", NULL, NULL, "fonts.googleapis.com", NULL, "/css", "family=Cabin+Condensed:600|Cabin:500,700,700italic,500italic", NULL);
+	TEST_PARSE ("//host.com?a=b",
+		NULL, NULL, NULL, "host.com", NULL, "", "a=b", NULL);
+}
+
+static void
+test_sub (void)
+{
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path?a=1#frag");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http:");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"#frag");
+}
+
+static void
+test_sub_no_fragment (void)
+{
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http:");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_USER, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_HOST, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PORT, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"?a=1");
+	TEST_SUB ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"");
+}
+
+static void
+test_sub_no_query (void)
+{
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http:");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_USER, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_HOST, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_PORT, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"");
+	TEST_SUB ("http://user:pass@host.com:80/some/path",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"");
+}
+
+static void
+test_sub_scheme_rel (void)
+{
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"//user:pass@host.com:80/some/path?a=1#frag");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"//user:pass@host.com:80/some/path");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"#frag");
+}
+
+static void
+test_sub_path_rel (void)
+{
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"#frag");
+}
+
+static void
+test_sub_query_rel (void)
+{
+	TEST_SUB ("?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"?a=1");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"?a=1#frag");
+	TEST_SUB ("?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"#frag");
+}
+
+static void
+test_sub_fragment_rel (void)
+{
+	TEST_SUB ("#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"#frag");
+	TEST_SUB ("#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"#frag");
+	TEST_SUB ("#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"");
+	TEST_SUB ("#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"#frag");
+	TEST_SUB ("#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"#frag");
+}
+
+static void
+test_range (void)
+{
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path?a=1#frag");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
+}
+
+static void
+test_range_no_fragment (void)
+{
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_USER, SP_URI_PATH,
+			"user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_HOST, SP_URI_PATH,
+			"host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PORT, SP_URI_PATH,
+			"80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"a=1");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
+}
+
+static void
+test_range_no_query (void)
+{
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"http://user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_QUERY,
+			"http://user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PATH,
+			"http://user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PORT,
+			"http://user:pass@host.com:80");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_HOST,
+			"http://user:pass@host.com");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_PASSWORD,
+			"http://user:pass");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_USER,
+			"http://user");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_SCHEME, SP_URI_SCHEME,
+			"http");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_USER, SP_URI_PATH,
+			"user:pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"pass@host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_HOST, SP_URI_PATH,
+			"host.com:80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_PORT, SP_URI_PATH,
+			"80/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"");
+	TEST_RANGE ("http://user:pass@host.com:80/some/path",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"");
+}
+
+static void
+test_range_scheme_rel (void)
+{
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"user:pass@host.com:80/some/path?a=1#frag");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"user:pass@host.com:80/some/path");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"pass@host.com:80/some/path");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"host.com:80/some/path");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"80/some/path");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("//user:pass@host.com:80/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
+}
+
+static void
+test_range_path_rel (void)
+{
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"/some/path");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"/some/path?a=1");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"/some/path?a=1#frag");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("/some/path?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
+}
+
+static void
+test_range_query_rel (void)
+{
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"a=1");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"a=1#frag");
+	TEST_RANGE ("?a=1#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
+}
+
+static void
+test_range_fragment_rel (void)
+{
+	TEST_RANGE ("#frag",
+			SP_URI_SCHEME, SP_URI_FRAGMENT,
+			"frag");
+	TEST_RANGE ("#frag",
+			SP_URI_USER, SP_URI_PATH,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_PASSWORD, SP_URI_PATH,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_HOST, SP_URI_PATH,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_PORT, SP_URI_PATH,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_PATH, SP_URI_PATH,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_PATH, SP_URI_QUERY,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_PATH, SP_URI_FRAGMENT,
+			"frag");
+	TEST_RANGE ("#frag",
+			SP_URI_QUERY, SP_URI_QUERY,
+			"");
+	TEST_RANGE ("#frag",
+			SP_URI_QUERY, SP_URI_FRAGMENT,
+			"frag");
+	TEST_RANGE ("#frag",
+			SP_URI_FRAGMENT, SP_URI_FRAGMENT,
+			"frag");
 }
 
 static void
@@ -731,6 +1419,20 @@ int
 main (void)
 {
 	test_parse ();
+	test_sub ();
+	test_sub_no_fragment ();
+	test_sub_no_query ();
+	test_sub_scheme_rel ();
+	test_sub_path_rel ();
+	test_sub_query_rel ();
+	test_sub_fragment_rel ();
+	test_range ();
+	test_range_no_fragment ();
+	test_range_no_query ();
+	test_range_scheme_rel ();
+	test_range_path_rel ();
+	test_range_query_rel ();
+	test_range_fragment_rel ();
 	test_join ();
 	test_ipv6 ();
 
