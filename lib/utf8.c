@@ -183,7 +183,6 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 		return 0;
 	}
 
-
 	const uint8_t *in = src;
 	size_t charlen;
 
@@ -194,7 +193,8 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 	switch (in[0]) {
 
 	case 0xE0:
-		if (len < 3 || in[1] < 0xA0 || 0xBF < in[1]) {
+		if (len < 3) return SP_ETOOSHORT;
+		if (in[1] < 0xA0 || 0xBF < in[1]) {
 			return SP_EENCODING;
 		}
 		if (!is_cont (in[2])) {
@@ -204,7 +204,8 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 		break;
 
 	case 0xF0:
-		if (len < 4 || in[1] < 0x90 || 0xBF < in[1]) {
+		if (len < 4) return SP_ETOOSHORT;
+		if (in[1] < 0x90 || 0xBF < in[1]) {
 			return SP_EENCODING;
 		}
 		if (!is_cont (in[2]) || !is_cont (in[3])) {
@@ -215,9 +216,8 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 
 	default:
 		charlen = byte_counts[in[0]];
-		if (charlen == 0 || len < charlen) {
-			return SP_EENCODING;
-		}
+		if (charlen == 0) return SP_EENCODING;
+		if (len < charlen) return SP_ETOOSHORT;
 		switch (charlen) {
 		case 0: return SP_EENCODING;
 		case 4: if (!is_cont (in[3])) return SP_EENCODING;
@@ -346,7 +346,10 @@ sp_utf8_json_decode_next (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 	assert (src != NULL);
-	assert (len > 0);
+
+	if (len == 0) {
+		return SP_ETOOSHORT;
+	}
 
 	// check for control characters
 	if (!is_valid_json_byte (src)) {
@@ -401,7 +404,10 @@ sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 	assert (src != NULL);
-	assert (len > 0);
+
+	if (len == 0) {
+		return SP_ETOOSHORT;
+	}
 
 	switch (*(const uint8_t *)src) {
 	case '"':  return add_escape (u, "\\\"");
@@ -441,7 +447,7 @@ sp_utf8_codepoint (const void *src, size_t len)
 	}
 	else if (cp1 < 0xE0) {
 		if (len < 2) {
-			return SP_EENCODING;
+			return SP_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80) {
@@ -451,7 +457,7 @@ sp_utf8_codepoint (const void *src, size_t len)
 	}
 	else if (cp1 < 0xF0) {
 		if (len < 3) {
-			return SP_EENCODING;
+			return SP_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80 || (cp1 == 0xE0 && cp2 < 0xA0)) {
@@ -465,7 +471,7 @@ sp_utf8_codepoint (const void *src, size_t len)
 	}
 	else if (cp1 < 0xF5) {
 		if (len < 4) {
-			return SP_EENCODING;
+			return SP_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80 || (cp1 == 0xF0 && cp2 < 0x90) || (cp1 == 0xF4 && cp2 >= 0x90)) {
