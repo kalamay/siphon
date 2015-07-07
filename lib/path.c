@@ -217,7 +217,7 @@ sp_path_join (char *out, size_t len,
 	out[alen] = '/';
 	memmove (out+alen+1, b, blen);
 	if ((mode & SP_PATH_TRAIL_SLASH) && has_suffix_dir (b, blen)) {
-		if (olen+1 > len) {
+		if (olen+1 > (uint16_t)len) {
 			olen = 0;
 			err = ENAMETOOLONG;
 			goto done;

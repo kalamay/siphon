@@ -209,7 +209,11 @@ SpUriSegment
 sp_uri_find_segment (const SpUri *u, SpUriSegment start, bool nonempty)
 {
 	assert (u != NULL);
+	assert (start >= SP_URI_SEGMENT_FIRST && start <= SP_URI_SEGMENT_LAST);
 
+	if (start < SP_URI_SEGMENT_FIRST || start > SP_URI_SEGMENT_LAST) {
+		return SP_URI_NONE;
+	}
 	if (!nonempty && start == SP_URI_PATH) {
 		return SP_URI_PATH;
 	}

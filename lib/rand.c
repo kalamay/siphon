@@ -29,10 +29,12 @@ sp_rand_uint32 (uint32_t bound, uint32_t *out)
 
 #elif defined(__linux__)
 
+#include <stdio.h>
+#include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
 
-static int fd = -1, err = ENOENT;
+static int fd = -1;
 
 int
 sp_rand_init (void)
@@ -60,6 +62,7 @@ sp_rand_init (void)
 		close (fd);
 		fd = -1;
 		fprintf (stderr, "failed to stat /dev/urandom: %s", strerror (err));
+		errno = err;
 		return -1;
 	}
 
@@ -67,10 +70,10 @@ sp_rand_init (void)
 	if (!S_ISCHR (sbuf.st_mode) ||
 			// verify that the device is /dev/random or /dev/urandom (linux only)
 			(sbuf.st_rdev != makedev (1, 8) && sbuf.st_rdev != makedev (1, 9))) {
-		err = ENODEV;
 		close (fd);
 		fd = -1;
 		fprintf (stderr, "/dev/urandom is an invalid device");
+		errno = ENODEV;
 		return -1;
 	}
 

@@ -11,37 +11,6 @@ typedef struct {
 	uint32_t crc32, crc32c;
 } TestVector;
 
-static TestVector tests[];
-
-static void
-test_crc32 (void)
-{
-	TestVector *tv;
-	for (tv = &tests[0]; tv->size != 0; tv++) {
-		uint32_t crc = sp_crc32 (0, tv->input, tv->size);
-		mu_assert_int_eq (crc, tv->crc32);
-	}
-}
-
-static void
-test_crc32c (void)
-{
-	TestVector *tv;
-	for (tv = &tests[0]; tv->size != 0; tv++) {
-		uint32_t crc = sp_crc32c (0, tv->input, tv->size);
-		mu_assert_int_eq (crc, tv->crc32c);
-	}
-}
-
-int
-main (void)
-{
-	test_crc32 ();
-	test_crc32c ();
-
-	mu_exit ("crc");
-}
-
 static TestVector tests[] = {
 	{
 		.input = (uint8_t []){ 0x61 },
@@ -1088,4 +1057,33 @@ static TestVector tests[] = {
 		.size = 0
 	},
 };
+
+static void
+test_crc32 (void)
+{
+	TestVector *tv;
+	for (tv = &tests[0]; tv->size != 0; tv++) {
+		uint32_t crc = sp_crc32 (0, tv->input, tv->size);
+		mu_assert_int_eq (crc, tv->crc32);
+	}
+}
+
+static void
+test_crc32c (void)
+{
+	TestVector *tv;
+	for (tv = &tests[0]; tv->size != 0; tv++) {
+		uint32_t crc = sp_crc32c (0, tv->input, tv->size);
+		mu_assert_int_eq (crc, tv->crc32c);
+	}
+}
+
+int
+main (void)
+{
+	test_crc32 ();
+	test_crc32c ();
+
+	mu_exit ("crc");
+}
 

@@ -31,9 +31,9 @@ typedef enum {
 
 typedef struct {
 	SpRange16 seg[8];
+	SpHost host;
 	uint16_t port;
-	SpUriSegment first:8, last:8;
-	SpHost host:8;
+	int8_t first, last;
 } SpUri;
 
 SP_EXPORT ssize_t

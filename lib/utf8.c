@@ -84,7 +84,7 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 {
 	assert (u != NULL);
 
-	if (len > SSIZE_MAX) {
+	if (len > (ssize_t)((size_t)SIZE_MAX / 2)) {
 		return SP_ESIZE;
 	}
 
@@ -332,7 +332,7 @@ unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 	}
 
 	ssize_t rc = sp_utf8_add_codepoint (u, cp);
-	return rc < 0 ? rc : scan;
+	return rc < 0 ? rc : (ssize_t)scan;
 }
 
 static inline bool

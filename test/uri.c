@@ -3,26 +3,27 @@
 
 #define assert_uri(u, s) do {                                                \
 	ssize_t rc = sp_uri_parse (u, s, strlen (s));                            \
-	mu_assert_msg (rc >= 0, "Failed to parse URI \"%s\"", s);                \
+	mu_assert_msg (rc >= 0, "Failed to parse URI \"%s\"", (const char *)s);  \
 	if (rc < 0) mu_exit ("uri");                                             \
 } while (0)
 
 #define assert_uri_segment(uri, buf, typ, str) do {                          \
 	SpUriSegment uri_seg = SP_URI_##typ;                                     \
 	SpRange16 rng = (uri)->seg[uri_seg];                                     \
-	if (str == NULL) {                                                       \
+	const char *_str_tmp = (const char *)(str);                              \
+	if (_str_tmp == NULL) {                                                  \
 		mu_assert_msg(!sp_uri_has_segment (uri, uri_seg),                    \
 				"Assertion '" #typ "==(null)' failed: " #typ "==\"%.*s\"",   \
 				(int)rng.len, (const char *)buf+rng.off);                    \
 	}                                                                        \
 	else if (!sp_uri_has_segment (uri, uri_seg)) {                           \
 		mu_fail ("Assertion '" #typ "==\"%s\"' failed: " #typ "==(null)",    \
-				(str));                                                      \
+				_str_tmp);                                        \
 	}                                                                        \
 	else {                                                                   \
-		mu_assert_msg(SP_RANGE_EQ_STR (rng, buf, str),                       \
+		mu_assert_msg(SP_RANGE_EQ_STR (rng, buf, _str_tmp),                  \
 				"Assertion '" #typ "==\"%s\"' failed: " #typ "==\"%.*s\"",   \
-				(str), (int)rng.len, (const char *)buf+rng.off);             \
+				_str_tmp, (int)rng.len, (const char *)buf+rng.off);          \
 	}                                                                        \
 } while (0)
 

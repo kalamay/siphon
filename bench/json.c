@@ -40,7 +40,7 @@ bench (int iter_count, int silent)
 		while (p < pe) {
 			ssize_t o = sp_json_next (&parser, p, pe - p, true);
 			if (o < 0) {
-				printf ("ERR: %zd\n", sp_strerror (o));
+				printf ("ERR: %s\n", sp_strerror (o));
 				return 1;
 			}
 			p += o;
