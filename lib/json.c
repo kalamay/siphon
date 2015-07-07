@@ -98,23 +98,33 @@ static const uint8_t rng_non_ws[] = "\x00\x08\x0b\x0c\x0e\x1f\x21\xff";
 } while (0)
 
 
+
 static ssize_t
 parse_string (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 {
 	// matches escape sequences, ASCII control, quote, or start of UTF-8 sequence
 	static const uint8_t rng_check[] = SP_UTF8_JSON_RANGE "\"\"";
 
+	const uint8_t *start = m + p->mark;
 	const uint8_t *end = m + p->off;
-	const uint8_t *start = end;
 	ssize_t n;
 
 again:
 	EXPECT_RANGE (rng_check, SP_JSON_MAX_STRING, eof);
+	end = pcmp_range16 (end, len-p->off, rng_check, sizeof rng_check - 1);
+	if (end == NULL) {
+		end = m + len;
+	}
+	p->off = end - m;
+	EXPECT_MAX_OFFSET (SP_JSON_MAX_STRING);
 
 	n = sp_utf8_add_raw (&p->utf8, start, end - start);
 	if (n < 0) {
 		YIELD_ERROR (n);
 	}
+
+	start = end;
+	p->mark += n;
 
 	if (*end == '"') {
 		end++;
@@ -124,7 +134,10 @@ again:
 	n = sp_utf8_json_decode_next (&p->utf8, end, len - p->off);
 	if (n == SP_ETOOSHORT) {
 		if (!eof) {
-			return p->off;
+			n = (ssize_t)p->off;
+			p->off = 0;
+			p->mark = 0;
+			return n;
 		}
 		n = SP_EESCAPE;
 	}
@@ -135,6 +148,7 @@ again:
 	end += n;
 	start = end;
 	p->off += n;
+	p->mark += n;
 	goto again;
 }
 
@@ -201,8 +215,6 @@ parse_any (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 {
 	const uint8_t *end = m + p->off;
 
-	p->type = SP_JSON_NONE;
-
 	SKIP_WHITESPACE (eof);
 
 	switch (*end) {
@@ -221,15 +233,14 @@ parse_any (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 		switch (*end) {
 		case '"':
 			sp_utf8_reset (&p->utf8);
-			p->off++;
+			p->mark = ++p->off;
 			p->cs = KIND_STRING;
 			return parse_string (p, m, len, eof);
 
 		case '-': case '.': case '0': case '1': case '2': case '3':
 		case '4': case '5': case '6': case '7': case '8': case '9':
-			p->cs = KIND_NUMBER;
-			// use the string to mark the number range
 			p->mark = p->off++;
+			p->cs = KIND_NUMBER;
 			return parse_number (p, m, len, eof);
 
 		case 't':
@@ -304,7 +315,7 @@ again:
 				break;
 			case '"':
 				sp_utf8_reset (&p->utf8);
-				p->off++;
+				p->mark = ++p->off;
 				p->cs = KIND_KEY;
 				return parse_string (p, m, len, eof);
 		}
@@ -313,6 +324,7 @@ again:
 	case OBJECT_KEY:
 		EXPECT_CHAR ('"', eof);
 		sp_utf8_reset (&p->utf8);
+		p->mark = p->off;
 		p->cs = KIND_KEY;
 		return parse_string (p, m, len, eof);
 
@@ -381,6 +393,7 @@ sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof)
 {
 	assert (p != NULL);
 
+	p->type = SP_JSON_NONE;
 	EXPECT_SIZE (1, eof);
 
 	if (p->cs & ARRAY_MASK) {
@@ -398,7 +411,6 @@ sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof)
 	case KIND_FALSE:  return parse_false (p, buf, len, eof);
 	case KIND_NULL:   return parse_null (p, buf, len, eof);
 	}
-	p->type = SP_JSON_NONE;
 	YIELD_ERROR (SP_ESTATE);
 }
 
