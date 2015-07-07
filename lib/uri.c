@@ -221,18 +221,20 @@ sp_uri_find_segment (const SpUri *u, SpUriSegment start, bool nonempty)
 		return SP_URI_NONE;
 	}
 
-	SpUriSegment stop, def;
+	unsigned x = (unsigned)start, y;
+	SpUriSegment def;
 	if (!nonempty && start < SP_URI_PATH) {
-		stop = def = SP_URI_PATH;
+		y = SP_URI_PATH;
+		def = SP_URI_PATH;
 	}
 	else {
-		stop = u->last;
+		y = u->last;
 		def = SP_URI_NONE;
 	}
 
-	for (; start <= stop; start++) {
-		if (u->seg[start].len > 0) {
-			return start;
+	for (; x <= y; x++) {
+		if (u->seg[x].len > 0) {
+			return (SpUriSegment)x;
 		}
 	}
 	return def;
@@ -250,18 +252,20 @@ sp_uri_rfind_segment (const SpUri *u, SpUriSegment start, bool nonempty)
 		return SP_URI_NONE;
 	}
 
-	SpUriSegment stop, def;
+	unsigned x = (unsigned)start, y;
+	SpUriSegment def;
 	if (!nonempty && start > SP_URI_PATH) {
-		stop = def = SP_URI_PATH;
+		y = SP_URI_PATH;
+		def = SP_URI_PATH;
 	}
 	else {
-		stop = u->first;
+		y = u->first;
 		def = SP_URI_NONE;
 	}
 
-	for (; start >= stop; start--) {
-		if (u->seg[start].len > 0) {
-			return start;
+	for (; x >= y; x--) {
+		if (u->seg[x].len > 0) {
+			return (SpUriSegment)x;
 		}
 	}
 	return def;
