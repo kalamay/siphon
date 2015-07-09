@@ -30,6 +30,8 @@ sp_uri_copy (
 	return ulen;
 }
 
+#include <stdio.h>
+
 ssize_t
 sp_uri_join (
 		const SpUri *a, const char *abuf,
@@ -82,7 +84,7 @@ sp_uri_join (
 	}
 
 	// add any remaining segments from the join URI
-	if (end > SP_URI_SCHEME && end < SP_PATH_URI) {
+	if (end > SP_URI_SCHEME && seg < SP_URI_PATH) {
 		if (end < SP_URI_HOST) {
 			*p = '@';
 			p++;
