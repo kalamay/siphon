@@ -47,10 +47,12 @@ sp_uri_join (
 
 	// find the first segment of the join URI
 	SpUriSegment seg = sp_uri_find_segment (b, SP_URI_SEGMENT_FIRST, true);
+	SpUriSegment end;
 	SpRange16 rng;
 
 	// get base URI up to first segment of join URI
-	if (sp_uri_sub (a, SP_URI_SEGMENT_FIRST, seg-1, &rng) == 0 && rng.len > 0) {
+	end = sp_uri_sub (a, SP_URI_SEGMENT_FIRST, seg-1, &rng);
+	if (end >= 0 && rng.len > 0) {
 		memcpy (p, abuf + rng.off, rng.len);
 		p += rng.len;
 		*p = '\0';
@@ -80,7 +82,17 @@ sp_uri_join (
 	}
 
 	// add any remaining segments from the join URI
-	if (sp_uri_sub (b, seg, b->last, &rng) == 0 && rng.len > 0) {
+	if (end > SP_URI_SCHEME && end < SP_PATH_URI) {
+		if (end < SP_URI_HOST) {
+			*p = '@';
+			p++;
+		}
+		end = sp_uri_range (b, seg, b->last, &rng);
+	}
+	else {
+		end = sp_uri_sub (b, seg, b->last, &rng);
+	}
+	if (end >= 0 && rng.len > 0) {
 		memcpy (p, bbuf + rng.off, rng.len);
 		p += rng.len;
 		*p = '\0';
@@ -119,14 +131,14 @@ sp_uri_length (const SpUri *u)
 	return u->seg[u->last].off + u->seg[u->last].len;
 }
 
-int
+SpUriSegment
 sp_uri_sub (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out)
 {
 	assert (u != NULL);
 	assert (out != NULL);
 
 	if (sp_uri_adjust_range (u, &start, &end, true) < 0) {
-		return -1;
+		return SP_URI_NONE;
 	}
 
 	SpRange16 r = {
@@ -155,21 +167,21 @@ sp_uri_sub (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out
 		r.len++;
 	}
 	memcpy (out, &r, sizeof r);
-	return 0;
+	return end;
 }
 
-int
+SpUriSegment
 sp_uri_range (const SpUri *u, SpUriSegment start, SpUriSegment end, SpRange16 *out)
 {
 	assert (u != NULL);
 	assert (out != NULL);
 
 	if (sp_uri_adjust_range (u, &start, &end, false) < 0) {
-		return -1;
+		return SP_URI_NONE;
 	}
 	out->off = u->seg[start].off;
 	out->len = u->seg[end].off - u->seg[start].off + u->seg[end].len;
-	return 0;
+	return end;
 }
 
 int

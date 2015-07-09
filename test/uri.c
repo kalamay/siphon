@@ -45,7 +45,7 @@
 	assert_uri (&parsed, u);                             \
 	SpRange16 rng;                                       \
 	int rc = sp_uri_sub (&parsed, s1, s2, &rng);         \
-	mu_assert_int_eq (rc, 0);                            \
+	mu_assert_int_ge (rc, 0);                            \
 	if (rc == 0) {                                       \
 		char buf[4096];                                  \
 		strncpy (buf, (const char *)u+rng.off, rng.len); \
@@ -59,7 +59,7 @@
 	assert_uri (&parsed, u);                             \
 	SpRange16 rng;                                       \
 	int rc = sp_uri_range (&parsed, s1, s2, &rng);       \
-	mu_assert_int_eq (rc, 0);                            \
+	mu_assert_int_ge (rc, 0);                            \
 	if (rc == 0) {                                       \
 		char buf[4096];                                  \
 		strncpy (buf, (const char *)u+rng.off, rng.len); \
@@ -79,20 +79,21 @@
 	mu_assert (sp_uri_eq (&join, buf, &uexp, exp));          \
 } while (0)
 
-#define TEST_JOIN_SEGMENTS(a, b, sc, us, pw, hn, pt, pa, q, f) do { \
-	char buf[4096];                                                 \
-	SpUri ua, ub, join;                                             \
-	assert_uri (&ua, a);                                            \
-	assert_uri (&ub, b);                                            \
-	sp_uri_join (&ua, a, &ub, b, &join, buf, sizeof buf -1);        \
-	assert_uri_segment (&join, buf, SCHEME, sc);                    \
-	assert_uri_segment (&join, buf, USER, us);                      \
-	assert_uri_segment (&join, buf, PASSWORD, pw);                  \
-	assert_uri_segment (&join, buf, HOST, hn);                      \
-	assert_uri_segment (&join, buf, PORT, pt);                      \
-	assert_uri_segment (&join, buf, PATH, pa);                      \
-	assert_uri_segment (&join, buf, QUERY, q);                      \
-	assert_uri_segment (&join, buf, FRAGMENT, f);                   \
+#define TEST_JOIN_SEGMENTS(a, b, sc, us, pw, hn, pt, pa, q, f) do {        \
+	char buf[4096];                                                        \
+	SpUri ua, ub, join;                                                    \
+	assert_uri (&ua, a);                                                   \
+	assert_uri (&ub, b);                                                   \
+	ssize_t len = sp_uri_join (&ua, a, &ub, b, &join, buf, sizeof buf -1); \
+	mu_assert_int_ge (len, 0);                                             \
+	assert_uri_segment (&join, buf, SCHEME, sc);                           \
+	assert_uri_segment (&join, buf, USER, us);                             \
+	assert_uri_segment (&join, buf, PASSWORD, pw);                         \
+	assert_uri_segment (&join, buf, HOST, hn);                             \
+	assert_uri_segment (&join, buf, PORT, pt);                             \
+	assert_uri_segment (&join, buf, PATH, pa);                             \
+	assert_uri_segment (&join, buf, QUERY, q);                             \
+	assert_uri_segment (&join, buf, FRAGMENT, f);                          \
 } while (0)
 
 #define TEST_IPv6_VALID(str) do {                             \
@@ -861,6 +862,15 @@ test_join (void)
 	TEST_JOIN ("http://a/b/c/d;p?q", "g#s/../x"      , "http://a/b/c/g#s/../x");
 	TEST_JOIN ("http://a/b/c/d;p?q", "http:g"        , "http:g");
 
+	TEST_JOIN ("http://user:pass@test.com:80/some/path?a=b#c", "//new.com/new/path",
+			"http://user:pass@new.com/new/path");
+
+	TEST_JOIN ("http://user@test.com:80/some/path?a=b#c", "//new.com/new/path",
+			"http://user@new.com/new/path");
+
+	TEST_JOIN ("http://test.com:80/some/path?a=b#c", "//new.com/new/path",
+			"http://new.com/new/path");
+
 	TEST_JOIN_SEGMENTS (
 			"http://base.com/some/path.html?a=b#c:w",
 			"//user:pass@www.test.com:80/test/file.txt?a=b&c=def&x%26y=%C2%AE#frag",
@@ -920,6 +930,11 @@ test_join (void)
 			"http://www.test.com/dir/",
 			"file.html",
 		"http", NULL, NULL, "www.test.com", NULL, "/dir/file.html", NULL, NULL);
+
+	TEST_JOIN_SEGMENTS (
+			"http://user@test.com:80/some/path?a=b#c",
+			"//new.com/new/path",
+		"http", "user", NULL, "new.com", NULL, "/new/path", NULL, NULL);
 }
 
 static void

@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 %%{
 	machine uri_parser;
@@ -19,9 +20,17 @@
 	action query          { SET(QUERY, 0); }
 	action fragment       { SET(FRAGMENT, 0); }
 	action mark_user      { user = p; }
+	action mark_pass      { pass = p; }
 	action userinfo       {
-		SET(PASSWORD, 0);
-		size_t back = p - mark + 1;
+		size_t back;
+		if (pass == NULL) {
+			back = 0;
+		}
+		else {
+			mark = pass;
+			SET(PASSWORD, 0);
+			back = p - pass + 1;
+		}
 		mark = user;
 		SET(USER, back);
 	}
@@ -106,7 +115,7 @@
 	                | null
 	                ;
 
-	uri_userinfo    = ( uri_auth_val >mark_user )? ( ":" ( uri_auth_val >mark ) )? "@" >userinfo ;
+	uri_userinfo    = ( uri_auth_val >mark_user )? ( ":" ( uri_auth_val >mark_pass ) )? "@" >userinfo ;
 	uri_authority   = uri_userinfo? uri_host ( ":" uri_port )? ;
 
 	uri_rel_part    = "//" uri_authority uri_path_abs
@@ -145,6 +154,7 @@ sp_uri_parse (SpUri *u, const char *restrict buf, size_t len)
 	const char *restrict eof = pe;
 	const char *restrict mark = p;
 	const char *restrict user = NULL;
+	const char *restrict pass = NULL;
 	int cs = %%{ write start; }%%;
 	bool mapped = false;
 
