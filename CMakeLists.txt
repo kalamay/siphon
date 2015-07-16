@@ -28,6 +28,14 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 		${PROJECT_SOURCE_DIR}/lib/uri_parser.rl
 )
 
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
+	COMMAND ${RAGEL_COMMAND} -G2 -o
+		${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
+		${PROJECT_SOURCE_DIR}/lib/cache_parser.rl 
+	DEPENDS
+		${PROJECT_SOURCE_DIR}/lib/cache_parser.rl
+)
+
 add_library(
 	objects
 	OBJECT
@@ -42,6 +50,7 @@ add_library(
 	lib/path.c
 	lib/uri.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
+	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
 
 add_library(siphon-static STATIC $<TARGET_OBJECTS:objects>)
@@ -121,4 +130,8 @@ target_link_libraries(test-uri siphon-static m)
 add_test(NAME bloom COMMAND test-bloom)
 add_executable(test-bloom test/bloom.c)
 target_link_libraries(test-bloom siphon-static m)
+
+add_test(NAME cache COMMAND test-cache)
+add_executable(test-cache test/cache.c)
+target_link_libraries(test-cache siphon-static m)
 
