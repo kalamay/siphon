@@ -19,13 +19,13 @@ typedef enum {
 	SP_CACHE_PROXY_REVALIDATE  = 1 << 12
 } SpCacheType;
 
+#define SP_CACHE_CONTROL_HAS(s, k) ((s) && ((s)->type & (k)))
+
 typedef struct {
 	time_t max_age, s_maxage, max_stale, min_fresh;
 	SpCacheType type;
 	SpRange16 private, no_cache;
 } SpCacheControl;
-
-#define SP_CACHE_CONTROL_HAS(s, k) ((s) && ((s)->type & (k)))
 
 SP_EXPORT ssize_t
 sp_cache_control_parse (SpCacheControl *cc, const char *buf, size_t len);

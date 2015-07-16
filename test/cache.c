@@ -33,10 +33,104 @@ test_max_stale (void)
 }
 
 static void
+test_private (void)
+{
+	SpCacheControl cc;
+	ssize_t n;
+
+	const char buf1[] = "private";
+	const char buf2[] = "private=\"string\"";
+	const char buf3[] = "private=token"; // non-standard
+	char val[16];
+
+	n = sp_cache_control_parse (&cc, buf1, (sizeof buf1) - 1);
+	mu_assert_int_eq (n, (sizeof buf1) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf1 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_PRIVATE, SP_CACHE_PRIVATE);
+	mu_assert_uint_eq (cc.private.len, 0);
+
+	n = sp_cache_control_parse (&cc, buf2, (sizeof buf2) - 1);
+	mu_assert_int_eq (n, (sizeof buf2) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf2 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_PRIVATE, SP_CACHE_PRIVATE);
+	mu_assert_uint_eq (cc.private.len, 6);
+	memcpy (val, buf2+cc.private.off, cc.private.len);
+	val[cc.private.len] = '\0';
+	mu_assert_str_eq (val, "string");
+
+	n = sp_cache_control_parse (&cc, buf3, (sizeof buf3) - 1);
+	mu_assert_int_eq (n, (sizeof buf3) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf3 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_PRIVATE, SP_CACHE_PRIVATE);
+	mu_assert_uint_eq (cc.private.len, 5);
+	memcpy (val, buf3+cc.private.off, cc.private.len);
+	val[cc.private.len] = '\0';
+	mu_assert_str_eq (val, "token");
+}
+
+static void
+test_no_cache (void)
+{
+	SpCacheControl cc;
+	ssize_t n;
+
+	const char buf1[] = "no-cache";
+	const char buf2[] = "no-cache=\"string\"";
+	const char buf3[] = "no-cache=token"; // non-standard
+	char val[16];
+
+	n = sp_cache_control_parse (&cc, buf1, (sizeof buf1) - 1);
+	mu_assert_int_eq (n, (sizeof buf1) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf1 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+	mu_assert_uint_eq (cc.no_cache.len, 0);
+
+	n = sp_cache_control_parse (&cc, buf2, (sizeof buf2) - 1);
+	mu_assert_int_eq (n, (sizeof buf2) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf2 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+	mu_assert_uint_eq (cc.no_cache.len, 6);
+	memcpy (val, buf2+cc.no_cache.off, cc.no_cache.len);
+	val[cc.no_cache.len] = '\0';
+	mu_assert_str_eq (val, "string");
+
+	n = sp_cache_control_parse (&cc, buf3, (sizeof buf3) - 1);
+	mu_assert_int_eq (n, (sizeof buf3) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf3 + (-1 - n));
+		return;
+	}
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+	mu_assert_uint_eq (cc.no_cache.len, 5);
+	memcpy (val, buf3+cc.no_cache.off, cc.no_cache.len);
+	val[cc.no_cache.len] = '\0';
+	mu_assert_str_eq (val, "token");
+}
+
+static void
 test_all (void)
 {
 	const char buf[] =
+		"public;"
+		"private;"
+		"private=\"stuff\";"
 		"no-cache;"
+		"no-cache=\"thing\";"
 		"no-store;"
 		"max-age=12;"
 		"s-maxage=34;"
@@ -46,7 +140,10 @@ test_all (void)
 		"no-transform;"
 		"only-if-cached;"
 		"must-revalidate;"
-		"proxy-revalidate"
+		"proxy-revalidate;"
+		"ext1;"
+		"ext2=something;"
+		"ext3=\"other\""
 		;
 
 	SpCacheControl cc;
@@ -57,6 +154,8 @@ test_all (void)
 		return;
 	}
 
+	mu_assert_int_eq (cc.type & SP_CACHE_PUBLIC, SP_CACHE_PUBLIC);
+	mu_assert_int_eq (cc.type & SP_CACHE_PRIVATE, SP_CACHE_PRIVATE);
 	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
 	mu_assert_int_eq (cc.type & SP_CACHE_NO_STORE, SP_CACHE_NO_STORE);
 	mu_assert_int_eq (cc.type & SP_CACHE_MAX_AGE, SP_CACHE_MAX_AGE);
@@ -73,12 +172,24 @@ test_all (void)
 	mu_assert_int_eq (cc.s_maxage, 34);
 	mu_assert_int_eq (cc.max_stale, 56);
 	mu_assert_int_eq (cc.min_fresh, 78);
+
+	char val[64];
+
+	memcpy (val, buf+cc.private.off, cc.private.len);
+	val[cc.private.len] = '\0';
+	mu_assert_str_eq (val, "stuff");
+
+	memcpy (val, buf+cc.no_cache.off, cc.no_cache.len);
+	val[cc.no_cache.len] = '\0';
+	mu_assert_str_eq (val, "thing");
 }
 
 int
 main (void)
 {
 	test_max_stale ();
+	test_private ();
+	test_no_cache ();
 	test_all ();
 
 	mu_exit ("cache");

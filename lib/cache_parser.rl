@@ -3,6 +3,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include <stdio.h>
+
 %%{
 	machine cache_control_parser;
 
@@ -26,17 +28,20 @@
 	}
 
 	action str_init { str.off = p - buf; }
-	action str_end  { str.len = (p - buf) - str.len; }
+	action str_end  { str.len = (p - buf) - str.off; }
 	action sec_neg  { neg = -1; }
 	action sec_incr { num = num*10 + (fc-'0'); }
 
-	string = '="' ( [^"]* >str_init %str_end ) '"' ;
+	token = [!#-'*-.0-:@A-Z^-`a-z|~]+ >str_init %str_end ;
+	string = '"' ( [^"]* >str_init %str_end ) '"' ;
+	value = '=' ( token | string ) ;
 	integer = '0' | [1-9] digit* ;
 	seconds = '=' ( ( "-" @sec_neg )? integer >{ val = true; } @sec_incr ) ;
+	extension = ( token ) ( value )? ;
 
 	dir = "public"i %public
-		| "private"i string? %private
-		| "no-cache"i string? %no_cache
+		| "private"i value? %private
+		| "no-cache"i value? %no_cache
 		| "no-store"i %no_store
 		| "max-age"i seconds %max_age
 		| "s-maxage"i seconds %s_maxage
@@ -46,6 +51,7 @@
 		| "only-if-cached"i %only_if_cached
 		| "must-revalidate"i %must_revalidate
 		| "proxy-revalidate"i %proxy_revalidate
+		| extension
 		;
 
 	main := space* dir ( space* ";" space* dir )* ;
