@@ -14,7 +14,6 @@
 #elif defined(__APPLE__)
 # include <machine/endian.h>
 # if BYTE_ORDER == LITTLE_ENDIAN
-#  define IX_LITTLE_ENDIAN
 #  define htobe16(v) __builtin_bswap16(v)
 #  define htole16(v) (v)
 #  define be16toh(v) __builtin_bswap16(v)
@@ -28,7 +27,6 @@
 #  define be64toh(v) __builtin_bswap64(v)
 #  define le64toh(v) (v)
 # elif BYTE_ORDER == BIG_ENDIAN
-#  define IX_LITTLE_ENDIAN
 #  define htobe16(v) (v)
 #  define htole16(v) __builtin_bswap16(v)
 #  define be16toh(v) (v)
@@ -51,12 +49,6 @@
 
 #else
 # error Endianess not available
-#endif
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-# define IX_LITTLE_ENDIAN
-#elif BYTE_ORDER == BIG_ENDIAN
-# define IX_BIG_ENDIAN
 #endif
 
 #endif
