@@ -2,11 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 project(siphon C)
 
-set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC")
+set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden -fvisibility-inlines-hidden")
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
-set(CMAKE_SHARED_LINKER_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+SET(CMAKE_MACOSX_RPATH ON)
 
 set(SIPHON_VERSION_MAJOR 0)
 set(SIPHON_VERSION_MINOR 1)
