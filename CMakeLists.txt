@@ -36,8 +36,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
 
 add_library(
-	objects
-	OBJECT
+	siphon
 	lib/error.c
 	lib/crc.c
 	lib/hash.c
@@ -52,18 +51,14 @@ add_library(
 	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
 
-add_library(siphon-static STATIC $<TARGET_OBJECTS:objects>)
-add_library(siphon-shared SHARED $<TARGET_OBJECTS:objects>)
-
-set_target_properties(siphon-static siphon-shared PROPERTIES
-	OUTPUT_NAME siphon
+set_target_properties(siphon PROPERTIES
 	VERSION ${SIPHON_VERSION_STRING}
 	SOVERSION ${SIPHON_VERSION_STRING}
 )
 
 include_directories(BEFORE include)
 
-install(TARGETS siphon-shared siphon-static
+install(TARGETS siphon
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib)
 
@@ -74,13 +69,13 @@ install(DIRECTORY include/siphon
 
 
 add_executable(bench-http bench/http.c)
-target_link_libraries(bench-http siphon-static m)
+target_link_libraries(bench-http siphon m)
 
 add_executable(bench-json bench/json.c)
-target_link_libraries(bench-json siphon-static m)
+target_link_libraries(bench-json siphon m)
 
 add_executable(bench-crc bench/crc.c)
-target_link_libraries(bench-crc siphon-static m)
+target_link_libraries(bench-crc siphon m)
 
 
 
@@ -100,37 +95,37 @@ include(CTest)
 
 add_test(NAME crc COMMAND test-crc)
 add_executable(test-crc test/crc.c)
-target_link_libraries(test-crc siphon-static m)
+target_link_libraries(test-crc siphon m)
 
 add_test(NAME hash COMMAND test-hash)
 add_executable(test-hash test/hash.c)
-target_link_libraries(test-hash siphon-static m)
+target_link_libraries(test-hash siphon m)
 
 add_test(NAME utf8 COMMAND test-utf8)
 add_executable(test-utf8 test/utf8.c)
-target_link_libraries(test-utf8 siphon-static m)
+target_link_libraries(test-utf8 siphon m)
 
 add_test(NAME http COMMAND test-http)
 add_executable(test-http test/http.c)
-target_link_libraries(test-http siphon-static m)
+target_link_libraries(test-http siphon m)
 
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
-target_link_libraries(test-json siphon-static m)
+target_link_libraries(test-json siphon m)
 
 add_test(NAME path COMMAND test-path)
 add_executable(test-path test/path.c)
-target_link_libraries(test-path siphon-static m)
+target_link_libraries(test-path siphon m)
 
 add_test(NAME uri COMMAND test-uri)
 add_executable(test-uri test/uri.c)
-target_link_libraries(test-uri siphon-static m)
+target_link_libraries(test-uri siphon m)
 
 add_test(NAME bloom COMMAND test-bloom)
 add_executable(test-bloom test/bloom.c)
-target_link_libraries(test-bloom siphon-static m)
+target_link_libraries(test-bloom siphon m)
 
 add_test(NAME cache COMMAND test-cache)
 add_executable(test-cache test/cache.c)
-target_link_libraries(test-cache siphon-static m)
+target_link_libraries(test-cache siphon m)
 
