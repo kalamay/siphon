@@ -6,7 +6,7 @@
 
 #ifdef __APPLE__
 
-void *
+static void *
 memrchr (const void *m, int c, size_t n)
 {
 	const uint8_t *s = m;
