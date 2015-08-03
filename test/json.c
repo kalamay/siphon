@@ -314,7 +314,8 @@ main (void)
 	test_parse (2);
 	test_parse (11);
 
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail1.json", 20));
+	// XXX: allowing bare values
+	//mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail1.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail2.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail3.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail4.json", 20));
@@ -326,6 +327,7 @@ main (void)
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail10.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail11.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail12.json", 20));
+	// XXX: allowing extended number formats for now
 	//mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail13.json", 20));
 	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail14.json", 20));
 	mu_assert_int_eq (SP_EESCAPE, parse_file ("fail15.json", 20));
@@ -353,6 +355,11 @@ main (void)
 	mu_assert_int_eq (9, parse_file ("pass3.json", 20));
 	mu_assert_int_eq (31, parse_file ("pass4.json", 20));
 	mu_assert_int_eq (5276, parse_file ("pass5.json", 469));
+
+	// XXX: these next three test non-object/array values as root
+	mu_assert_int_eq (1, parse_file ("pass6.json", 20));
+	mu_assert_int_eq (1, parse_file ("pass7.json", 20));
+	mu_assert_int_eq (1, parse_file ("pass8.json", 20));
 
 	mu_exit ("json");
 }

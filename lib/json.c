@@ -231,37 +231,33 @@ parse_any (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 		STACK_PUSH_ARR (p);
 		end = m + ++p->off;
 		YIELD (SP_JSON_ARRAY, ARRAY_FIRST);
-	}
 
-	if (p->depth > 0) {
-		switch (*end) {
-		case '"':
-			sp_utf8_reset (&p->utf8);
-			p->mark = ++p->off;
-			p->cs = KIND_STRING;
-			return parse_string (p, m, len, eof);
+	case '"':
+		sp_utf8_reset (&p->utf8);
+		p->mark = ++p->off;
+		p->cs = KIND_STRING;
+		return parse_string (p, m, len, eof);
 
-		case '-': case '.': case '0': case '1': case '2': case '3':
-		case '4': case '5': case '6': case '7': case '8': case '9':
-			p->mark = p->off++;
-			p->cs = KIND_NUMBER;
-			return parse_number (p, m, len, eof);
+	case '-': case '.': case '0': case '1': case '2': case '3':
+	case '4': case '5': case '6': case '7': case '8': case '9':
+		p->mark = p->off++;
+		p->cs = KIND_NUMBER;
+		return parse_number (p, m, len, eof);
 
-		case 't':
-			p->off++;
-			p->cs = KIND_TRUE;
-			return parse_true (p, m, len, eof);
+	case 't':
+		p->off++;
+		p->cs = KIND_TRUE;
+		return parse_true (p, m, len, eof);
 
-		case 'f':
-			p->off++;
-			p->cs = KIND_FALSE;
-			return parse_false (p, m, len, eof);
+	case 'f':
+		p->off++;
+		p->cs = KIND_FALSE;
+		return parse_false (p, m, len, eof);
 
-		case 'n':
-			p->off++;
-			p->cs = KIND_NULL;
-			return parse_null (p, m, len, eof);
-		}
+	case 'n':
+		p->off++;
+		p->cs = KIND_NULL;
+		return parse_null (p, m, len, eof);
 	}
 	YIELD_ERROR (SP_ESYNTAX);
 }
