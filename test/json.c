@@ -295,7 +295,7 @@ parse_file (const char *name, uint16_t depth)
 	if (fstat (fd, &st) < 0) goto out;
 
 	m = mmap (NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (m == NULL) goto out;
+	if (m == MAP_FAILED) goto out;
 
 	rc = parse_value (m, st.st_size, depth);
 	
