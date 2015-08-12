@@ -1,54 +1,50 @@
 #include "siphon/crc.h"
 #include "siphon/endian.h"
 
-static inline uint32_t
-crc32 (uint32_t crc, const void *bytes, size_t len, const uint32_t t[4][256])
-{
-#define NEXT1 do {                                  \
-	uint32_t c = (crc & 0xff) ^ *(uint8_t *)bytes;  \
-	crc = t[3][c] ^ (crc >> 8);                     \
-	bytes = (uint8_t *)bytes + 1;                   \
+#define NEXT1(t) do {                                                        \
+	uint32_t c = (crc & 0xff) ^ *(uint8_t *)bytes;                           \
+	crc = t[3][c] ^ (crc >> 8);                                              \
+	bytes = (uint8_t *)bytes + 1;                                            \
 } while (0)
 
-#define NEXT4 do {                                  \
-	uint32_t c = crc ^ htole32(*(uint32_t *)bytes); \
-	bytes = (uint8_t *)bytes + 4;                   \
-	crc = t[0][c & 0xff] ^                          \
-	      t[1][(c >> 8) & 0xff] ^                   \
-	      t[2][(c >> 16) & 0xff] ^                  \
-	      t[3][c >> 24];                            \
+#define NEXT4(t) do {                                                        \
+	uint32_t c = crc ^ htole32(*(uint32_t *)bytes);                          \
+	bytes = (uint8_t *)bytes + 4;                                            \
+	crc = t[0][c & 0xff] ^                                                   \
+	      t[1][(c >> 8) & 0xff] ^                                            \
+	      t[2][(c >> 16) & 0xff] ^                                           \
+	      t[3][c >> 24];                                                     \
 } while (0)
-	const void *end = (uint8_t *)bytes + len;
-	crc = ~htole32 (crc);
 
-	// find the end of the unaligned sequence (up to 3 bytes)
-	const void *sub = (const uint8_t *)((((uintptr_t)bytes + 3) >> 2) << 2);
-	if (sub <= end) {
-		// process single bytes until we get to a 4-byte aligned position
-		while (bytes != sub) {
-			NEXT1;
-		}
-	}
-	// process 16 bytes at a time
-	while (((uint8_t *)end - (uint8_t *)bytes) >= 16) {
-		NEXT4;
-		NEXT4;
-		NEXT4;
-		NEXT4;
-	}
-	// process bytes 4 at a time
-	while (((uint8_t *)end - (uint8_t *)bytes) >= 4) {
-		NEXT4;
-	}
-	// process remaining single bytes
-	while (bytes != end) {
-		NEXT1;
-	}
-
-	return le32toh (~crc);
-#undef NEXT1
-#undef NEXT4
-}
+#define CRC32(t) do {                                                        \
+	const void *end = (uint8_t *)bytes + len;                                \
+	crc = ~htole32 (crc);                                                    \
+	/* find the end of the unaligned sequence (up to 3 bytes) */             \
+	const void *sub = (const uint8_t *)((((uintptr_t)bytes + 3) >> 2) << 2); \
+	if (sub <= end) {                                                        \
+		/* process single bytes until we get to a 4-byte aligned position */ \
+		while (bytes != sub) {                                               \
+			NEXT1(t);                                                        \
+		}                                                                    \
+	}                                                                        \
+	/* process 16 bytes at a time */                                         \
+	while (((uint8_t *)end - (uint8_t *)bytes) >= 16) {                      \
+		NEXT4(t);                                                            \
+		NEXT4(t);                                                            \
+		NEXT4(t);                                                            \
+		NEXT4(t);                                                            \
+	}                                                                        \
+	/* process bytes 4 at a time */                                          \
+	while (((uint8_t *)end - (uint8_t *)bytes) >= 4) {                       \
+		NEXT4(t);                                                            \
+	}                                                                        \
+	/* process remaining single bytes */                                     \
+	while (bytes != end) {                                                   \
+		NEXT1(t);                                                            \
+	}                                                                        \
+                                                                             \
+	crc = le32toh (~crc);                                                    \
+} while (0)
 
 static const uint32_t table32[4][256] = {{
 	0x00000000,0xb8bc6765,0xaa09c88b,0x12b5afee,0x8f629757,0x37def032,0x256b5fdc,0x9dd738b9,
@@ -187,7 +183,8 @@ static const uint32_t table32[4][256] = {{
 uint32_t
 sp_crc32 (uint32_t crc, const void *bytes, size_t len)
 {
-	return crc32 (crc, bytes, len, table32);
+	CRC32 (table32);
+	return crc;
 }
 
 #if __SSE4_2__
@@ -463,7 +460,8 @@ static const uint32_t table32c[4][256] = {{
 uint32_t
 sp_crc32c (uint32_t crc, const void *bytes, size_t len)
 {
-	return crc32 (crc, bytes, len, table32c);
+	CRC32 (table32c);
+	return crc;
 }
 
 #endif
