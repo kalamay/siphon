@@ -83,13 +83,21 @@ sp_mallocn (size_t size, size_t align)
 	}
 
 	ret = p + (alloc - off);
-
-	struct preamble *pre = preamble (ret);
-	if (((char *)ret - (char *)pre) < (ssize_t)sizeof (struct preamble) ||
-			(uintptr_t)pre % __alignof__ (pre)) {
-		fprintf (stderr, "I done goofed the maths!\n");
+	if ((uintptr_t)ret & (align - 1)) {
+		fprintf (stderr, "incorrect alignment for returned pointer\n");
 		abort ();
 	}
+
+	struct preamble *pre = preamble (ret);
+	if (((char *)ret - (char *)pre) < (ssize_t)sizeof (struct preamble)) {
+		fprintf (stderr, "incorrect space for preamble\n");
+		abort ();
+	}
+	if ((uintptr_t)pre & (__alignof__ (pre) - 1)) {
+		fprintf (stderr, "incorrect alignment for preamble\n");
+		abort ();
+	}
+
 	pre->ptr = p;
 	pre->size = size;
 
