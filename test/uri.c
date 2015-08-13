@@ -74,7 +74,7 @@
 	assert_uri (&ua, a);                                     \
 	assert_uri (&ub, b);                                     \
 	assert_uri (&uexp, exp);                                 \
-	sp_uri_join (&ua, a, &ub, b, &join, buf, sizeof buf -1); \
+	sp_uri_join (&join, buf, sizeof buf -1, &ua, a, &ub, b); \
 	mu_assert_str_eq (buf, exp);                             \
 	mu_assert (sp_uri_eq (&join, buf, &uexp, exp));          \
 } while (0)
@@ -84,7 +84,7 @@
 	SpUri ua, ub, join;                                                    \
 	assert_uri (&ua, a);                                                   \
 	assert_uri (&ub, b);                                                   \
-	ssize_t len = sp_uri_join (&ua, a, &ub, b, &join, buf, sizeof buf -1); \
+	ssize_t len = sp_uri_join (&join, buf, sizeof buf -1, &ua, a, &ub, b); \
 	mu_assert_int_ge (len, 0);                                             \
 	assert_uri_segment (&join, buf, SCHEME, sc);                           \
 	assert_uri_segment (&join, buf, USER, us);                             \

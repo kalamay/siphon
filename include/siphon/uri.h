@@ -2,6 +2,7 @@
 #define SIPHON_URI_H
 
 #include "common.h"
+#include <stdio.h>
 
 typedef enum {
 	SP_URI_NONE   = -1,
@@ -41,14 +42,20 @@ sp_uri_parse (SpUri *u, const char *restrict buf, size_t len);
 
 SP_EXPORT ssize_t
 sp_uri_copy (
-		const SpUri *u, const char *buf,
-		SpUri *out, char *outbuf, size_t len);
+		SpUri *dst, char *dstbuf, size_t dstlen,
+		const SpUri *u, const char *ubuf);
 
 SP_EXPORT ssize_t
 sp_uri_join (
+		SpUri *dst, char *dstbuf, size_t dstlen,
 		const SpUri *a, const char *abuf,
-		const SpUri *b, const char *bbuf,
-		SpUri *out, char *outbuf, size_t len);
+		const SpUri *b, const char *bbuf);
+
+SP_EXPORT ssize_t
+sp_uri_join_paths (
+		char *dstbuf, size_t dstlen,
+		const char *abuf, size_t alen,
+		const char *bbuf, size_t blen);
 
 SP_EXPORT bool
 sp_uri_eq (const SpUri *a, const char *abuf, const SpUri *b, const char *bbuf);
@@ -76,6 +83,12 @@ sp_uri_has_segment (const SpUri *u, SpUriSegment seg);
 
 SP_EXPORT bool
 sp_uri_is_absolute (const SpUri *u);
+
+SP_EXPORT const char *
+sp_uri_segment_name (SpUriSegment seg);
+
+SP_EXPORT void
+sp_uri_print (const SpUri *u, const char *buf, FILE *out);
 
 #endif
 

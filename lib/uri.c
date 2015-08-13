@@ -8,44 +8,42 @@
 
 ssize_t
 sp_uri_copy (
-		const SpUri *u, const char *buf,
-		SpUri *out, char *outbuf, size_t len)
+		SpUri *dst, char *dstbuf, size_t dstlen,
+		const SpUri *u, const char *ubuf)
 {
 	assert (u != NULL);
-	assert (buf != NULL);
-	assert (out != NULL);
-	assert (outbuf != NULL);
+	assert (ubuf != NULL);
+	assert (dst != NULL);
+	assert (dstbuf != NULL);
 
 	uint16_t ulen = sp_uri_length (u);
-	if (ulen > len) {
+	if (ulen > dstlen) {
 		errno = ENAMETOOLONG;
 		return -1;
 	}
 
-	memcpy (outbuf, buf, ulen);
-	if (len > ulen) {
-		outbuf[ulen] = '\0';
+	memcpy (dstbuf, ubuf, ulen);
+	if (dstlen > ulen) {
+		dstbuf[ulen] = '\0';
 	}
-	memcpy (out, u, sizeof *u);
+	memcpy (dst, u, sizeof *u);
 	return ulen;
 }
 
-#include <stdio.h>
-
 ssize_t
 sp_uri_join (
+		SpUri *dst, char *dstbuf, size_t dstlen,
 		const SpUri *a, const char *abuf,
-		const SpUri *b, const char *bbuf,
-		SpUri *out, char *outbuf, size_t len)
+		const SpUri *b, const char *bbuf)
 {
 	if (sp_uri_eq (a, abuf, b, bbuf) || sp_uri_length (a) == 0) {
-		return sp_uri_copy (b, bbuf, out, outbuf, len);
+		return sp_uri_copy (dst, dstbuf, dstlen, b, bbuf);
 	}
 	if (b == NULL || sp_uri_length (b) == 0) {
-		return sp_uri_copy (a, abuf, out, outbuf, len);
+		return sp_uri_copy (dst, dstbuf, dstlen, a, abuf);
 	}
 
-	char *p = outbuf;
+	char *p = dstbuf;
 
 	// find the first segment of the join URI
 	SpUriSegment seg = sp_uri_find_segment (b, SP_URI_SEGMENT_FIRST, true);
@@ -63,22 +61,16 @@ sp_uri_join (
 	// if the first segment of the join URI is a path, join the paths
 	if (seg == SP_URI_PATH) {
 		rng = a->seg[SP_URI_PATH];
-		sp_path_pop (abuf, &rng, 1);
-
-		uint16_t plen = sp_path_join (
-			p, len - (p - outbuf),
+		uint16_t plen = sp_uri_join_paths (
+			p, dstlen - (p - dstbuf),
 			abuf + rng.off, rng.len,
-			bbuf + b->seg[SP_URI_PATH].off, b->seg[SP_URI_PATH].len,
-			SP_PATH_URI);
+			bbuf + b->seg[SP_URI_PATH].off, b->seg[SP_URI_PATH].len);
 
-		if (plen == 0) {
-			if (errno != 0) {
-				return -1;
-			}
-		}
-		else {
-			plen = sp_path_clean (p, plen, SP_PATH_URI);
+		if (plen > 0) {
 			p += plen;
+		}
+		else if (errno != 0) {
+			return -1;
 		}
 		seg++;
 	}
@@ -100,7 +92,33 @@ sp_uri_join (
 		*p = '\0';
 	}
 
-	return sp_uri_parse (out, outbuf, p - outbuf);
+	return sp_uri_parse (dst, dstbuf, p - dstbuf);
+}
+
+ssize_t
+sp_uri_join_paths (
+		char *outbuf, size_t len,
+		const char *abuf, size_t alen,
+		const char *bbuf, size_t blen)
+{
+	SpRange16 rng = { 0, alen };
+	sp_path_pop (abuf, &rng, 1);
+
+	uint16_t plen = sp_path_join (
+		outbuf, len,
+		abuf, rng.len,
+		bbuf, blen,
+		SP_PATH_URI);
+
+	if (plen == 0) {
+		if (errno != 0) {
+			return -1;
+		}
+	}
+	else {
+		plen = sp_path_clean (outbuf, plen, SP_PATH_URI);
+	}
+	return plen;
 }
 
 bool
@@ -300,5 +318,81 @@ sp_uri_is_absolute (const SpUri *u)
 	return (u &&
 			sp_uri_has_segment (u, SP_URI_SCHEME) &&
 			sp_uri_has_segment (u, SP_URI_HOST));
+}
+
+const char *
+sp_uri_segment_name (SpUriSegment seg)
+{
+	static const char *names[] = {
+		[SP_URI_SCHEME]   = "scheme",
+		[SP_URI_USER]     = "user",
+		[SP_URI_PASSWORD] = "password",
+		[SP_URI_HOST]     = "host",
+		[SP_URI_PORT]     = "port",
+		[SP_URI_PATH]     = "path",
+		[SP_URI_QUERY]    = "query",
+		[SP_URI_FRAGMENT] = "fragment"
+	};
+
+	if (seg < SP_URI_SEGMENT_FIRST || seg > SP_URI_SEGMENT_LAST) {
+		return NULL;
+	}
+	return names[seg];
+}
+
+static void
+print_segment (const SpUri *u, const char *buf, FILE *out, SpUriSegment seg)
+{
+	if (!sp_uri_has_segment (u, seg)) {
+		return;
+	}
+	fprintf (out, "    %s[%u, %u]",
+			sp_uri_segment_name (seg),
+			u->seg[seg].off, u->seg[seg].len);
+	if (buf != NULL) {
+		fprintf (out, " = \"%.*s\"\n",
+				(int)u->seg[seg].len,
+				buf + u->seg[seg].off);
+	}
+	else {
+		fputc ('\n', out);
+	}
+}
+
+void
+sp_uri_print (const SpUri *u, const char *buf, FILE *out)
+{
+	if (out == NULL) {
+		out = stderr;
+	}
+
+	if (u) {
+		flockfile (out);
+
+		SpRange16 rng;
+		sp_uri_range (u, SP_URI_SEGMENT_FIRST, SP_URI_SEGMENT_LAST, &rng);
+
+		fprintf (out, "#<SpUri:%p", (void *)u);
+		if (buf != NULL) {
+			fprintf (out, " value=\"%.*s\"", (int)rng.len, buf+rng.off);
+		}
+		fprintf (out, "> {\n");
+
+		print_segment (u, buf, out, SP_URI_SCHEME);
+		print_segment (u, buf, out, SP_URI_USER);
+		print_segment (u, buf, out, SP_URI_PASSWORD);
+		print_segment (u, buf, out, SP_URI_HOST);
+		print_segment (u, buf, out, SP_URI_PORT);
+		print_segment (u, buf, out, SP_URI_PATH);
+		print_segment (u, buf, out, SP_URI_QUERY);
+		print_segment (u, buf, out, SP_URI_FRAGMENT);
+
+		fprintf (out, "}\n");
+
+		funlockfile (out);
+	}
+	else {
+		fprintf (out, "#<SpUri(null)>\n");
+	}
 }
 
