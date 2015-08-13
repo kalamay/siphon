@@ -11,10 +11,10 @@ sp_uri_copy (
 		SpUri *dst, char *dstbuf, size_t dstlen,
 		const SpUri *u, const char *ubuf)
 {
-	assert (u != NULL);
-	assert (ubuf != NULL);
 	assert (dst != NULL);
 	assert (dstbuf != NULL);
+	assert (u != NULL);
+	assert (ubuf != NULL);
 
 	uint16_t ulen = sp_uri_length (u);
 	if (ulen > dstlen) {
@@ -36,6 +36,9 @@ sp_uri_join (
 		const SpUri *a, const char *abuf,
 		const SpUri *b, const char *bbuf)
 {
+	assert (dst != NULL);
+	assert (dstbuf != NULL);
+
 	if (sp_uri_eq (a, abuf, b, bbuf) || sp_uri_length (a) == 0) {
 		return sp_uri_copy (dst, dstbuf, dstlen, b, bbuf);
 	}
@@ -101,6 +104,10 @@ sp_uri_join_paths (
 		const char *abuf, size_t alen,
 		const char *bbuf, size_t blen)
 {
+	assert (outbuf != NULL);
+	assert (abuf != NULL);
+	assert (bbuf != NULL);
+
 	SpRange16 rng = { 0, alen };
 	sp_path_pop (abuf, &rng, 1);
 
