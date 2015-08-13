@@ -47,6 +47,7 @@ add_library(
 	lib/json.c
 	lib/path.c
 	lib/uri.c
+	lib/alloc.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
@@ -120,6 +121,8 @@ target_link_libraries(test-path siphon m)
 add_test(NAME uri COMMAND test-uri)
 add_executable(test-uri test/uri.c)
 target_link_libraries(test-uri siphon m)
+add_executable(test-uri-input test/uri-input.c)
+target_link_libraries(test-uri-input siphon m)
 
 add_test(NAME bloom COMMAND test-bloom)
 add_executable(test-bloom test/bloom.c)
