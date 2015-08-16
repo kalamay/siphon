@@ -1,7 +1,6 @@
 #include "siphon/http.h"
 #include "common.h"
 
-#include <stdio.h>
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
@@ -327,5 +326,41 @@ sp_http_is_done (const SpHttp *p)
 	assert (p != NULL);
 
 	return IS_DONE (p->cs);
+}
+
+void
+sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out)
+{
+	assert (p != NULL);
+
+	if (out == NULL) {
+		out = stderr;
+	}
+
+	switch (p->type) {
+	case SP_HTTP_REQUEST:
+		fprintf (out, "> %.*s %.*s HTTP/1.%u\n",
+				(int)p->as.request.method.len, (char *)buf+p->as.request.method.off,
+				(int)p->as.request.uri.len, (char *)buf+p->as.request.uri.off,
+				p->as.request.version);
+		break;
+	case SP_HTTP_RESPONSE:
+		fprintf (out, "< HTTP/1.%u %u %.*s\n",
+				p->as.response.version,
+				p->as.response.status,
+				(int)p->as.response.reason.len, (char *)buf+p->as.response.reason.off);
+		break;
+	case SP_HTTP_FIELD:
+		fprintf (out, "%c %.*s: %.*s\n",
+				p->response ? '<' : '>',
+				(int)p->as.field.name.len, (char *)buf+p->as.field.name.off,
+				(int)p->as.field.value.len, (char *)buf+p->as.field.value.off);
+		break;
+	case SP_HTTP_BODY_START:
+	case SP_HTTP_TRAILER_END:
+		fprintf (out, "%c\n", p->response ? '<' : '>');
+		break;
+	default: break;
+	}
 }
 
