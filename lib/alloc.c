@@ -1,3 +1,5 @@
+#include "siphon/alloc.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -93,7 +95,7 @@ sp_mallocn (size_t size, size_t align)
 		fprintf (stderr, "incorrect space for preamble\n");
 		abort ();
 	}
-	if ((uintptr_t)pre & (__alignof__ (pre) - 1)) {
+	if ((uintptr_t)pre & (sizeof (pre) - 1)) {
 		fprintf (stderr, "incorrect alignment for preamble\n");
 		abort ();
 	}
