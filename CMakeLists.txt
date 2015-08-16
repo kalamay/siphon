@@ -109,6 +109,8 @@ target_link_libraries(test-utf8 siphon m)
 add_test(NAME http COMMAND test-http)
 add_executable(test-http test/http.c)
 target_link_libraries(test-http siphon m)
+add_executable(test-http-input test/http-input.c)
+target_link_libraries(test-http-input siphon m)
 
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
