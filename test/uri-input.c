@@ -6,7 +6,7 @@
 #include <err.h>
 
 static char *
-readin (size_t *outlen, bool trim)
+readin (size_t *outlen)
 {
 	char buffer[8192];
 
@@ -15,7 +15,7 @@ readin (size_t *outlen, bool trim)
 	}
 
 	size_t len = strlen (buffer);
-	while (trim && buffer[len-1] == '\n') {
+	while (buffer[len-1] == '\n') {
 		len--;
 	}
 
@@ -33,7 +33,7 @@ int
 main (void)
 {
 	size_t len;
-	char *str = readin (&len, true);
+	char *str = readin (&len);
 
 	SpUri uri;
 	ssize_t rc = sp_uri_parse (&uri, str, len);
