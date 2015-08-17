@@ -57,6 +57,7 @@ read_body (SpHttp *p, char *buf, size_t len)
 	}
 
 	char *cur = buf;
+	char *end = buf + len;
 	do {
 		ssize_t rc = sp_http_next (p, cur, len);
 		if (rc < 0) return rc;
@@ -73,7 +74,7 @@ read_body (SpHttp *p, char *buf, size_t len)
 		else {
 			break;
 		}
-	} while (true);
+	} while (cur < end);
 	return cur - buf;
 }
 
@@ -83,12 +84,13 @@ main (void)
 	size_t len;
 	char *buf = readin (&len);
 	char *cur = buf;
+	char *end = buf + len;
 	ssize_t rc;
 
 	SpHttp p;
 	sp_http_init_request (&p);
 
-	while (!sp_http_is_done (&p)) {
+	while (!sp_http_is_done (&p) && cur < end) {
 		rc = sp_http_next (&p, cur, len);
 		if (rc < 0) goto error;
 
