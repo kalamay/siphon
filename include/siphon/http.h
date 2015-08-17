@@ -62,6 +62,7 @@ typedef struct {
 	size_t off;       // internal offset mark
 	size_t body_len;  // content length or current chunk size
 	uint16_t scans;   // number of passes through the scanner
+	uint8_t cscans;   // number of scans in the current rule
 	bool response;    // true if response, false if request
 	bool chunked;     // set by field scanner
 	bool trailers;    // parsing trailers

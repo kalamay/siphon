@@ -312,12 +312,21 @@ sp_http_next (SpHttp *p, const void *restrict buf, size_t len)
 {
 	assert (p != NULL);
 
+	ssize_t rc;
 	p->scans++;
-	if (p->cs & REQ) return parse_request_line (p, buf, len);
-	if (p->cs & RES) return parse_response_line (p, buf, len);
-	if (p->cs & FLD) return parse_field (p, buf, len);
-	if (p->cs & CHK) return parse_chunk (p, buf, len);
-	YIELD_ERROR (SP_ESTATE);
+	p->cscans++;
+	     if (p->cs & REQ) rc = parse_request_line (p, buf, len);
+	else if (p->cs & RES) rc = parse_response_line (p, buf, len);
+	else if (p->cs & FLD) rc = parse_field (p, buf, len);
+	else if (p->cs & CHK) rc = parse_chunk (p, buf, len);
+	else { YIELD_ERROR (SP_ESTATE); }
+	if (rc > 0) {
+		p->cscans = 0;
+	}
+	else if (rc == 0 && p->cscans > 64) {
+		YIELD_ERROR (SP_ETOOSHORT);
+	}
+	return rc;
 }
 
 bool
