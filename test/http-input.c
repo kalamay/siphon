@@ -1,5 +1,4 @@
 #include "siphon/siphon.h"
-#include "siphon/alloc.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -7,26 +6,6 @@
 #include <err.h>
 
 #include <ctype.h>
-
-static char *
-readin (size_t *outlen)
-{
-	char buffer[8192];
-
-	ssize_t len = read (STDIN_FILENO, buffer, sizeof buffer);
-	if (len <= 0) {
-		err (EXIT_FAILURE, "read");
-	}
-
-	char *str = sp_mallocn (len, 1);
-	if (str == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
-	}
-
-	memcpy (str, buffer, len);
-	*outlen = len;
-	return str;
-}
 
 static void
 print_string (FILE *out, const void *val, size_t len)
@@ -82,11 +61,14 @@ read_body (SpHttp *p, char *buf, size_t len)
 int
 main (void)
 {
-	size_t len;
-	char *buf = readin (&len);
+	char buf[8192];
 	char *cur = buf;
-	char *end = buf + len;
 	ssize_t rc;
+	ssize_t len = read (STDIN_FILENO, buf, sizeof buf);
+	if (len <= 0) {
+		err (EXIT_FAILURE, "read");
+	}
+	char *end = buf + len;
 
 	SpHttp p;
 	sp_http_init_request (&p);
@@ -108,12 +90,10 @@ main (void)
 		}
 	}
 
-	sp_free (buf);
 	return 0;
 
 error:
 	fprintf (stderr, "http error: %s\n", sp_strerror (rc));
-	sp_free (buf);
 	return 1;
 }
 
