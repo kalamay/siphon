@@ -1,6 +1,7 @@
 #include "siphon/siphon.h"
 #include "siphon/alloc.h"
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
@@ -12,9 +13,9 @@ readin (size_t *outlen)
 {
 	char buffer[8192];
 
-	size_t len = fread (buffer, 1, sizeof buffer, stdin);
-	if (len == 0) {
-		err (EXIT_FAILURE, "fgets");
+	ssize_t len = read (STDIN_FILENO, buffer, sizeof buffer);
+	if (len <= 0) {
+		err (EXIT_FAILURE, "read");
 	}
 
 	char *str = sp_mallocn (len, 1);
