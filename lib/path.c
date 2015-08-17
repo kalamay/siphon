@@ -26,6 +26,7 @@ sp_path_pop (const char *path, SpRange16 *rng, int n)
 	while (n > 0 && rng->len > 0) {
 		const char *m = memrchr (path+rng->off, '/', rng->len);
 		if (m == NULL) {
+			rng->len = 0;
 			break;
 		}
 		rng->len = m - path - rng->off;
