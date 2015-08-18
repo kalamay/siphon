@@ -54,7 +54,7 @@
 		| extension
 		;
 
-	main := space* dir ( space* ";" space* dir )* ;
+	main := space* dir ( space* "," space* dir )* ;
 }%%
 
 ssize_t
