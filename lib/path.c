@@ -29,12 +29,14 @@ sp_path_pop (const char *path, SpRange16 *rng, int n)
 			rng->len = 0;
 			break;
 		}
+		n--;
 		rng->len = m - path - rng->off;
 		if (rng->len == 0) {
-			rng->len = 1;
+			if (n == 0) {
+				rng->len = 1;
+			}
 			break;
 		}
-		n--;
 	}
 }
 

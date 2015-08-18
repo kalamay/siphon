@@ -29,6 +29,15 @@
 	mu_assert_str_eq (buf, exp);                                     \
 } while (0)
 
+#define TEST_POP(path, cnt, exp) do {                                \
+	char buf[4096] = { 0 };                                          \
+	SpRange16 popped = { 0, sizeof path - 1 };                       \
+	sp_path_pop (path, &popped, cnt);                                \
+	memcpy (buf, (const char *)path + popped.off, popped.len);       \
+	buf[popped.len] = '\0';                                          \
+	mu_assert_str_eq (buf, exp);                                     \
+} while (0)
+
 #define TEST_SPLIT(path, cnt, a, b) do {                             \
 	SpRange16 ra, rb;                                                \
 	char buf[4096];                                                  \
@@ -112,6 +121,18 @@ test_clean (void)
 }
 
 static void
+test_pop (void)
+{
+	TEST_POP ("/path/to/file.txt", 1, "/path/to");
+	TEST_POP ("/path/to/file.txt", 2, "/path");
+	TEST_POP ("/path/to/file.txt", 3, "/");
+	TEST_POP ("/path/to/file.txt", 4, "");
+	TEST_POP ("path/to/file.txt", 1, "path/to");
+	TEST_POP ("path/to/file.txt", 2, "path");
+	TEST_POP ("path/to/file.txt", 3, "");
+}
+
+static void
 test_split (void)
 {
 	TEST_SPLIT ("/path/to/file.txt", 1, "/path/to", "file.txt");
@@ -189,6 +210,7 @@ main (void)
 	test_clean ();
 	test_split ();
 	test_splitext ();
+	test_pop ();
 	test_match ();
 
 	mu_exit ("path");
