@@ -32,7 +32,7 @@
 	action sec_neg  { neg = -1; }
 	action sec_incr { num = num*10 + (fc-'0'); }
 
-	token = [!#-'*-.0-:@A-Z^-`a-z|~]+ >str_init %str_end ;
+	token = [!#-'*-+\-.0-:@A-Z^-`a-z|~]+ >str_init %str_end ;
 	string = '"' ( [^"]* >str_init %str_end ) '"' ;
 	value = '=' ( token | string ) ;
 	integer = '0' | [1-9] digit* ;
