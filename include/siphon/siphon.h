@@ -8,6 +8,7 @@
 #include "uri.h"
 #include "crc.h"
 #include "hash.h"
+#include "line.h"
 
 #endif
 

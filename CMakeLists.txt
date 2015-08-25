@@ -48,6 +48,7 @@ add_library(
 	lib/path.c
 	lib/uri.c
 	lib/alloc.c
+	lib/line.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
@@ -133,4 +134,8 @@ target_link_libraries(test-bloom siphon m)
 add_test(NAME cache COMMAND test-cache)
 add_executable(test-cache test/cache.c)
 target_link_libraries(test-cache siphon m)
+
+add_test(NAME line COMMAND test-line)
+add_executable(test-line test/line.c)
+target_link_libraries(test-line siphon m)
 
