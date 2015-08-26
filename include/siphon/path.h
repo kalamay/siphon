@@ -10,6 +10,10 @@ typedef enum {
 	SP_PATH_URI = SP_PATH_TRAIL_SLASH | SP_PATH_ALLOW_EMPTY
 } SpPathMode;
 
+#ifndef SP_PATH_MAX
+# define SP_PATH_MAX 4096
+#endif
+
 SP_EXPORT void
 sp_path_pop (const char *path, SpRange16 *rng, int n);
 
@@ -30,6 +34,12 @@ sp_path_clean (char *path, uint16_t len, SpPathMode mode);
 
 SP_EXPORT bool
 sp_path_match (const char *path, const char *match);
+
+SP_EXPORT ssize_t
+sp_path_proc (char *buf, size_t buflen);
+
+SP_EXPORT ssize_t
+sp_path_env (const char *name, char *buf, size_t buflen);
 
 #endif
 

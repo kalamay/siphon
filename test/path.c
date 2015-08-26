@@ -203,6 +203,24 @@ test_match (void)
 	TEST_MATCH_INVALID ("test.c", "test*");
 }
 
+static void
+test_proc (void)
+{
+	char buf[SP_PATH_MAX];
+	ssize_t len = sp_path_proc (buf, sizeof buf);
+	printf ("DEBUG: process path '%s'\n", buf);
+	mu_assert_int_gt (len, 0);
+}
+
+static void
+test_env (void)
+{
+	char buf[SP_PATH_MAX];
+	ssize_t len = sp_path_env ("vi", buf, sizeof buf);
+	printf ("DEBUG: vi path '%s'\n", buf);
+	mu_assert_int_gt (len, 0);
+}
+
 int
 main (void)
 {
@@ -212,6 +230,8 @@ main (void)
 	test_splitext ();
 	test_pop ();
 	test_match ();
+	test_proc ();
+	test_env ();
 
 	mu_exit ("path");
 }

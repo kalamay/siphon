@@ -1,10 +1,14 @@
 #include "siphon/path.h"
 
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
 
 #ifdef __APPLE__
+
+#include <mach-o/dyld.h>
 
 static void *
 memrchr (const void *m, int c, size_t n)
@@ -427,5 +431,75 @@ sp_path_match (const char *path, const char *match)
 	}
 
 	return *p == '\0' && *m == '\0';
+}
+
+ssize_t
+sp_path_proc (char *buf, size_t buflen)
+{
+	ssize_t len = -1;
+
+#if defined(__linux)
+	len = readlink ("/proc/self/exe", buf, buflen-1);
+#elif defined(__APPLE__)
+	char tmp[4096];
+	if (buflen < sizeof tmp) {
+		errno = ENOBUFS;
+		return -1;
+	}
+	uint32_t tmplen = sizeof (tmp)-1;
+	if (_NSGetExecutablePath (tmp, &tmplen) == 0) {
+		tmp[tmplen] = '\0';
+		if (realpath (tmp, buf)) {
+			len = strlen (buf);
+		}
+	}
+#elif defined(__FreeBSD__)
+	int mib[4];
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PATHNAME;
+	mib[3] = -1;
+	buflen--;
+	if (sysctl (mib, 4, buf, &buflen, NULL, 0) == 0) {
+		len = buflen;
+	}
+#elif defined(BSD)
+	len = readlink ("/proc/curproc/file", buf, buflen-1);
+#endif
+
+	if (len > 0) {
+		buf[len] = '\0';
+		return len;
+	}
+	return -1;
+}
+
+ssize_t
+sp_path_env (const char *name, char *buf, size_t buflen)
+{
+	if (realpath (name, buf) && access (buf, X_OK) == 0) {
+		return strlen (buf);
+	}
+
+	char *path = getenv ("PATH");
+	if (path == NULL) return -1;
+
+	size_t namelen = strlen (name), pathlen = 0;
+	ssize_t result = -1;
+	char *pathsep = NULL;
+	uint16_t len;
+
+	while ((pathsep = strchr (path, ':')) != NULL) {
+		pathlen = pathsep - path;
+		if (pathlen == 0 || buflen < pathlen) continue;
+		len = sp_path_join (buf, buflen, path, pathlen, name, namelen, 0);
+		path = pathsep + 1;
+		if (len > 0 && access (buf, X_OK) == 0) {
+			result = len;
+			break;
+		}
+	}
+
+	return result;
 }
 
