@@ -441,11 +441,11 @@ sp_path_proc (char *buf, size_t buflen)
 #if defined(__linux)
 	len = readlink ("/proc/self/exe", buf, buflen-1);
 #elif defined(__APPLE__)
-	char tmp[4096];
-	if (buflen < sizeof tmp) {
+	if (buflen < SP_PATH_MAX) {
 		errno = ENOBUFS;
 		return -1;
 	}
+	char tmp[SP_PATH_MAX*2];
 	uint32_t tmplen = sizeof (tmp)-1;
 	if (_NSGetExecutablePath (tmp, &tmplen) == 0) {
 		tmp[tmplen] = '\0';
