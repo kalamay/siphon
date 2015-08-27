@@ -37,8 +37,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.h
 	"#ifndef SIPHON_VER_H\n"
-	"#define SIPHON_VER_H\n"
-	"\n"
+	"#define SIPHON_VER_H\n\n"
 	"#define SP_VER_MAJOR ${SIPHON_VER_MAJOR}\n"
 	"#define SP_VER_MINOR ${SIPHON_VER_MINOR}\n"
 	"#define SP_VER_PATCH ${SIPHON_VER_PATCH}\n"
