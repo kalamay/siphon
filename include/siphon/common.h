@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <sys/types.h>
 #include <string.h>
 
@@ -46,6 +47,30 @@ typedef struct {
 
 #define SP_RANGE_SUFFIX(a, abuf, b, bbuf) \
 	SP_RANGE_SUFFIX_MEM(a, abuf, (bbuf)+(b).off, (b).len)
+
+#define sp_container_of(ptr, type, member) ({            \
+	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );  \
+})
+
+#define SP_POWER_OF_2(n) do {         \
+	if (n > 0) {                      \
+		(n)--;                        \
+		(n) |= (n) >> 1;              \
+		(n) |= (n) >> 2;              \
+		(n) |= (n) >> 4;              \
+		if (sizeof (n) > 1) {         \
+			(n) |= (n) >> 8;          \
+			if (sizeof (n) > 2) {     \
+				(n) |= (n) >> 16;     \
+				if (sizeof (n) > 4) { \
+					(n) |= (n) >> 32; \
+				}                     \
+			}                         \
+		}                             \
+		(n)++;                        \
+	}                                 \
+} while (0)
 
 #endif
 
