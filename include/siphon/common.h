@@ -72,5 +72,8 @@ typedef struct {
 	}                                 \
 } while (0)
 
+#define SP_NEXT(n, quant) \
+	(((((n) - 1) / (quant)) + 1) * (quant))
+
 #endif
 
