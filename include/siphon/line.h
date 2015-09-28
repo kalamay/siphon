@@ -4,8 +4,8 @@
 #include "common.h"
 
 typedef enum {
-	SP_LINE_NONE     = -1,
-	SP_LINE_COMPLETE = 1
+	SP_LINE_NONE  = -1,
+	SP_LINE_VALUE = 1
 } SpLineType;
 
 typedef struct {

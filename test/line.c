@@ -47,7 +47,7 @@ parse (SpLine *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 			return false;
 		}
 
-		if (p->type == SP_LINE_COMPLETE) {
+		if (p->type == SP_LINE_VALUE) {
 			msg->fields[msg->count].buf = buf;
 			msg->fields[msg->count].len = rc;
 			msg->count++;
