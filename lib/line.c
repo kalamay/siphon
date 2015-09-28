@@ -28,6 +28,6 @@ sp_line_next (SpLine *p, const void *restrict buf, size_t len, bool eof)
 
 	EXPECT_SET (eol, len, eof);
 	end++;
-	YIELD (SP_LINE_COMPLETE, 0);
+	YIELD (SP_LINE_VALUE, 0);
 }
 
