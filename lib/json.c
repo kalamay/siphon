@@ -10,32 +10,16 @@
 static const uint8_t rng_non_ws[] = "\x00\x08\x0b\x0c\x0e\x1f\x21\xff";
 
 
+#include "stack.h"
+
 #define STACK_ARR 0
 #define STACK_OBJ 1
 
-#define STACK_MAX(p) \
-	(sizeof (p->stack)*8 - 1)
-
-#define STACK_TOP(p) \
-	(!!(p->stack[(p->depth-1)/8] & (1 << ((p->depth-1)%8))))
+#define STACK_PUSH_ARR STACK_PUSH_FALSE
+#define STACK_PUSH_OBJ STACK_PUSH_TRUE
 
 #define STACK_IN_ARR(p) (STACK_TOP(p) == STACK_ARR)
 #define STACK_IN_OBJ(p) (STACK_TOP(p) == STACK_OBJ)
-
-#define STACK_PUSH_ARR(p) do {                              \
-	if (p->depth == STACK_MAX (p)) YIELD_ERROR (SP_ESTACK); \
-	p->stack[p->depth/8] &= ~(1 << (p->depth%8));           \
-	p->depth++;                                             \
-} while (0)
-
-#define STACK_PUSH_OBJ(p) do {                              \
-	if (p->depth == STACK_MAX (p)) YIELD_ERROR (SP_ESTACK); \
-	p->stack[p->depth/8] |= 1 << (p->depth%8);              \
-	p->depth++;                                             \
-} while (0)
-
-#define STACK_POP(p, c) \
-	(p->depth > 0 && STACK_TOP(p) == (c) ? (--p->depth, 1) : 0)
 
 #define STACK_POP_ARR(p) STACK_POP(p, STACK_ARR)
 #define STACK_POP_OBJ(p) STACK_POP(p, STACK_OBJ)
