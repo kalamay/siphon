@@ -97,7 +97,7 @@ SP_EXPORT size_t
 sp_msgpack_enc_map (void *buf, uint32_t count);
 
 SP_EXPORT size_t
-sp_msgpack_enc_ext (void *buf, int8_t type, size_t len);
+sp_msgpack_enc_ext (void *buf, int8_t type, uint32_t len);
 
 #endif
 

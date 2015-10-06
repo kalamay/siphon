@@ -100,7 +100,7 @@
 #endif
 
 #define WRITE_INT(buf, tag, T, val) do {   \
-	((uint8_t *)buf)[0] = (tag);           \
+	*(uint8_t *)buf = (tag);               \
 	*(T *)((uint8_t *)(buf) + 1) = (T)val; \
 } while (0)
 
@@ -217,7 +217,7 @@ next_tag (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 	case 0x17: // fixext 8
 		EXPECT_SIZE (2, len, eof);
 		p->tag.ext.type = buf[1];
-		p->tag.ext.len = (1 << (((unsigned int)*buf) & 0x03)) + 1;
+		p->tag.ext.len = 1 << (((unsigned int)*buf) & 0x03);
 		p->type = SP_MSGPACK_EXT;
 		return 2;
 	case 0x18: // fixext 16
@@ -372,28 +372,29 @@ sp_msgpack_enc (SpMsgpackType type, const SpMsgpackTag *tag, void *buf)
 		return sp_msgpack_enc_map (buf, tag->count);
 	case SP_MSGPACK_EXT:
 		 return sp_msgpack_enc_ext (buf, tag->ext.type, tag->ext.len);
-	default:             return 0;
+	default:
+		 return 0;
 	}
 }
 
 size_t 
 sp_msgpack_enc_nil (void *buf)
 {
-	((uint8_t *)buf)[0] = 0xc0;
+	*(uint8_t *)buf = 0xc0;
 	return 1;
 }
 
 size_t
 sp_msgpack_enc_false (void *buf)
 {
-	((uint8_t *)buf)[0] = 0xc2;
+	*(uint8_t *)buf = 0xc2;
 	return 1;
 }
 
 size_t
 sp_msgpack_enc_true (void *buf)
 {
-	((uint8_t *)buf)[0] = 0xc3;
+	*(uint8_t *)buf = 0xc3;
 	return 1;
 }
 
@@ -404,7 +405,7 @@ sp_msgpack_enc_negative (void *buf, int64_t val)
 		return sp_msgpack_enc_positive (buf, (uint64_t)val);
 	}
 	if (val >= -0x1f) {
-		((uint8_t *)buf)[0] = (uint8_t)val | 0xe0;
+		*(uint8_t *)buf = (uint8_t)val | 0xe0;
 		return 1;
 	}
 	if (val >= INT8_MIN) {
@@ -427,7 +428,7 @@ size_t
 sp_msgpack_enc_positive (void *buf, uint64_t val)
 {
 	if (val <= 0x7f) {
-		((uint8_t *)buf)[0] = (uint8_t)val;
+		*(uint8_t *)buf = (uint8_t)val;
 		return 1;
 	}
 	if (val <= UINT8_MAX) {
@@ -468,7 +469,7 @@ size_t
 sp_msgpack_enc_string (void *buf, uint32_t len)
 {
 	if (len <= 0x1f) {
-		((uint8_t *)buf)[0] = (uint8_t)len | 0xa0;
+		*(uint8_t *)buf = (uint8_t)len | 0xa0;
 		return 1;
 	}
 	if (len <= UINT8_MAX) {
@@ -502,7 +503,7 @@ size_t
 sp_msgpack_enc_array (void *buf, uint32_t count)
 {
 	if (count <= 0xf) {
-		((uint8_t *)buf)[0] = (uint8_t)count | 0x90;
+		*(uint8_t *)buf = (uint8_t)count | 0x90;
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
@@ -517,7 +518,7 @@ size_t
 sp_msgpack_enc_map (void *buf, uint32_t count)
 {
 	if (count <= 0xf) {
-		((uint8_t *)buf)[0] = (uint8_t)count | 0x80;
+		*(uint8_t *)buf = (uint8_t)count | 0x80;
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
@@ -529,11 +530,33 @@ sp_msgpack_enc_map (void *buf, uint32_t count)
 }
 
 size_t
-sp_msgpack_enc_ext (void *buf, int8_t type, size_t len)
+sp_msgpack_enc_ext (void *buf, int8_t type, uint32_t len)
 {
-	(void)buf;
-	(void)type;
-	(void)len;
-	return 0;
+	if (type < 0) {
+		return 0;
+	}
+
+	size_t off = 1;
+
+	if (len == 1)       { *(uint8_t *)buf = 0xd4; }
+	else if (len == 2)  { *(uint8_t *)buf = 0xd5; }
+	else if (len == 4)  { *(uint8_t *)buf = 0xd6; }
+	else if (len == 8)  { *(uint8_t *)buf = 0xd7; }
+	else if (len == 16) { *(uint8_t *)buf = 0xd8; }
+	else if (len <= UINT8_MAX) {
+		WRITE_INT (buf, 0xc7, uint8_t, len);
+		off = 2;
+	}
+	else if (len <= UINT16_MAX) {
+		WRITE_INT (buf, 0xc8, uint16_t, htobe16 (len));
+		off = 3;
+	}
+	else {
+		WRITE_INT (buf, 0xc9, uint32_t, htobe32 (len));
+		off = 5;
+	}
+
+	((int8_t *)buf)[off] = type;
+	return off + 1;
 }
 

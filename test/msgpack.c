@@ -513,7 +513,38 @@ test_encode_map ()
 static void
 test_encode_ext ()
 {
-	// TODO: implement extension test
+	uint8_t buf[352], *m;
+	ssize_t rc;
+
+	uint32_t lengths[] = { 1, 2, 3, 4, 5, 8, 10, 16, 17, 256 };
+
+	m = buf;
+	for (size_t i = 0; i < count (lengths); i++) {
+		rc = sp_msgpack_enc_ext (m, (int8_t)i, lengths[i]);
+		mu_assert_int_ge (rc, 2);
+		if (rc <= 0) return;
+		m += rc;
+		memset (m, 0xff, lengths[i]);
+		m += lengths[i];
+	}
+
+	SpMsgpack p;
+	sp_msgpack_init (&p);
+
+	m = buf;
+	for (size_t i = 0; i < count (lengths); i++) {
+		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
+		mu_assert_int_ge (rc, 2);
+		if (rc <= 0) return;
+		mu_assert_int_eq (p.type, SP_MSGPACK_EXT);
+		mu_assert_int_eq (p.tag.ext.type, (int8_t)i);
+		mu_assert_int_eq (p.tag.ext.len, lengths[i]);
+		m += rc + p.tag.ext.len;
+		if (m > buf + sizeof buf) {
+			mu_fail ("invalid buffer range");
+			return;
+		}
+	}
 }
 
 int
