@@ -10,6 +10,7 @@
 #include "crc.h"
 #include "hash.h"
 #include "line.h"
+#include "msgpack.h"
 
 #endif
 

@@ -55,6 +55,7 @@ add_library(siphon OBJECT
 	lib/utf8.c
 	lib/http.c
 	lib/json.c
+	lib/msgpack.c
 	lib/path.c
 	lib/uri.c
 	lib/alloc.c
@@ -133,6 +134,10 @@ target_link_libraries(test-http-input siphon-static m)
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
 target_link_libraries(test-json siphon-static m)
+
+add_test(NAME msgpack COMMAND test-msgpack)
+add_executable(test-msgpack test/msgpack.c)
+target_link_libraries(test-msgpack siphon-static m)
 
 add_test(NAME path COMMAND test-path)
 add_executable(test-path test/path.c)
