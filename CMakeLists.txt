@@ -138,6 +138,8 @@ target_link_libraries(test-json siphon-static m)
 add_test(NAME msgpack COMMAND test-msgpack)
 add_executable(test-msgpack test/msgpack.c)
 target_link_libraries(test-msgpack siphon-static m)
+add_executable(test-msgpack-input test/msgpack-input.c)
+target_link_libraries(test-msgpack-input siphon-static m)
 
 add_test(NAME path COMMAND test-path)
 add_executable(test-path test/path.c)
