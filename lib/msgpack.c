@@ -299,7 +299,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_BINARY;
-		return blen + 1;
+		VERIFY_LEN (blen + 1, p->tag.count, len, eof);
 
 	case B_EXT8:
 	case B_EXT16:
@@ -309,7 +309,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		READ_DINT (p->tag.ext.len, buf+1, blen);
 		p->tag.ext.type = buf[blen+1];
 		p->type = SP_MSGPACK_EXT;
-		VERIFY_LEN (blen + 2, p->tag.ext.type, len, eof);
+		VERIFY_LEN (blen + 2, p->tag.ext.len, len, eof);
 
 	case B_FLOAT:
 		EXPECT_SIZE (5, len, eof);
