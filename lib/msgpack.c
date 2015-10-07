@@ -416,6 +416,9 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof)
 		if (len > 0) {
 			rc = next (p, buf, len, eof);
 		}
+		else if (eof) {
+			YIELD_ERROR (SP_ESYNTAX);
+		}
 	}
 
 	if (rc >= 0 && p->type > SP_MSGPACK_ARRAY) {
