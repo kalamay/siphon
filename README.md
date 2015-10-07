@@ -44,7 +44,7 @@ cmake -H. -Bbuild/fuzz -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/bi
 cmake --build build/fuzz
 
 # create directories to capture the results
-mkdir -p build/fuzz/{http,uri}
+mkdir -p build/fuzz/{http,uri,msgpack}
 
 # test http module
 # run these in different shells (best in tmux or screen)

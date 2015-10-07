@@ -36,8 +36,7 @@ main (void)
 
 	while (!sp_msgpack_is_done (&p)) {
 		ssize_t rc = sp_msgpack_next (&p, buf, len, true);
-		if (rc < 0) {
-			sp_free (buf);
+		if (rc < 0 || (size_t)rc > len) {
 			errx (EXIT_FAILURE, "failed to parse");
 		}
 

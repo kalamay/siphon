@@ -232,7 +232,7 @@ sp_msgpack_init (SpMsgpack *p)
 static inline ssize_t
 next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 {
-	const uint8_t register c = *(uint8_t *)buf;
+	uint8_t c = *(uint8_t *)buf;
 
 	if (B_IS_FUINT (c)) {
 		p->type = SP_MSGPACK_POSITIVE;
