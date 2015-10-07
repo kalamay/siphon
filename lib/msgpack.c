@@ -91,6 +91,14 @@
 	}                                      \
 } while (0)
 
+#define VERIFY_LEN(off, exp, remain, done) do {                \
+	ssize_t _off = (ssize_t)(off);                             \
+	if ((done) && _off + (ssize_t)(exp) > (ssize_t)(remain)) { \
+		YIELD_ERROR (SP_ESYNTAX);                              \
+	}                                                          \
+	return _off;                                               \
+} while (0)
+
 /**
  * Loads an unsigned integer into the tag.
  * @p: parser pointer
@@ -249,6 +257,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 	if (B_IS_FSTR (c)) {
 		p->type = SP_MSGPACK_STRING;
 		p->tag.count = B_FSTR_LEN (c);
+		VERIFY_LEN (1, p->tag.count, len, eof);
 		return 1;
 	}
 
@@ -300,7 +309,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		READ_DINT (p->tag.ext.len, buf+1, blen);
 		p->tag.ext.type = buf[blen+1];
 		p->type = SP_MSGPACK_EXT;
-		return blen + 2;
+		VERIFY_LEN (blen + 2, p->tag.ext.type, len, eof);
 
 	case B_FLOAT:
 		EXPECT_SIZE (5, len, eof);
@@ -347,13 +356,13 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		p->tag.ext.type = buf[1];
 		p->tag.ext.len = 1 << ((unsigned)c & 0x03);
 		p->type = SP_MSGPACK_EXT;
-		return 2;
+		VERIFY_LEN (2, p->tag.ext.len, len, eof);
 	case B_FEXT128:
 		EXPECT_SIZE (2, len, eof);
 		p->tag.ext.type = buf[1];
 		p->tag.ext.len = 16;
 		p->type = SP_MSGPACK_EXT;
-		return 2;
+		VERIFY_LEN (2, p->tag.ext.len, len, eof);
 
 	case B_STR8:
 	case B_STR16:
@@ -362,7 +371,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_STRING;
-		return blen + 1;
+		VERIFY_LEN (blen + 1, p->tag.count, len, eof);
 
 	case B_ARR16:
 	case B_ARR32:
