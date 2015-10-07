@@ -1,4 +1,5 @@
 #include "siphon/siphon.h"
+#include "siphon/alloc.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -58,17 +59,43 @@ read_body (SpHttp *p, char *buf, size_t len)
 	return cur - buf;
 }
 
-int
-main (void)
+static char *
+readin (const char *path, size_t *outlen)
 {
-	char buf[8192];
-	char *cur = buf;
-	ssize_t rc;
-	ssize_t len = read (STDIN_FILENO, buf, sizeof buf);
-	if (len <= 0) {
-		err (EXIT_FAILURE, "read");
+	FILE *in = stdin;
+	if (path != NULL) {
+		in = fopen (path, "r");
+		if (in == NULL) {
+			err (EXIT_FAILURE, "fopen");
+		}
 	}
+
+	char buffer[8192];
+	size_t len = fread (buffer, 1, sizeof buffer, in);
+	if (len == 0) {
+		err (EXIT_FAILURE, "fread");
+	}
+
+	fclose (in);
+
+	char *copy = sp_mallocn (len, 1);
+	if (copy == NULL) {
+		err (EXIT_FAILURE, "sp_mallocn");
+	}
+
+	memcpy (copy, buffer, len);
+	*outlen = len;
+	return copy;
+}
+
+int
+main (int argc, char **argv)
+{
+	size_t len;
+	char *buf = readin (argc > 1 ? argv[1] : NULL, &len);
+	char *cur = buf;
 	char *end = buf + len;
+	ssize_t rc;
 
 	SpHttp p;
 	sp_http_init_request (&p);
@@ -90,10 +117,13 @@ main (void)
 		}
 	}
 
+	sp_free (buf);
+
 	return 0;
 
 error:
 	fprintf (stderr, "http error: %s\n", sp_strerror (rc));
+	sp_free (buf);
 	return 1;
 }
 
