@@ -53,12 +53,7 @@ afl-fuzz -i test/fuzz/http -o build/fuzz/http -S fuzz02 ./test-http-input
 afl-fuzz -i test/fuzz/http -o build/fuzz/http -S fuzz03 ./test-http-input
 # run as many of these as you want, just make sure to update the -S parameter
 # wait a long time
-
-# test uri module
-# run these in different shells (best in tmux or screen)
-afl-fuzz -i test/fuzz/uri -o build/fuzz/uri -M fuzz01 ./build/fuzz/test-uri-input
-afl-fuzz -i test/fuzz/uri -o build/fuzz/uri -S fuzz02 ./test-uri-input
-afl-fuzz -i test/fuzz/uri -o build/fuzz/uri -S fuzz03 ./test-uri-input
-# run as many of these as you want, just make sure to update the -S parameter
-# wait a long time
 ```
+
+Similar tests are provided for the URI and MsgPack modules.
+
