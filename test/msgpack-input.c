@@ -39,7 +39,8 @@ int
 main (int argc, char **argv)
 {
 	size_t len;
-	uint8_t *buf = readin (argc > 1 ? argv[1] : NULL, &len);
+	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
+	uint8_t *buf = val;
 
 	SpMsgpack p;
 	sp_msgpack_init (&p);
@@ -47,6 +48,7 @@ main (int argc, char **argv)
 	while (!sp_msgpack_is_done (&p)) {
 		ssize_t rc = sp_msgpack_next (&p, buf, len, true);
 		if (rc < 0 || (size_t)rc > len) {
+			sp_free (val);
 			errx (EXIT_FAILURE, "failed to parse");
 		}
 
@@ -106,6 +108,7 @@ main (int argc, char **argv)
 			break;
 		}
 	}
+	sp_free (val);
 	return 0;
 }
 
