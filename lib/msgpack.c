@@ -5,6 +5,75 @@
 #include <stdio.h>
 #include <assert.h>
 
+
+
+/**
+ * tag bytes patterns
+ */
+#define B_NIL     0xc0 /* nil */
+#define B_FALSE   0xc2 /* false */
+#define B_TRUE    0xc3 /* true */
+#define B_BIN8    0xc4 /* binary with 8-bit length */
+#define B_BIN16   0xc5 /* binary with 16-bit length */
+#define B_BIN32   0xc6 /* binary with 32-bit length */
+#define B_EXT8    0xc7 /* extention with 8-bit length */
+#define B_EXT16   0xc8 /* extention with 16-bit length */
+#define B_EXT32   0xc9 /* extention with 32-bit length */
+#define B_FLOAT   0xca /* float */
+#define B_DOUBLE  0xcb /* double */
+#define B_UINT8   0xcc /* 8-bit unsigned integer */
+#define B_UINT16  0xcd /* 16-bit unsigned integer */
+#define B_UINT32  0xce /* 32-bit unsigned integer */
+#define B_UINT64  0xcf /* 64-bit unsigned integer */
+#define B_INT8    0xd0 /* 8-bit signed integer */
+#define B_INT16   0xd1 /* 16-bit signed integer */
+#define B_INT32   0xd2 /* 32-bit signed integer */
+#define B_INT64   0xd3 /* 64-bit signed integer */
+#define B_FEXT8   0xd4 /* 8-bit extension */
+#define B_FEXT16  0xd5 /* 16-bit extension */
+#define B_FEXT32  0xd6 /* 32-bit extension */
+#define B_FEXT64  0xd7 /* 64-bit extension */
+#define B_FEXT128 0xd8 /* 128-bit extension */
+#define B_STR8    0xd9 /* string with 8-bit length */
+#define B_STR16   0xda /* string with 16-bit length */
+#define B_STR32   0xdb /* string with 32-bit length */
+#define B_ARR16   0xdc /* array with 16-bit count */
+#define B_ARR32   0xdd /* array with 32-bit count */
+#define B_MAP16   0xde /* map with 16-bit count */
+#define B_MAP32   0xdf /* map with 32-bit count */
+#define B_IS_NF(n)     /* test if the tag is non-fixed */ \
+	(((n) & 0xc0) == 0xc0 && (n) != 0xc1)
+
+/**
+ * "fixed" byte patterns (value is encoded in tag)
+ */
+#define B_FINT_MIN -31                   /* smallest fixed integer */
+#define B_IS_FINT(n) (((n)&0xe0)==0xe0)  /* test if the tag is a fixed integer */
+#define B_FINT(n) ((uint8_t)(n) | 0xe0)  /* convert fixed integer into tag */
+#define B_FINT_VAL(n) ((int8_t)(n))      /* convert fixed inteter tag into value */
+
+#define B_FUINT_MAX 127                  /* largest fixed unsigned */
+#define B_IS_FUINT(n) (((n) >> 7) == 0)  /* test if the tag is a fixed unsigned */
+#define B_FUINT(n) ((uint8_t)(n))        /* convert fixed unsigned into tag */
+#define B_FUINT_VAL(n) ((uint8_t)(n))    /* convert fixed unsigned tag into value */
+
+#define B_FSTR_MAX 31                    /* longest fixed string */
+#define B_IS_FSTR(n) (((n)&0xe0)==0xa0)  /* test if the tag is a fixed string */
+#define B_FSTR(n) ((uint8_t)(n) | 0xa0)  /* convert fixed string into tag */
+#define B_FSTR_LEN(n) ((n) & B_FSTR_MAX) /* convert fixed string tag into length */
+
+#define B_FARR_MAX 15                    /* longest fixed array */
+#define B_IS_FARR(n) (((n)&0xf0)==0x90)  /* test if the tag is a fixed array */
+#define B_FARR(n) ((uint8_t)(n) | 0x90)  /* convert fixed array into tag */
+#define B_FARR_LEN(n) ((n) & B_FARR_MAX) /* convert fixed array tag into count */
+
+#define B_FMAP_MAX 15                    /* longest fixed map */
+#define B_IS_FMAP(n) (((n)&0xf0)==0x80)  /* test if the tag is a fixed map */
+#define B_FMAP(n) ((uint8_t)(n) | 0x80)  /* convert fixed map into tag */
+#define B_FMAP_LEN(n) ((n) & B_FMAP_MAX) /* convert fixed map tag into count */
+
+
+
 #define DONE 0xFFFFFFFFU
 #define IS_DONE(cs) (((cs) & 0xF0000000U) != 0)
 
@@ -73,6 +142,11 @@
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 
+/**
+ * Reads a 32-bit float
+ * @dst: value to store the read value
+ * @src: the read position of the buffer
+ */
 # define READ_FLT(dst, src) do {         \
 	union { uint32_t i; float f; } mem;  \
 	mem.f = *(float *)(src);             \
@@ -80,6 +154,11 @@
 	(dst) = mem.f;                       \
 } while (0)
 
+/**
+ * Reads a 64-bit double
+ * @dst: value to store the read value
+ * @src: the read position of the buffer
+ */
 # define READ_DBL(dst, src) do {         \
 	union { uint64_t i; double f; } mem; \
 	mem.f = *(double *)(src);            \
@@ -89,16 +168,33 @@
 
 #elif BYTE_ORDER == BIG_ENDIAN
 
+/**
+ * Reads a 32-bit float
+ * @dst: value to store the read value
+ * @src: the read position of the buffer
+ */
 # define READ_FLT(dst, src) do { \
 	(dst) = (*(float *)(src));   \
 } while (0)
 
+/**
+ * Reads a 64-bit double
+ * @dst: value to store the read value
+ * @src: the read position of the buffer
+ */
 # define READ_DBL(dst, src) do { \
 	(dst) = (*(double *)(src));  \
 } while (0)
 
 #endif
 
+/**
+ * Writes a big-endian integer into the buffer
+ * @buf: buffer to write into
+ * @tag: the tag byte
+ * @T: integer type (uint32_t, int16_t, etc.)
+ * @val: big-endian integer value
+ */
 #define WRITE_INT(buf, tag, T, val) do {   \
 	*(uint8_t *)buf = (tag);               \
 	*(T *)((uint8_t *)(buf) + 1) = (T)val; \
@@ -134,68 +230,100 @@ sp_msgpack_init (SpMsgpack *p)
 }
 
 static inline ssize_t
-next_tag (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
+next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 {
+	const uint8_t register c = *(uint8_t *)buf;
+
+	if (B_IS_FUINT (c)) {
+		p->type = SP_MSGPACK_POSITIVE;
+		p->tag.u64 = B_FUINT_VAL (c);
+		return 1;
+	}
+
+	if (B_IS_FINT (c)) {
+		p->type = SP_MSGPACK_NEGATIVE;
+		p->tag.i64 = B_FINT_VAL (c);
+		return 1;
+	}
+
+	if (B_IS_FSTR (c)) {
+		p->type = SP_MSGPACK_STRING;
+		p->tag.count = B_FSTR_LEN (c);
+		return 1;
+	}
+
+	if (B_IS_FMAP (c)) {
+		p->type = SP_MSGPACK_MAP;
+		p->tag.count = B_FMAP_LEN (c);
+		p->key = true;
+		STACK_PUSH_MAP (p, p->tag.count);
+		return 1;
+	}
+
+	if (B_IS_FARR (c)) {
+		p->type = SP_MSGPACK_ARRAY;
+		p->tag.count = B_FARR_LEN (c);
+		STACK_PUSH_ARR (p, p->tag.count);
+		return 1;
+	}
+
 	unsigned blen = 0;
 
-	switch (*buf & 0x1f) {
+	switch (c) {
 
-	case 0x00: // nil
+	case B_NIL:
 		p->type = SP_MSGPACK_NIL;
 		return 1;
 
-	case 0x01: // invalid
-		break;
-
-	case 0x02: // false
+	case B_FALSE:
 		p->type = SP_MSGPACK_FALSE;
 		return 1;
 
-	case 0x03: // true
+	case B_TRUE:
 		p->type = SP_MSGPACK_TRUE;
 		return 1;
 
-	case 0x04: // bin 8
-	case 0x05: // bin 16
-	case 0x06: // bin 32
-		blen = 1 << (((unsigned int)*buf) & 0x03);
+	case B_BIN8:
+	case B_BIN16:
+	case B_BIN32:
+		blen = 1 << ((unsigned)c & 0x03);
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_BINARY;
 		return blen + 1;
 
-	case 0x07: // ext 8
-	case 0x08: // ext 16
-	case 0x09: // ext 32
-		blen = 1 << ((((unsigned int)*buf) + 1) & 0x03);
+	case B_EXT8:
+	case B_EXT16:
+	case B_EXT32:
+		blen = 1 << (((unsigned)c + 1) & 0x03);
 		EXPECT_SIZE (blen + 2, len, eof);
 		READ_DINT (p->tag.ext.len, buf+1, blen);
 		p->tag.ext.type = buf[blen+1];
 		p->type = SP_MSGPACK_EXT;
 		return blen + 2;
 
-	case 0x0a: // float
+	case B_FLOAT:
 		EXPECT_SIZE (5, len, eof);
 		READ_FLT (p->tag.f32, buf+1);
 		p->type = SP_MSGPACK_FLOAT;
 		return 5;
 
-	case 0x0b: // double
+	case B_DOUBLE:
 		EXPECT_SIZE (9, len, eof);
 		READ_DBL (p->tag.f64, buf+1);
 		p->type = SP_MSGPACK_DOUBLE;
 		return 9;
 
-	case 0x0c: // unsigned int  8
+	case B_UINT8:
 		EXPECT_SIZE (2, len, eof);
 		p->type = SP_MSGPACK_POSITIVE;
 		p->tag.u64 = buf[1];
 		return 2;
-	case 0x0d: LOAD_UINT (p, 16, buf, len, eof);
-	case 0x0e: LOAD_UINT (p, 32, buf, len, eof);
-	case 0x0f: LOAD_UINT (p, 64, buf, len, eof);
+	case B_UINT16: LOAD_UINT (p, 16, buf, len, eof);
+	case B_UINT32: LOAD_UINT (p, 32, buf, len, eof);
+	case B_UINT64: LOAD_UINT (p, 64, buf, len, eof);
 
-	case 0x10: // signed int  8
+	case B_INT8:
 		EXPECT_SIZE (2, len, eof);
 		int8_t val = *(int8_t *)(buf+1);
 		if (val < 0) {
@@ -207,94 +335,53 @@ next_tag (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 			p->tag.u64 = (uint8_t)val;
 		}
 		return 2;
-	case 0x11: LOAD_SINT (p, 16, buf, len, eof);
-	case 0x12: LOAD_SINT (p, 32, buf, len, eof);
-	case 0x13: LOAD_SINT (p, 64, buf, len, eof);
+	case B_INT16: LOAD_SINT (p, 16, buf, len, eof);
+	case B_INT32: LOAD_SINT (p, 32, buf, len, eof);
+	case B_INT64: LOAD_SINT (p, 64, buf, len, eof);
 
-	case 0x14: // fixext 1
-	case 0x15: // fixext 2
-	case 0x16: // fixext 4
-	case 0x17: // fixext 8
+	case B_FEXT8:
+	case B_FEXT16:
+	case B_FEXT32:
+	case B_FEXT64:
 		EXPECT_SIZE (2, len, eof);
 		p->tag.ext.type = buf[1];
-		p->tag.ext.len = 1 << (((unsigned int)*buf) & 0x03);
+		p->tag.ext.len = 1 << ((unsigned)c & 0x03);
 		p->type = SP_MSGPACK_EXT;
 		return 2;
-	case 0x18: // fixext 16
+	case B_FEXT128:
 		EXPECT_SIZE (2, len, eof);
 		p->tag.ext.type = buf[1];
 		p->tag.ext.len = 16;
 		p->type = SP_MSGPACK_EXT;
 		return 2;
 
-	case 0x19: // str 8
-	case 0x1a: // str 16
-	case 0x1b: // str 32
-		blen = 1 << ((((unsigned int)*buf) & 0x03) - 1);
+	case B_STR8:
+	case B_STR16:
+	case B_STR32:
+		blen = 1 << (((unsigned)c & 0x03) - 1);
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_STRING;
 		return blen + 1;
 
-	case 0x1c: // array 16
-	case 0x1d: // array 32
-		blen = 2u << (((unsigned int)*buf) & 0x01);
+	case B_ARR16:
+	case B_ARR32:
+		blen = 2u << ((unsigned)c & 0x01);
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_ARRAY;
 		STACK_PUSH_ARR (p, p->tag.count);
 		return blen + 1;
 
-	case 0x1e: // map 16
-	case 0x1f: // map 32
-		blen = 2u << (((unsigned int)*buf) & 0x01);
+	case B_MAP16:
+	case B_MAP32:
+		blen = 2u << ((unsigned)c & 0x01);
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_MAP;
 		STACK_PUSH_MAP (p, p->tag.count);
 		return blen + 1;
 
-	}
-
-	YIELD_ERROR (SP_ESYNTAX);
-}
-
-static inline ssize_t
-next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
-{
-	const uint8_t register c = *(uint8_t *)buf;
-
-	if (c >> 7 == 0) {
-		p->type = SP_MSGPACK_POSITIVE;
-		p->tag.u64 = c;
-		return 1;
-	}
-
-	switch (c >> 5) {
-	case 5:
-		p->type = SP_MSGPACK_STRING;
-		p->tag.count = c & 0x1f;
-		return 1;
-	case 6:
-		return next_tag (p, buf, len, eof);
-	case 7:
-		p->type = SP_MSGPACK_NEGATIVE;
-		p->tag.i64 = (int8_t)c;
-		return 1;
-	}
-
-	switch (c >> 4) {
-	case 8:
-		p->type = SP_MSGPACK_MAP;
-		p->tag.count = c & 0xf;
-		p->key = true;
-		STACK_PUSH_MAP (p, p->tag.count);
-		return 1;
-	case 9:
-		p->type = SP_MSGPACK_ARRAY;
-		p->tag.count = c & 0xf;
-		STACK_PUSH_ARR (p, p->tag.count);
-		return 1;
 	}
 
 	YIELD_ERROR (SP_ESYNTAX);
@@ -380,21 +467,21 @@ sp_msgpack_enc (SpMsgpackType type, const SpMsgpackTag *tag, void *buf)
 size_t 
 sp_msgpack_enc_nil (void *buf)
 {
-	*(uint8_t *)buf = 0xc0;
+	*(uint8_t *)buf = B_NIL;
 	return 1;
 }
 
 size_t
 sp_msgpack_enc_false (void *buf)
 {
-	*(uint8_t *)buf = 0xc2;
+	*(uint8_t *)buf = B_FALSE;
 	return 1;
 }
 
 size_t
 sp_msgpack_enc_true (void *buf)
 {
-	*(uint8_t *)buf = 0xc3;
+	*(uint8_t *)buf = B_TRUE;
 	return 1;
 }
 
@@ -404,46 +491,46 @@ sp_msgpack_enc_negative (void *buf, int64_t val)
 	if (val >= 0) {
 		return sp_msgpack_enc_positive (buf, (uint64_t)val);
 	}
-	if (val >= -0x1f) {
-		*(uint8_t *)buf = (uint8_t)val | 0xe0;
+	if (val >= B_FINT_MIN) {
+		*(uint8_t *)buf = B_FINT (val);
 		return 1;
 	}
 	if (val >= INT8_MIN) {
-		WRITE_INT (buf, 0xd0, int8_t, val);
+		WRITE_INT (buf, B_INT8, int8_t, val);
 		return 2;
 	}
 	if (val >= INT16_MIN) {
-		WRITE_INT (buf, 0xd1, int16_t, htobe16 (val));
+		WRITE_INT (buf, B_INT16, int16_t, htobe16 (val));
 		return 3;
 	}
 	if (val >= INT32_MIN) {
-		WRITE_INT (buf, 0xd2, int32_t, htobe32 (val));
+		WRITE_INT (buf, B_INT32, int32_t, htobe32 (val));
 		return 5;
 	}
-	WRITE_INT (buf, 0xd3, int64_t, htobe64 (val));
+	WRITE_INT (buf, B_INT64, int64_t, htobe64 (val));
 	return 9;
 }
 
 size_t
 sp_msgpack_enc_positive (void *buf, uint64_t val)
 {
-	if (val <= 0x7f) {
-		*(uint8_t *)buf = (uint8_t)val;
+	if (val <= B_FUINT_MAX) {
+		*(uint8_t *)buf = B_FUINT (val);
 		return 1;
 	}
 	if (val <= UINT8_MAX) {
-		WRITE_INT (buf, 0xcc, uint8_t, val);
+		WRITE_INT (buf, B_UINT8, uint8_t, val);
 		return 2;
 	}
 	if (val <= UINT16_MAX) {
-		WRITE_INT (buf, 0xcd, uint16_t, htobe16 (val));
+		WRITE_INT (buf, B_UINT16, uint16_t, htobe16 (val));
 		return 3;
 	}
 	if (val <= UINT32_MAX) {
-		WRITE_INT (buf, 0xce, uint32_t, htobe32 (val));
+		WRITE_INT (buf, B_UINT32, uint32_t, htobe32 (val));
 		return 5;
 	}
-	WRITE_INT (buf, 0xcf, uint64_t, htobe64 (val));
+	WRITE_INT (buf, B_UINT64, uint64_t, htobe64 (val));
 	return 9;
 }
 
@@ -451,7 +538,7 @@ size_t
 sp_msgpack_enc_float (void *buf, float val)
 {
 	uint8_t *p = buf;
-	*p = 0xca;
+	*p = B_FLOAT;
 	READ_FLT (*(float *)(p+1), &val);
 	return 5;
 }
@@ -460,7 +547,7 @@ size_t
 sp_msgpack_enc_double (void *buf, double val)
 {
 	uint8_t *p = buf;
-	*p = 0xcb;
+	*p = B_DOUBLE;
 	READ_DBL (*(double *)(p+1), &val);
 	return 9;
 }
@@ -468,19 +555,19 @@ sp_msgpack_enc_double (void *buf, double val)
 size_t
 sp_msgpack_enc_string (void *buf, uint32_t len)
 {
-	if (len <= 0x1f) {
-		*(uint8_t *)buf = (uint8_t)len | 0xa0;
+	if (len <= B_FSTR_MAX) {
+		*(uint8_t *)buf = B_FSTR (len);
 		return 1;
 	}
 	if (len <= UINT8_MAX) {
-		WRITE_INT (buf, 0xd9, uint8_t, len);
+		WRITE_INT (buf, B_STR8, uint8_t, len);
 		return 2;
 	}
 	if (len <= UINT16_MAX) {
-		WRITE_INT (buf, 0xda, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_STR16, uint16_t, htobe16 (len));
 		return 3;
 	}
-	WRITE_INT (buf, 0xdb, uint32_t, htobe32 (len));
+	WRITE_INT (buf, B_STR32, uint32_t, htobe32 (len));
 	return 5;
 }
 
@@ -488,44 +575,44 @@ size_t
 sp_msgpack_enc_binary (void *buf, uint32_t len)
 {
 	if (len <= UINT8_MAX) {
-		WRITE_INT (buf, 0xc4, uint8_t, len);
+		WRITE_INT (buf, B_BIN8, uint8_t, len);
 		return 2;
 	}
 	if (len <= UINT16_MAX) {
-		WRITE_INT (buf, 0xc5, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_BIN16, uint16_t, htobe16 (len));
 		return 3;
 	}
-	WRITE_INT (buf, 0xc6, uint32_t, htobe32 (len));
+	WRITE_INT (buf, B_BIN32, uint32_t, htobe32 (len));
 	return 5;
 }
 
 size_t
 sp_msgpack_enc_array (void *buf, uint32_t count)
 {
-	if (count <= 0xf) {
-		*(uint8_t *)buf = (uint8_t)count | 0x90;
+	if (count <= B_FARR_MAX) {
+		*(uint8_t *)buf = B_FARR (count);
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
-		WRITE_INT (buf, 0xdc, uint16_t, htobe16 (count));
+		WRITE_INT (buf, B_ARR16, uint16_t, htobe16 (count));
 		return 3;
 	}
-	WRITE_INT (buf, 0xdd, uint32_t, htobe32 (count));
+	WRITE_INT (buf, B_ARR32, uint32_t, htobe32 (count));
 	return 5;
 }
 
 size_t
 sp_msgpack_enc_map (void *buf, uint32_t count)
 {
-	if (count <= 0xf) {
-		*(uint8_t *)buf = (uint8_t)count | 0x80;
+	if (count <= B_FMAP_MAX) {
+		*(uint8_t *)buf = B_FMAP (count);
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
-		WRITE_INT (buf, 0xde, uint16_t, htobe16 (count));
+		WRITE_INT (buf, B_MAP16, uint16_t, htobe16 (count));
 		return 3;
 	}
-	WRITE_INT (buf, 0xdf, uint32_t, htobe32 (count));
+	WRITE_INT (buf, B_MAP32, uint32_t, htobe32 (count));
 	return 5;
 }
 
@@ -538,21 +625,21 @@ sp_msgpack_enc_ext (void *buf, int8_t type, uint32_t len)
 
 	size_t off = 1;
 
-	if (len == 1)       { *(uint8_t *)buf = 0xd4; }
-	else if (len == 2)  { *(uint8_t *)buf = 0xd5; }
-	else if (len == 4)  { *(uint8_t *)buf = 0xd6; }
-	else if (len == 8)  { *(uint8_t *)buf = 0xd7; }
-	else if (len == 16) { *(uint8_t *)buf = 0xd8; }
+	if (len == 1)       { *(uint8_t *)buf = B_FEXT8; }
+	else if (len == 2)  { *(uint8_t *)buf = B_FEXT16; }
+	else if (len == 4)  { *(uint8_t *)buf = B_FEXT32; }
+	else if (len == 8)  { *(uint8_t *)buf = B_FEXT64; }
+	else if (len == 16) { *(uint8_t *)buf = B_FEXT128; }
 	else if (len <= UINT8_MAX) {
-		WRITE_INT (buf, 0xc7, uint8_t, len);
+		WRITE_INT (buf, B_EXT8, uint8_t, len);
 		off = 2;
 	}
 	else if (len <= UINT16_MAX) {
-		WRITE_INT (buf, 0xc8, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_EXT16, uint16_t, htobe16 (len));
 		off = 3;
 	}
 	else {
-		WRITE_INT (buf, 0xc9, uint32_t, htobe32 (len));
+		WRITE_INT (buf, B_EXT32, uint32_t, htobe32 (len));
 		off = 5;
 	}
 
