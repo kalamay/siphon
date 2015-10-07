@@ -7,13 +7,23 @@
 #include <err.h>
 
 static uint8_t *
-readin (size_t *outlen)
+readin (const char *path, size_t *outlen)
 {
+	FILE *in = stdin;
+	if (path != NULL) {
+		in = fopen (path, "r");
+		if (in == NULL) {
+			err (EXIT_FAILURE, "fopen");
+		}
+	}
+
 	char buffer[8192];
-	size_t len = fread (buffer, 1, sizeof buffer, stdin);
+	size_t len = fread (buffer, 1, sizeof buffer, in);
 	if (len == 0) {
 		err (EXIT_FAILURE, "fread");
 	}
+
+	fclose (in);
 
 	uint8_t *copy = sp_mallocn (len, 1);
 	if (copy == NULL) {
@@ -26,10 +36,10 @@ readin (size_t *outlen)
 }
 
 int
-main (void)
+main (int argc, char **argv)
 {
 	size_t len;
-	uint8_t *buf = readin (&len);
+	uint8_t *buf = readin (argc > 1 ? argv[1] : NULL, &len);
 
 	SpMsgpack p;
 	sp_msgpack_init (&p);
