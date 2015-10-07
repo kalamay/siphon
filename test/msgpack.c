@@ -248,12 +248,13 @@ test_encode_negative (void)
 	uint8_t buf[64], *m;
 	ssize_t rc;
 
-	int64_t values[] = { -12, -123, -1234, -1234567, -123456789000 };
+	int64_t values[] = { -12, -30, -31, -32, -123, -1234, -1234567, -123456789000 };
+	ssize_t rcs[] = { 1, 1, 1, 2, 2, 3, 5, 9 };
 
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_negative (m, values[i]);
-		mu_assert_int_ge (rc, 1);
+		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		m += rc;
 	}
@@ -264,7 +265,7 @@ test_encode_negative (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 1);
+		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		mu_assert_int_eq (p.type, SP_MSGPACK_NEGATIVE);
 		mu_assert_int_eq (p.tag.i64, values[i]);
@@ -278,12 +279,13 @@ test_encode_positive (void)
 	uint8_t buf[64], *m;
 	ssize_t rc;
 
-	uint64_t values[] = { 12, 123, 1234, 1234567, 123456789000 };
+	uint64_t values[] = { 12, 123, 126, 127, 128, 1234, 1234567, 123456789000 };
+	ssize_t rcs[] = { 1, 1, 1, 1, 2, 3, 5, 9 };
 
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_positive (m, values[i]);
-		mu_assert_int_ge (rc, 1);
+		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		m += rc;
 	}
@@ -294,7 +296,7 @@ test_encode_positive (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 1);
+		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		mu_assert_int_eq (p.type, SP_MSGPACK_POSITIVE);
 		mu_assert_int_eq (p.tag.i64, values[i]);
