@@ -37,27 +37,5 @@ sp_calloc (size_t n, size_t size);
 SP_EXPORT void *
 sp_realloc (void *p, size_t size);
 
-#ifndef NDEBUG
-
-#define mallocn sp_mallocn
-#define malloc sp_malloc
-#define free sp_free
-#define calloc sp_calloc
-#define realloc sp_realloc
-
-#else
-
-#include <stdlib.h>
-
-#define mallocn(s,a) ({                        \
-	void *buf;                                 \
-	if (posix_memalign (&buf, (a), (s)) < 0) { \
-		buf = NULL;                            \
-	}                                          \
-	buf;                                       \
-})
-
-#endif
-
 #endif
 
