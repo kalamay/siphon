@@ -44,7 +44,7 @@ cmake -H. -Bbuild/fuzz -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/bi
 cmake --build build/fuzz
 
 # create directories to capture the results
-mkdir -p build/fuzz/{http,uri,msgpack}
+mkdir -p build/fuzz/{http,uri,msgpack,json}
 
 # test http module
 # run these in different shells (best in tmux or screen)
@@ -55,5 +55,5 @@ afl-fuzz -i test/fuzz/http -o build/fuzz/http -S fuzz03 ./test-http-input
 # wait a long time
 ```
 
-Similar tests are provided for the URI and MsgPack modules.
+Similar tests are provided for the URI, JSON, and MsgPack modules.
 
