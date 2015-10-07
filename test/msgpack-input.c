@@ -80,16 +80,25 @@ main (void)
 			printf ("double: %f\n", p.tag.f64);
 			break;
 		case SP_MSGPACK_STRING:
+			if (p.tag.count > len) {
+				errx (EXIT_FAILURE, "failed to parse");
+			}
 			printf ("string: %.*s\n", (int)p.tag.count, buf);
 			buf += p.tag.count;
 			len -= p.tag.count;
 			break;
 		case SP_MSGPACK_BINARY:
+			if (p.tag.count > len) {
+				errx (EXIT_FAILURE, "failed to parse");
+			}
 			printf ("binary: length=%u\n", p.tag.count);
 			buf += p.tag.count;
 			len -= p.tag.count;
 			break;
 		case SP_MSGPACK_EXT:
+			if (p.tag.ext.len > len) {
+				errx (EXIT_FAILURE, "failed to parse");
+			}
 			printf ("ext: type=%d, length=%u\n", p.tag.ext.type, p.tag.ext.len);
 			buf += p.tag.ext.len;
 			len -= p.tag.ext.len;
