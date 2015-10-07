@@ -134,6 +134,8 @@ target_link_libraries(test-http-input siphon-static m)
 add_test(NAME json COMMAND test-json)
 add_executable(test-json test/json.c)
 target_link_libraries(test-json siphon-static m)
+add_executable(test-json-input test/json-input.c)
+target_link_libraries(test-json-input siphon-static m)
 
 add_test(NAME msgpack COMMAND test-msgpack)
 add_executable(test-msgpack test/msgpack.c)
