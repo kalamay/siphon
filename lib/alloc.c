@@ -7,19 +7,28 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <assert.h>
 
 struct preamble {
+	uint64_t magic;
 	void *ptr;
 	uintptr_t size;
 	size_t align;
 };
 
 static size_t pagesize;
+static const uint64_t magic = 0xf0231f251949aa2ULL;
 
 static void __attribute__((constructor))
 init (void)
 {
 	pagesize = getpagesize ();
+}
+
+static size_t
+alloc_size (size_t size)
+{
+	return ((((size + sizeof (struct preamble)) - 1) / pagesize) + 1) * pagesize;
 }
 
 static struct preamble *
@@ -37,6 +46,7 @@ preamble (void *p)
 static size_t
 capacity (struct preamble *pre)
 {
+	assert (pre->magic == magic);
 	return pre ?
 		(((pre->size - 1) / pagesize) + 1) * pagesize - sizeof (*pre) :
 		0;
@@ -45,6 +55,7 @@ capacity (struct preamble *pre)
 static size_t
 available (struct preamble *pre)
 {
+	assert (pre->magic == magic);
 	return pre ?
 		capacity (pre) - pre->size :
 		0;
@@ -53,8 +64,9 @@ available (struct preamble *pre)
 static int
 protect (struct preamble *pre, int flags)
 {
+	assert (pre->magic == magic);
 	if (pre == NULL) { return 0; };
-	return mprotect ((char *)pre->ptr + (pre->size / pagesize) + pagesize, pagesize, flags);
+	return mprotect ((char *)pre->ptr + alloc_size (pre->size), pagesize, flags);
 }
 
 void *
@@ -72,7 +84,7 @@ sp_mallocn (size_t size, size_t align)
 		return malloc (0);
 	}
 
-	size_t alloc = ((((size + sizeof (struct preamble)) - 1) / pagesize) + 1) * pagesize;
+	size_t alloc = alloc_size (size);
 	char *p, *ret;
 	
 	if (posix_memalign ((void **)&p, pagesize, alloc + pagesize) == -1) {
@@ -100,6 +112,7 @@ sp_mallocn (size_t size, size_t align)
 		abort ();
 	}
 
+	pre->magic = magic;
 	pre->ptr = p;
 	pre->size = size;
 
@@ -113,7 +126,9 @@ sp_free (void *p)
 {
 	if (p != NULL) {
 		struct preamble *pre = preamble (p);
+		assert (pre->magic == magic);
 		protect (pre, PROT_READ | PROT_WRITE);
+		pre->magic = 0;
 		free (pre->ptr);
 	}
 }
