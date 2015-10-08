@@ -60,10 +60,10 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof);
 SP_EXPORT bool
 sp_msgpack_is_done (const SpMsgpack *p);
 
-SP_EXPORT size_t 
+SP_EXPORT size_t
 sp_msgpack_enc (SpMsgpackType type, const SpMsgpackTag *tag, void *buf);
 
-SP_EXPORT size_t 
+SP_EXPORT size_t
 sp_msgpack_enc_nil (void *buf);
 
 SP_EXPORT size_t
