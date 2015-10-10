@@ -79,11 +79,11 @@ main (int argc, char **argv)
 		case SP_MSGPACK_FALSE:
 			printf ("false\n");
 			break;
-		case SP_MSGPACK_NEGATIVE:
-			printf ("negative: %" PRIi64 "\n", p.tag.i64);
+		case SP_MSGPACK_SIGNED:
+			printf ("signed: %" PRIi64 "\n", p.tag.i64);
 			break;
-		case SP_MSGPACK_POSITIVE:
-			printf ("positive: %" PRIu64 "\n", p.tag.u64);
+		case SP_MSGPACK_UNSIGNED:
+			printf ("unsigned: %" PRIu64 "\n", p.tag.u64);
 			break;
 		case SP_MSGPACK_FLOAT:
 			printf ("float: %f\n", p.tag.f32);

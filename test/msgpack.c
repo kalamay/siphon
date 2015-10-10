@@ -55,8 +55,8 @@ parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t spee
 			case SP_MSGPACK_NIL:
 			case SP_MSGPACK_TRUE:
 			case SP_MSGPACK_FALSE:
-			case SP_MSGPACK_NEGATIVE:
-			case SP_MSGPACK_POSITIVE:
+			case SP_MSGPACK_SIGNED:
+			case SP_MSGPACK_UNSIGNED:
 			case SP_MSGPACK_FLOAT:
 			case SP_MSGPACK_DOUBLE:
 			case SP_MSGPACK_ARRAY:
@@ -134,25 +134,25 @@ test_parse (ssize_t speed)
 	mu_assert_str_eq (msg.fields[2].str, "this is a longer string that should not pack to a fixed string");
 	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_TRUE);
 	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_FALSE);
-	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[5].tag.u64, 12);
-	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[6].tag.u64, 123);
-	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[7].tag.u64, 1234);
-	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[8].tag.u64, 1234567);
-	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[9].tag.u64, 123456789000);
-	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_NEGATIVE);
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_SIGNED);
 	mu_assert_int_eq (msg.fields[10].tag.i64, -12);
-	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_NEGATIVE);
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_SIGNED);
 	mu_assert_int_eq (msg.fields[11].tag.i64, -123);
-	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_NEGATIVE);
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_SIGNED);
 	mu_assert_int_eq (msg.fields[12].tag.i64, -1234);
-	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_NEGATIVE);
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_SIGNED);
 	mu_assert_int_eq (msg.fields[13].tag.i64, -1234567);
-	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_NEGATIVE);
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_SIGNED);
 	mu_assert_int_eq (msg.fields[14].tag.i64, -123456789000);
 	mu_assert_int_eq (msg.fields[15].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[15].tag.count, 5);
@@ -171,11 +171,11 @@ test_parse (ssize_t speed)
 	mu_assert_str_eq (msg.fields[22].str, "d");
 	mu_assert_int_eq (msg.fields[23].type, SP_MSGPACK_ARRAY);
 	mu_assert_int_eq (msg.fields[23].tag.count, 3);
-	mu_assert_int_eq (msg.fields[24].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[24].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[24].tag.u64, 1);
-	mu_assert_int_eq (msg.fields[25].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[25].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[25].tag.u64, 2);
-	mu_assert_int_eq (msg.fields[26].type, SP_MSGPACK_POSITIVE);
+	mu_assert_int_eq (msg.fields[26].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[26].tag.u64, 3);
 	mu_assert_int_eq (msg.fields[27].type, SP_MSGPACK_ARRAY_END);
 	mu_assert_int_eq (msg.fields[28].type, SP_MSGPACK_STRING);
@@ -243,7 +243,7 @@ test_encode_false (void)
 }
 
 static void
-test_encode_negative (void)
+test_encode_signed (void)
 {
 	uint8_t buf[64], *m;
 	ssize_t rc;
@@ -253,7 +253,7 @@ test_encode_negative (void)
 
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
-		rc = sp_msgpack_enc_negative (m, values[i]);
+		rc = sp_msgpack_enc_signed (m, values[i]);
 		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		m += rc;
@@ -267,14 +267,14 @@ test_encode_negative (void)
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
 		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
-		mu_assert_int_eq (p.type, SP_MSGPACK_NEGATIVE);
+		mu_assert_int_eq (p.type, SP_MSGPACK_SIGNED);
 		mu_assert_int_eq (p.tag.i64, values[i]);
 		m += rc;
 	}
 }
 
 static void
-test_encode_positive (void)
+test_encode_unsigned (void)
 {
 	uint8_t buf[64], *m;
 	ssize_t rc;
@@ -284,7 +284,7 @@ test_encode_positive (void)
 
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
-		rc = sp_msgpack_enc_positive (m, values[i]);
+		rc = sp_msgpack_enc_unsigned (m, values[i]);
 		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
 		m += rc;
@@ -298,7 +298,7 @@ test_encode_positive (void)
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
 		mu_assert_int_eq (rc, rcs[i]);
 		if (rc <= 0) return;
-		mu_assert_int_eq (p.type, SP_MSGPACK_POSITIVE);
+		mu_assert_int_eq (p.type, SP_MSGPACK_UNSIGNED);
 		mu_assert_int_eq (p.tag.i64, values[i]);
 		m += rc;
 	}
@@ -561,8 +561,8 @@ main (void)
 	test_encode_nil ();
 	test_encode_true ();
 	test_encode_false ();
-	test_encode_negative ();
-	test_encode_positive ();
+	test_encode_signed ();
+	test_encode_unsigned ();
 	test_encode_float ();
 	test_encode_double ();
 	test_encode_string ();

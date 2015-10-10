@@ -109,7 +109,7 @@
  */
 #define LOAD_UINT(p, bits, src, len, eof) do {                                 \
 	EXPECT_SIZE (bits/8 + 1, len, eof);                                        \
-	p->type = SP_MSGPACK_POSITIVE;                                             \
+	p->type = SP_MSGPACK_UNSIGNED;                                             \
 	p->tag.u64 = (uint##bits##_t)be##bits##toh (*(uint##bits##_t *)((src)+1)); \
 	return bits/8 + 1;                                                         \
 } while (0)
@@ -126,11 +126,11 @@
 	EXPECT_SIZE (bits/8 + 1, len, eof);                                       \
 	int64_t val = (int##bits##_t)be##bits##toh (*(int##bits##_t *)((src)+1)); \
 	if (val < 0) {                                                            \
-		p->type = SP_MSGPACK_NEGATIVE;                                        \
+		p->type = SP_MSGPACK_SIGNED;                                          \
 		p->tag.i64 = val;                                                     \
 	}                                                                         \
 	else {                                                                    \
-		p->type = SP_MSGPACK_POSITIVE;                                        \
+		p->type = SP_MSGPACK_UNSIGNED;                                        \
 		p->tag.u64 = (uint64_t)val;                                           \
 	}                                                                         \
 	return bits/8 + 1;                                                        \
@@ -243,13 +243,13 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 	uint8_t c = *(uint8_t *)buf;
 
 	if (B_IS_FUINT (c)) {
-		p->type = SP_MSGPACK_POSITIVE;
+		p->type = SP_MSGPACK_UNSIGNED;
 		p->tag.u64 = B_FUINT_VAL (c);
 		return 1;
 	}
 
 	if (B_IS_FINT (c)) {
-		p->type = SP_MSGPACK_NEGATIVE;
+		p->type = SP_MSGPACK_SIGNED;
 		p->tag.i64 = B_FINT_VAL (c);
 		return 1;
 	}
@@ -325,7 +325,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 
 	case B_UINT8:
 		EXPECT_SIZE (2, len, eof);
-		p->type = SP_MSGPACK_POSITIVE;
+		p->type = SP_MSGPACK_UNSIGNED;
 		p->tag.u64 = buf[1];
 		return 2;
 	case B_UINT16: LOAD_UINT (p, 16, buf, len, eof);
@@ -336,11 +336,11 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		EXPECT_SIZE (2, len, eof);
 		int8_t val = *(int8_t *)(buf+1);
 		if (val < 0) {
-			p->type = SP_MSGPACK_NEGATIVE;
+			p->type = SP_MSGPACK_SIGNED;
 			p->tag.i64 = val;
 		}
 		else {
-			p->type = SP_MSGPACK_POSITIVE;
+			p->type = SP_MSGPACK_UNSIGNED;
 			p->tag.u64 = (uint8_t)val;
 		}
 		return 2;
@@ -453,10 +453,10 @@ sp_msgpack_enc (SpMsgpackType type, const SpMsgpackTag *tag, void *buf)
 		return sp_msgpack_enc_true (buf);
 	case SP_MSGPACK_FALSE:
 		return sp_msgpack_enc_false (buf);
-	case SP_MSGPACK_NEGATIVE:
-		return sp_msgpack_enc_negative (buf, tag->i64);
-	case SP_MSGPACK_POSITIVE:
-		return sp_msgpack_enc_positive (buf, tag->u64);
+	case SP_MSGPACK_SIGNED:
+		return sp_msgpack_enc_signed (buf, tag->i64);
+	case SP_MSGPACK_UNSIGNED:
+		return sp_msgpack_enc_unsigned (buf, tag->u64);
 	case SP_MSGPACK_FLOAT:
 		return sp_msgpack_enc_float (buf, tag->f32);
 	case SP_MSGPACK_DOUBLE:
@@ -498,10 +498,10 @@ sp_msgpack_enc_true (void *buf)
 }
 
 size_t
-sp_msgpack_enc_negative (void *buf, int64_t val)
+sp_msgpack_enc_signed (void *buf, int64_t val)
 {
 	if (val >= 0) {
-		return sp_msgpack_enc_positive (buf, (uint64_t)val);
+		return sp_msgpack_enc_unsigned (buf, (uint64_t)val);
 	}
 	if (val >= B_FINT_MIN) {
 		*(uint8_t *)buf = B_FINT (val);
@@ -524,7 +524,7 @@ sp_msgpack_enc_negative (void *buf, int64_t val)
 }
 
 size_t
-sp_msgpack_enc_positive (void *buf, uint64_t val)
+sp_msgpack_enc_unsigned (void *buf, uint64_t val)
 {
 	if (val <= B_FUINT_MAX) {
 		*(uint8_t *)buf = B_FUINT (val);

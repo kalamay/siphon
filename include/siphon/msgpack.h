@@ -14,8 +14,8 @@ typedef enum {
 	SP_MSGPACK_NIL,
 	SP_MSGPACK_TRUE,
 	SP_MSGPACK_FALSE,
-	SP_MSGPACK_NEGATIVE,
-	SP_MSGPACK_POSITIVE,
+	SP_MSGPACK_SIGNED,
+	SP_MSGPACK_UNSIGNED,
 	SP_MSGPACK_FLOAT,
 	SP_MSGPACK_DOUBLE,
 	SP_MSGPACK_STRING,
@@ -73,10 +73,10 @@ SP_EXPORT size_t
 sp_msgpack_enc_false (void *buf);
 
 SP_EXPORT size_t
-sp_msgpack_enc_negative (void *buf, int64_t val);
+sp_msgpack_enc_signed (void *buf, int64_t val);
 
 SP_EXPORT size_t
-sp_msgpack_enc_positive (void *buf, uint64_t val);
+sp_msgpack_enc_unsigned (void *buf, uint64_t val);
 
 SP_EXPORT size_t
 sp_msgpack_enc_float (void *buf, float val);
