@@ -249,7 +249,7 @@ parse_value (const uint8_t *m, ssize_t len, uint16_t depth)
 		}
 		else if (n > 0) {
 			if (p.depth >= depth) {
-				values = SP_ESYNTAX;
+				values = SP_JSON_ESYNTAX;
 				goto out;
 			}
 			if (p.type != SP_JSON_NONE) {
@@ -268,7 +268,7 @@ parse_value (const uint8_t *m, ssize_t len, uint16_t depth)
 
 	ssize_t rem = len - off;
 	if (rem > 1 || (rem == 1 && !isspace (*m))) {
-		values = SP_ESYNTAX;
+		values = SP_JSON_ESYNTAX;
 	}
 
 out:
@@ -286,16 +286,22 @@ parse_file (const char *name, uint16_t depth)
 
 	int fd = -1;
 	void *m = NULL;
-	ssize_t rc = SP_ESYSTEM;
+	ssize_t rc = 0;
 
 	fd = open (path, O_RDONLY, 0);
-	if (fd < 0) goto out;
+	if (fd < 0) {
+		rc = SP_ESYSTEM (errno);
+		goto out;
+	}
 
 	struct stat st;
 	if (fstat (fd, &st) < 0) goto out;
 
 	m = mmap (NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (m == MAP_FAILED) goto out;
+	if (m == MAP_FAILED) {
+		rc = SP_ESYSTEM (errno);
+		goto out;
+	}
 
 	rc = parse_value (m, st.st_size, depth);
 	
@@ -315,40 +321,40 @@ main (void)
 	test_parse (11);
 
 	// XXX: allowing bare values
-	//mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail1.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail2.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail3.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail4.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail5.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail6.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail7.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail8.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail9.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail10.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail11.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail12.json", 20));
+	//mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail1.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail2.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail3.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail4.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail5.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail6.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail7.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail8.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail9.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail10.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail11.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail12.json", 20));
 	// XXX: allowing extended number formats for now
-	//mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail13.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail14.json", 20));
-	mu_assert_int_eq (SP_EESCAPE, parse_file ("fail15.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail16.json", 20));
-	mu_assert_int_eq (SP_EESCAPE, parse_file ("fail17.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail18.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail19.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail20.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail21.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail22.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail23.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail24.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail25.json", 20));
-	mu_assert_int_eq (SP_EESCAPE, parse_file ("fail26.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail27.json", 20));
-	mu_assert_int_eq (SP_EESCAPE, parse_file ("fail28.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail29.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail30.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail31.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail32.json", 20));
-	mu_assert_int_eq (SP_ESYNTAX, parse_file ("fail33.json", 20));
+	//mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail13.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail14.json", 20));
+	mu_assert_int_eq (SP_UTF8_EESCAPE, parse_file ("fail15.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail16.json", 20));
+	mu_assert_int_eq (SP_UTF8_EESCAPE, parse_file ("fail17.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail18.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail19.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail20.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail21.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail22.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail23.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail24.json", 20));
+	mu_assert_int_eq (SP_JSON_EBYTE,   parse_file ("fail25.json", 20));
+	mu_assert_int_eq (SP_UTF8_EESCAPE, parse_file ("fail26.json", 20));
+	mu_assert_int_eq (SP_JSON_EBYTE,   parse_file ("fail27.json", 20));
+	mu_assert_int_eq (SP_UTF8_EESCAPE, parse_file ("fail28.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail29.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail30.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail31.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail32.json", 20));
+	mu_assert_int_eq (SP_JSON_ESYNTAX, parse_file ("fail33.json", 20));
 
 	mu_assert_int_eq (112, parse_file ("pass1.json", 20));
 	mu_assert_int_eq (39, parse_file ("pass2.json", 20));

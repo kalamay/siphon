@@ -85,7 +85,7 @@
 #define EXPECT_SIZE(sz, remain, done) do { \
 	if ((sz) > remain) {                   \
 		if (done) {                        \
-			YIELD_ERROR (SP_ESYNTAX);      \
+			YIELD_ERROR (SP_MSGPACK_ESYNTAX);      \
 		}                                  \
 		return 0;                          \
 	}                                      \
@@ -94,7 +94,7 @@
 #define VERIFY_LEN(off, exp, remain, done) do {                \
 	ssize_t _off = (ssize_t)(off);                             \
 	if ((done) && _off + (ssize_t)(exp) > (ssize_t)(remain)) { \
-		YIELD_ERROR (SP_ESYNTAX);                              \
+		YIELD_ERROR (SP_MSGPACK_ESYNTAX);                              \
 	}                                                          \
 	return _off;                                               \
 } while (0)
@@ -215,8 +215,14 @@
 
 #define PUSH_COUNT(p, n) do { p->counts[p->depth-1] = (n); } while (0)
 
-#define STACK_PUSH_ARR(p, n) do { STACK_PUSH_FALSE(p); PUSH_COUNT(p, n); } while (0)
-#define STACK_PUSH_MAP(p, n) do { STACK_PUSH_TRUE(p); PUSH_COUNT(p, n); } while (0)
+#define STACK_PUSH_ARR(p, n) do {           \
+	STACK_PUSH_FALSE(p, SP_MSGPACK_ESTACK); \
+	PUSH_COUNT(p, n);                       \
+} while (0)
+#define STACK_PUSH_MAP(p, n) do {           \
+	STACK_PUSH_TRUE(p, SP_MSGPACK_ESTACK);  \
+	PUSH_COUNT(p, n);                       \
+} while (0)
 
 #define STACK_IN_ARR(p) (STACK_TOP(p) == STACK_ARR)
 #define STACK_IN_MAP(p) (STACK_TOP(p) == STACK_MAP)
@@ -393,7 +399,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 
 	}
 
-	YIELD_ERROR (SP_ESYNTAX);
+	YIELD_ERROR (SP_MSGPACK_ESYNTAX);
 }
 
 ssize_t
@@ -417,7 +423,7 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof)
 			rc = next (p, buf, len, eof);
 		}
 		else if (eof) {
-			YIELD_ERROR (SP_ESYNTAX);
+			YIELD_ERROR (SP_MSGPACK_ESYNTAX);
 		}
 	}
 

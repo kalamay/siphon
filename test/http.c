@@ -355,7 +355,7 @@ test_invalid_header (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
 		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_ESYNTAX);
+		mu_assert_int_eq (rc, SP_HTTP_ESYNTAX);
 	}
 }
 
@@ -390,7 +390,7 @@ test_exceed_method_size (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, SP_ESIZE);
+	mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 }
 
 static void
@@ -433,7 +433,7 @@ test_exceed_name_size (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
 		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_ESIZE);
+		mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 	}
 }
 
@@ -477,7 +477,7 @@ test_exceed_value_size (void)
 	if (rc > 0) {
 		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
 		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_ESIZE);
+		mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 	}
 }
 

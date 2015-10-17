@@ -31,7 +31,7 @@ read_body (SpHttp *p, char *buf, size_t len)
 {
 	if (!p->as.body_start.chunked) {
 		if (len < p->as.body_start.content_length) {
-			return SP_ESYNTAX;
+			return SP_HTTP_ESYNTAX;
 		}
 		print_string (stdout, buf, p->as.body_start.content_length);
 		return p->as.body_start.content_length;
@@ -46,7 +46,7 @@ read_body (SpHttp *p, char *buf, size_t len)
 		len -= rc;
 		if (p->type == SP_HTTP_BODY_CHUNK) {
 			if (len < p->as.body_chunk.length) {
-				return SP_ESYNTAX;
+				return SP_HTTP_ESYNTAX;
 			}
 			print_string (stdout, cur, p->as.body_chunk.length);
 			cur += p->as.body_chunk.length;

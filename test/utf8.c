@@ -8,7 +8,7 @@ test_err1 (void)
 	const uint8_t m[] = "\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -19,7 +19,7 @@ test_err2 (void)
 	const uint8_t m[] = "\xBF\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -30,7 +30,7 @@ test_err3 (void)
 	const uint8_t m[] = "\xC0\x7F";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -41,7 +41,7 @@ test_err4 (void)
 	const uint8_t m[] = "\xDF\xC0";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -52,7 +52,7 @@ test_err5 (void)
 	const uint8_t m[] = "\xE0\x9f\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -63,7 +63,7 @@ test_err6 (void)
 	const uint8_t m[] = "\xE0\xC0\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -74,7 +74,7 @@ test_err7 (void)
 	const uint8_t m[] = "\xE0\xA0\x7F";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -85,7 +85,7 @@ test_err8 (void)
 	const uint8_t m[] = "\xE0\xBF\xC0";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -96,7 +96,7 @@ test_err9 (void)
 	const uint8_t m[] = "\xF0\x8f\x80\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -107,7 +107,7 @@ test_err10 (void)
 	const uint8_t m[] = "\xF0\xC0\x80\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -118,7 +118,7 @@ test_err11 (void)
 	const uint8_t m[] = "\xF4\x7f\x80\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -129,7 +129,7 @@ test_err12 (void)
 	const uint8_t m[] = "\xF4\xC0\x80\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -140,7 +140,7 @@ test_err13 (void)
 	const uint8_t m[] = "\xF4\x80\x7F\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -151,7 +151,7 @@ test_err14 (void)
 	const uint8_t m[] = "\xF4\xBF\xC0\x80";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -162,7 +162,7 @@ test_err15 (void)
 	const uint8_t m[] = "\xF4\x80\x80\x7F";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -173,7 +173,7 @@ test_err16 (void)
 	const uint8_t m[] = "\xF4\xBF\x80\xC0";
 	SpUtf8 u = SP_UTF8_MAKE ();
 	ssize_t n = sp_utf8_json_decode_next (&u, m, sizeof (m) - 1);
-	mu_assert_int_eq (n, SP_EENCODING);
+	mu_assert_int_eq (n, SP_UTF8_EENCODING);
 	sp_utf8_final (&u);
 }
 
@@ -248,10 +248,10 @@ test_invalid_codepoints (void)
 	ssize_t n;
 
 	n = sp_utf8_add_codepoint (&u, -1);
-	mu_assert_int_eq (n, SP_ECODEPOINT);
+	mu_assert_int_eq (n, SP_UTF8_ECODEPOINT);
 
 	n = sp_utf8_add_codepoint (&u, 0x110000);
-	mu_assert_int_eq (n, SP_ECODEPOINT);
+	mu_assert_int_eq (n, SP_UTF8_ECODEPOINT);
 	sp_utf8_final (&u);
 }
 

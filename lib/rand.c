@@ -1,4 +1,5 @@
 #include "siphon/rand.h"
+#include "siphon/error.h"
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -62,8 +63,7 @@ sp_rand_init (void)
 		close (fd);
 		fd = -1;
 		fprintf (stderr, "failed to stat /dev/urandom: %s", strerror (err));
-		errno = err;
-		return -1;
+		return SP_ESYSTEM (err);
 	}
 
 	// check that it is a char special
@@ -73,8 +73,7 @@ sp_rand_init (void)
 		close (fd);
 		fd = -1;
 		fprintf (stderr, "/dev/urandom is an invalid device");
-		errno = ENODEV;
-		return -1;
+		return SP_ESYSTEM (ENODEV);
 	}
 
 	return 0;
@@ -90,7 +89,7 @@ sp_rand (void *const restrict dst, size_t len)
 			amt += (size_t)r;
 		}
 		else if (r == 0 || errno != EINTR) {
-			return -1;
+			return SP_ESYSTEM (errno);
 		}
 	}
 	return 0;
@@ -100,8 +99,9 @@ int
 sp_rand_uint32 (uint32_t bound, uint32_t *out)
 {
 	uint32_t val;
-	if (sp_rand (&val, sizeof val) < 0) {
-		return -1;
+	int rc = sp_rand (&val, sizeof val);
+	if (rc < 0) {
+		return rc;
 	}
 
 	if (bound) {
@@ -117,8 +117,9 @@ int
 sp_rand_double (double *out)
 {
 	uint64_t val;
-	if (sp_rand (&val, sizeof val) < 0) {
-		return -1;
+	int rc = sp_rand (&val, sizeof val);
+	if (rc < 0) {
+		return rc;
 	}
 
 	*out = (double)val / (double)UINT64_MAX;

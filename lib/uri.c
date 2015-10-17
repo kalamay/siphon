@@ -1,9 +1,9 @@
 #include "siphon/uri.h"
 #include "siphon/path.h"
+#include "siphon/error.h"
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <assert.h>
 
 ssize_t
@@ -18,8 +18,7 @@ sp_uri_copy (
 
 	uint16_t ulen = sp_uri_length (u);
 	if (ulen > dstlen) {
-		errno = ENAMETOOLONG;
-		return -1;
+		return SP_URI_EBUFS;
 	}
 
 	memcpy (dstbuf, ubuf, ulen);
@@ -64,17 +63,15 @@ sp_uri_join (
 	// if the first segment of the join URI is a path, join the paths
 	if (seg == SP_URI_PATH) {
 		rng = a->seg[SP_URI_PATH];
-		uint16_t plen = sp_uri_join_paths (
+		int plen = sp_uri_join_paths (
 			p, dstlen - (p - dstbuf),
 			abuf + rng.off, rng.len,
 			bbuf + b->seg[SP_URI_PATH].off, b->seg[SP_URI_PATH].len);
 
-		if (plen > 0) {
-			p += plen;
+		if (plen < 0) {
+			return plen;
 		}
-		else if (errno != 0) {
-			return -1;
-		}
+		p += plen;
 		seg++;
 	}
 
@@ -111,16 +108,14 @@ sp_uri_join_paths (
 	SpRange16 rng = { 0, alen };
 	sp_path_pop (abuf, &rng, 1);
 
-	uint16_t plen = sp_path_join (
+	ssize_t plen = sp_path_join (
 		outbuf, len,
 		abuf, rng.len,
 		bbuf, blen,
 		SP_PATH_URI);
 
-	if (plen == 0) {
-		if (errno != 0) {
-			return -1;
-		}
+	if (plen < 0) {
+		plen = SP_URI_EBUFS;
 	}
 	else {
 		plen = sp_path_clean (outbuf, plen, SP_PATH_URI);
@@ -219,9 +214,11 @@ sp_uri_adjust_range (const SpUri *u, SpUriSegment *start, SpUriSegment *end, boo
 	SpUriSegment s = *start, e = *end;
 
 	// verify that the expected range is reasonable
-	if (s > e || s < SP_URI_SEGMENT_FIRST || e > SP_URI_SEGMENT_LAST) {
-		errno = EINVAL;
-		return -1;
+	if (s < SP_URI_SEGMENT_FIRST || e > SP_URI_SEGMENT_LAST) {
+		return SP_URI_ESEGMENT;
+	}
+	if (s > e) {
+		return SP_URI_ERANGE;
 	}
 
 	// a valid netloc-relative URL must start with '//'

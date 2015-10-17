@@ -1,4 +1,5 @@
 #include "siphon/path.h"
+#include "siphon/error.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -176,23 +177,18 @@ has_suffix_dir (const char *buf, uint16_t len)
 		;
 }
 
-uint16_t
+int
 sp_path_join (char *out, size_t len,
 		const char *a, uint16_t alen,
 		const char *b, uint16_t blen,
 		SpPathMode mode)
 {
-	uint16_t olen;
-	int err = 0;
+	int olen = SP_PATH_EBUFS;
 
 	// ignore b if it is empty
 	if (blen == 0) {
-		olen = alen;
-		if (olen > len) {
-			olen = 0;
-			err = ENAMETOOLONG;
-		}
-		else {
+		if (alen <= len) {
+			olen = alen;
 			memmove (out, a, olen);
 		}
 		goto done;
@@ -200,12 +196,8 @@ sp_path_join (char *out, size_t len,
 
 	// ignore a if it is empty or b is absolute
 	if (alen == 0 || *b == '/') {
-		olen = blen;
-		if (olen > len) {
-			olen = 0;
-			err = ENAMETOOLONG;
-		}
-		else {
+		if (blen <= len) {
+			olen = blen;
 			memmove (out, b, olen);
 		}
 		goto done;
@@ -215,9 +207,8 @@ sp_path_join (char *out, size_t len,
 		alen--;
 	}
 	olen = alen + blen + 1;
-	if (olen > len) {
-		olen = 0;
-		err = ENAMETOOLONG;
+	if ((size_t)olen > len) {
+		olen = SP_PATH_EBUFS;
 		goto done;
 	}
 	memmove (out, a, alen);
@@ -225,18 +216,16 @@ sp_path_join (char *out, size_t len,
 	memmove (out+alen+1, b, blen);
 	if ((mode & SP_PATH_TRAIL_SLASH) && has_suffix_dir (b, blen)) {
 		if (olen+1 > (uint16_t)len) {
-			olen = 0;
-			err = ENAMETOOLONG;
+			olen = SP_PATH_EBUFS;
 			goto done;
 		}
 		out[olen++] = '/';
 	}
 
 done:
-	if (len > olen) {
+	if (olen >= 0 && len > (size_t)olen) {
 		out[olen] = '\0';
 	}
-	errno = err;
 	return olen;
 }
 
@@ -433,7 +422,7 @@ sp_path_match (const char *path, const char *match)
 	return *p == '\0' && *m == '\0';
 }
 
-ssize_t
+int
 sp_path_proc (char *buf, size_t buflen)
 {
 	ssize_t len = -1;
@@ -442,8 +431,7 @@ sp_path_proc (char *buf, size_t buflen)
 	len = readlink ("/proc/self/exe", buf, buflen-1);
 #elif defined(__APPLE__)
 	if (buflen < SP_PATH_MAX) {
-		errno = ENOBUFS;
-		return -1;
+		return SP_ESYSTEM (ENOBUFS);
 	}
 	char tmp[SP_PATH_MAX*2];
 	uint32_t tmplen = sizeof (tmp)-1;
@@ -469,12 +457,12 @@ sp_path_proc (char *buf, size_t buflen)
 
 	if (len > 0) {
 		buf[len] = '\0';
-		return len;
+		return (int)len;
 	}
-	return -1;
+	return SP_ESYSTEM (errno);
 }
 
-ssize_t
+int
 sp_path_env (const char *name, char *buf, size_t buflen)
 {
 	if (realpath (name, buf) && access (buf, X_OK) == 0) {
@@ -482,12 +470,13 @@ sp_path_env (const char *name, char *buf, size_t buflen)
 	}
 
 	char *path = getenv ("PATH");
-	if (path == NULL) return -1;
+	if (path == NULL) {
+		return SP_ESYSTEM (errno);
+	}
 
 	size_t namelen = strlen (name), pathlen = 0;
-	ssize_t result = -1;
 	char *pathsep = NULL;
-	uint16_t len;
+	int len;
 
 	while ((pathsep = strchr (path, ':')) != NULL) {
 		pathlen = pathsep - path;
@@ -495,11 +484,10 @@ sp_path_env (const char *name, char *buf, size_t buflen)
 		len = sp_path_join (buf, buflen, path, pathlen, name, namelen, 0);
 		path = pathsep + 1;
 		if (len > 0 && access (buf, X_OK) == 0) {
-			result = len;
-			break;
+			return len;
 		}
 	}
 
-	return result;
+	return SP_PATH_ENOTFOUND;
 }
 

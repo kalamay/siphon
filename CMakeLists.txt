@@ -165,3 +165,7 @@ add_test(NAME line COMMAND test-line)
 add_executable(test-line test/line.c)
 target_link_libraries(test-line siphon-static m)
 
+add_test(NAME error COMMAND test-error)
+add_executable(test-error test/error.c)
+target_link_libraries(test-error siphon-static m)
+

@@ -43,14 +43,14 @@ scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 
 	if (LEQ16 ("content-length", m + p->as.field.name.off, p->as.field.name.len)) {
 		if (p->as.field.value.len == 0) {
-			YIELD_ERROR (SP_ESYNTAX);
+			YIELD_ERROR (SP_HTTP_ESYNTAX);
 		}
 		size_t num = 0;
 		const uint8_t *s = m + p->as.field.value.off;
 		const uint8_t *e = s + p->as.field.value.len;
 		while (s < e) {
 			if (!isdigit (*s)) {
-				YIELD_ERROR (SP_ESYNTAX);
+				YIELD_ERROR (SP_HTTP_ESYNTAX);
 			}
 			num = num * 10 + (*s - '0');
 			s++;
@@ -84,31 +84,33 @@ parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->as.request.method.off = (uint8_t)p->off;
 
 	case REQ_METH:
-		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', SP_HTTP_MAX_METHOD, false);
+		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', SP_HTTP_MAX_METHOD, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.request.method.len = (uint8_t)(p->off - 1);
 		p->cs = REQ_URI;
 		p->as.request.uri.off = p->off;
 
 	case REQ_URI:
-		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', SP_HTTP_MAX_URI, false);
+		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', SP_HTTP_MAX_URI, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.request.uri.len = (uint16_t)(p->off - 1 - p->as.request.uri.off);
 		p->cs = REQ_VER;
 
 	case REQ_VER:
-		EXPECT_PREFIX (version_start, 1, false);
+		EXPECT_PREFIX (version_start, 1, false, SP_HTTP_ESYNTAX);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (SP_ESYNTAX);
+			YIELD_ERROR (SP_HTTP_ESYNTAX);
 		}
 		p->as.request.version = (uint8_t)(*end - '0');
 		p->cs = REQ_EOL;
 		end++;
 
 	case REQ_EOL:
-		EXPECT_PREFIX (crlf, 0, false);
+		EXPECT_PREFIX (crlf, 0, false, SP_HTTP_ESYNTAX);
 		YIELD (SP_HTTP_REQUEST, FLD);
 
 	default:
-		YIELD_ERROR (SP_ESTATE);
+		YIELD_ERROR (SP_HTTP_ESTATE);
 	}
 }
 
@@ -124,16 +126,16 @@ parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->cs = RES_VER;
 
 	case RES_VER:
-		EXPECT_PREFIX (version_start, 1, false);
+		EXPECT_PREFIX (version_start, 1, false, SP_HTTP_ESYNTAX);
 		if (!isdigit (*end)) {
-			YIELD_ERROR (SP_ESYNTAX);
+			YIELD_ERROR (SP_HTTP_ESYNTAX);
 		}
 		p->as.response.version = (uint8_t)(*end - '0');
 		p->cs = RES_SEP;
 		end++;
 	
 	case RES_SEP:
-		EXPECT_CHAR (' ', false);
+		EXPECT_CHAR (' ', false, SP_HTTP_ESYNTAX);
 		p->cs = RES_CODE;
 		p->as.response.status = 0;
 
@@ -151,19 +153,20 @@ parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 				end++;
 			}
 			else {
-				YIELD_ERROR (SP_ESYNTAX);
+				YIELD_ERROR (SP_HTTP_ESYNTAX);
 			}
 		} while (true);
 		p->as.response.reason.off = p->off;
 		p->cs = RES_MSG;
 
 	case RES_MSG:
-		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason.off, false);
+		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason.off, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.response.reason.len = (uint16_t)(p->off - p->as.response.reason.off - (sizeof crlf - 1));
 		YIELD (SP_HTTP_RESPONSE, FLD);
 
 	default:
-		YIELD_ERROR (SP_ESTATE);
+		YIELD_ERROR (SP_HTTP_ESTATE);
 	}
 }
 
@@ -197,17 +200,20 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->as.field.name.off = 0;
 
 	case FLD_KEY:
-		EXPECT_RANGE_THEN_CHAR (field_sep, ':', SP_HTTP_MAX_FIELD, false);
+		EXPECT_RANGE_THEN_CHAR (field_sep, ':', SP_HTTP_MAX_FIELD, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.name.len = (uint16_t)(p->off - 1);
 		p->cs = FLD_LWS;
 
 	case FLD_LWS:
-		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value.off, false);
+		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value.off, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.value.off = (uint16_t)p->off;
 		p->cs = FLD_VAL;
 
 	case FLD_VAL:
-		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value.off, false);
+		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value.off, false,
+				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.value.len = (uint16_t)(p->off - p->as.field.value.off - (sizeof crlf - 1));
 		if (!p->trailers) {
 			scrape_field (p, m);
@@ -215,7 +221,7 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		YIELD (SP_HTTP_FIELD, FLD);
 
 	default:
-		YIELD_ERROR (SP_ESTATE);
+		YIELD_ERROR (SP_HTTP_ESTATE);
 	}
 }
 
@@ -254,7 +260,7 @@ again:
 		p->cs = CHK_EOL1;
 	
 	case CHK_EOL1:
-		EXPECT_PREFIX (crlf, 0, false);
+		EXPECT_PREFIX (crlf, 0, false, SP_HTTP_ESYNTAX);
 		if (p->body_len == 0) {
 			p->trailers = true;
 			YIELD (SP_HTTP_BODY_END, FLD);
@@ -266,12 +272,12 @@ again:
 		}
 
 	case CHK_EOL2:
-		EXPECT_PREFIX (crlf, 0, false);
+		EXPECT_PREFIX (crlf, 0, false, SP_HTTP_ESYNTAX);
 		p->cs = CHK_NUM;
 		goto again;
 
 	default:
-		YIELD_ERROR (SP_ESTATE);
+		YIELD_ERROR (SP_HTTP_ESTATE);
 	}
 }
 
@@ -319,12 +325,12 @@ sp_http_next (SpHttp *p, const void *restrict buf, size_t len)
 	else if (p->cs & RES) rc = parse_response_line (p, buf, len);
 	else if (p->cs & FLD) rc = parse_field (p, buf, len);
 	else if (p->cs & CHK) rc = parse_chunk (p, buf, len);
-	else { YIELD_ERROR (SP_ESTATE); }
+	else { YIELD_ERROR (SP_HTTP_ESTATE); }
 	if (rc > 0) {
 		p->cscans = 0;
 	}
 	else if (rc == 0 && p->cscans > 64) {
-		YIELD_ERROR (SP_ETOOSHORT);
+		YIELD_ERROR (SP_HTTP_ETOOSHORT);
 	}
 	return rc;
 }

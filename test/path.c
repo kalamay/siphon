@@ -5,11 +5,11 @@
 
 #define TEST_JOIN(base, rel, exp) do {                               \
 	char buf[1024];                                                  \
-	uint16_t rc = sp_path_join (buf, sizeof buf,                     \
+	int rc = sp_path_join (buf, sizeof buf,                          \
 			base, (sizeof base) - 1,                                 \
 			rel, (sizeof rel) - 1,                                   \
 			0);                                                      \
-	mu_assert_uint_gt (rc, 0);                                       \
+	mu_assert_int_gt (rc, 0);                                        \
 	mu_assert_str_eq (buf, exp);                                     \
 } while (0)
 
@@ -89,12 +89,11 @@ test_join (void)
 	char buf[16];
 	char base[] = "/some/longer/named/path.txt";
 	char rel[] = "../../longothernamedfile.txt";
-	uint16_t rc = sp_path_join (buf, sizeof buf,
+	int rc = sp_path_join (buf, sizeof buf,
 			base, (sizeof base) - 1,
 			rel, (sizeof rel) - 1,
 			0);
-	mu_assert_int_eq (rc, 0);
-	mu_assert_int_eq (errno, ENAMETOOLONG);
+	mu_assert_int_eq (rc, SP_PATH_EBUFS);
 }
 
 static void
@@ -207,7 +206,7 @@ static void
 test_proc (void)
 {
 	char buf[SP_PATH_MAX];
-	ssize_t len = sp_path_proc (buf, sizeof buf);
+	int len = sp_path_proc (buf, sizeof buf);
 	printf ("DEBUG: process path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
 }
@@ -216,7 +215,7 @@ static void
 test_env (void)
 {
 	char buf[SP_PATH_MAX];
-	ssize_t len = sp_path_env ("vi", buf, sizeof buf);
+	int len = sp_path_env ("vi", buf, sizeof buf);
 	printf ("DEBUG: vi path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
 }

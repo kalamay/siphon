@@ -26,7 +26,7 @@ sp_line_next (SpLine *p, const void *restrict buf, size_t len, bool eof)
 
 	p->type = SP_LINE_NONE;
 
-	EXPECT_SET (eol, len, eof);
+	EXPECT_SET (eol, len, eof, SP_LINE_ESYNTAX, SP_LINE_ESIZE);
 	end++;
 	YIELD (SP_LINE_VALUE, 0);
 }

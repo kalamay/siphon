@@ -85,7 +85,7 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 	assert (u != NULL);
 
 	if (len > (ssize_t)((size_t)SIZE_MAX / 2)) {
-		return SP_ESIZE;
+		return SP_UTF8_ESIZE;
 	}
 
 	// add 1 to ensure space for a NUL byte
@@ -108,7 +108,7 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 
 	uint8_t *buf = realloc (u->buf, cap);
 	if (buf == NULL) {
-		return SP_ESYSTEM;
+		return SP_ESYSTEM(errno);
 	}
 	u->buf = buf;
 	u->cap = cap;
@@ -121,7 +121,7 @@ sp_utf8_add_raw (SpUtf8 *u, const void *src, size_t len)
 	assert (u != NULL);
 
 	if (sp_utf8_ensure (u, len) < 0) {
-		return SP_ESYSTEM;
+		return SP_ESYSTEM(errno);
 	}
 	memcpy (u->buf + u->len, src, len);
 	u->len += len;
@@ -138,7 +138,7 @@ sp_utf8_add_codepoint (SpUtf8 *u, int cp)
 
 	if (cp < 0x80) {
 		if (cp < 0) {
-			return SP_ECODEPOINT;
+			return SP_UTF8_ECODEPOINT;
 		}
 		buf[0] = cp;
 		len = 1;
@@ -162,7 +162,7 @@ sp_utf8_add_codepoint (SpUtf8 *u, int cp)
 		len = 4;
 	}
 	else {
-		return SP_ECODEPOINT;
+		return SP_UTF8_ECODEPOINT;
 	}
 
 	return sp_utf8_add_raw (u, buf, len);
@@ -193,36 +193,36 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 	switch (in[0]) {
 
 	case 0xE0:
-		if (len < 3) return SP_ETOOSHORT;
+		if (len < 3) return SP_UTF8_ETOOSHORT;
 		if (in[1] < 0xA0 || 0xBF < in[1]) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		if (!is_cont (in[2])) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		charlen = 3;
 		break;
 
 	case 0xF0:
-		if (len < 4) return SP_ETOOSHORT;
+		if (len < 4) return SP_UTF8_ETOOSHORT;
 		if (in[1] < 0x90 || 0xBF < in[1]) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		if (!is_cont (in[2]) || !is_cont (in[3])) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		charlen = 4;
 		break;
 
 	default:
 		charlen = byte_counts[in[0]];
-		if (charlen == 0) return SP_EENCODING;
-		if (len < charlen) return SP_ETOOSHORT;
+		if (charlen == 0) return SP_UTF8_EENCODING;
+		if (len < charlen) return SP_UTF8_ETOOSHORT;
 		switch (charlen) {
-		case 0: return SP_EENCODING;
-		case 4: if (!is_cont (in[3])) return SP_EENCODING;
-		case 3: if (!is_cont (in[2])) return SP_EENCODING;
-		case 2: if (!is_cont (in[1])) return SP_EENCODING;
+		case 0: return SP_UTF8_EENCODING;
+		case 4: if (!is_cont (in[3])) return SP_UTF8_EENCODING;
+		case 3: if (!is_cont (in[2])) return SP_UTF8_EENCODING;
+		case 2: if (!is_cont (in[1])) return SP_UTF8_EENCODING;
 		}
 	}
 
@@ -293,7 +293,7 @@ static ssize_t
 unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 {
 	if (rem < 2) {
-		return SP_ETOOSHORT;
+		return SP_UTF8_ETOOSHORT;
 	}
 
 	int cp;
@@ -309,16 +309,16 @@ unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 	case '/':  scan = 2; cp = '/';  break;
 	case '\\': scan = 2; cp = '\\'; break;
 	case 'u':
-		if (rem < 6) return SP_ETOOSHORT;
-		if (!is_hex4 (src+2)) return SP_EESCAPE;
+		if (rem < 6) return SP_UTF8_ETOOSHORT;
+		if (!is_hex4 (src+2)) return SP_UTF8_EESCAPE;
 
 		cp = hex4 (src + 2);
 		if (is_surrogate (cp)) {
 			if ((rem > 6 && src[6] != '\\') || (rem > 7 && src[7] != 'u')) {
-				return SP_ESURROGATE;
+				return SP_UTF8_ESURROGATE;
 			}
-			if (rem < 12) return SP_ETOOSHORT;
-			if (!is_hex4 (src+8)) return SP_EESCAPE;
+			if (rem < 12) return SP_UTF8_ETOOSHORT;
+			if (!is_hex4 (src+8)) return SP_UTF8_EESCAPE;
 			cp = combine_surrogate (cp, hex4 (src+8));
 			scan = 12;
 		}
@@ -328,7 +328,7 @@ unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 
 		break;
 	default:
-		return SP_EESCAPE;
+		return SP_UTF8_EESCAPE;
 	}
 
 	ssize_t rc = sp_utf8_add_codepoint (u, cp);
@@ -348,13 +348,12 @@ sp_utf8_json_decode_next (SpUtf8 *u, const void *src, size_t len)
 	assert (src != NULL);
 
 	if (len == 0) {
-		return SP_ETOOSHORT;
+		return SP_UTF8_ETOOSHORT;
 	}
 
 	// check for control characters
 	if (!is_valid_json_byte (src)) {
-		// TODO: better error code
-		return SP_ESYNTAX;
+		return SP_JSON_EBYTE;
 	}
 
 	return *(const uint8_t *)src == '\\' ?
@@ -406,7 +405,7 @@ sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
 	assert (src != NULL);
 
 	if (len == 0) {
-		return SP_ETOOSHORT;
+		return SP_UTF8_ETOOSHORT;
 	}
 
 	switch (*(const uint8_t *)src) {
@@ -420,7 +419,7 @@ sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
 	}
 
 	if (!is_valid_json_byte (src)) {
-		return SP_EENCODING;
+		return SP_UTF8_EENCODING;
 	}
 
 	return sp_utf8_add_char (u, src, len);
@@ -432,7 +431,7 @@ sp_utf8_codepoint (const void *src, size_t len)
 	assert (src != NULL);
 
 	if (len == 0) {
-		return SP_ETOOSHORT;
+		return SP_UTF8_ETOOSHORT;
 	}
 
 	const uint8_t *m = src;
@@ -443,52 +442,52 @@ sp_utf8_codepoint (const void *src, size_t len)
 		return cp1;
 	}
 	else if (cp1 < 0xC2) {
-		return SP_EENCODING;
+		return SP_UTF8_EENCODING;
 	}
 	else if (cp1 < 0xE0) {
 		if (len < 2) {
-			return SP_ETOOSHORT;
+			return SP_UTF8_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		return (cp1 << 6) + cp2 - 0x3080;
 	}
 	else if (cp1 < 0xF0) {
 		if (len < 3) {
-			return SP_ETOOSHORT;
+			return SP_UTF8_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80 || (cp1 == 0xE0 && cp2 < 0xA0)) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		cp3 = m[2];
 		if ((cp3 & 0xC0) != 0x80) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		return (cp1 << 12) + (cp2 << 6) + cp3 - 0xE2080;
 	}
 	else if (cp1 < 0xF5) {
 		if (len < 4) {
-			return SP_ETOOSHORT;
+			return SP_UTF8_ETOOSHORT;
 		}
 		cp2 = m[1];
 		if ((cp2 & 0xC0) != 0x80 || (cp1 == 0xF0 && cp2 < 0x90) || (cp1 == 0xF4 && cp2 >= 0x90)) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		cp3 = m[2];
 		if ((cp3 & 0xC0) != 0x80) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		cp4 = m[3];
 		if ((cp4 & 0xC0) != 0x80) {
-			return SP_EENCODING;
+			return SP_UTF8_EENCODING;
 		}
 		return (cp1 << 18) + (cp2 << 12) + (cp3 << 6) + cp4 - 0x3C82080;
 	}
 	else {
-		return SP_EENCODING;
+		return SP_UTF8_EENCODING;
 	}
 }
 

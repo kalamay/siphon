@@ -15,8 +15,8 @@ static const uint8_t rng_non_ws[] = "\x00\x08\x0b\x0c\x0e\x1f\x21\xff";
 #define STACK_ARR 0
 #define STACK_OBJ 1
 
-#define STACK_PUSH_ARR STACK_PUSH_FALSE
-#define STACK_PUSH_OBJ STACK_PUSH_TRUE
+#define STACK_PUSH_ARR(p) STACK_PUSH_FALSE(p, SP_JSON_ESTACK)
+#define STACK_PUSH_OBJ(p) STACK_PUSH_TRUE(p, SP_JSON_ESTACK)
 
 #define STACK_IN_ARR(p) (STACK_TOP(p) == STACK_ARR)
 #define STACK_IN_OBJ(p) (STACK_TOP(p) == STACK_OBJ)
@@ -73,7 +73,7 @@ static const uint8_t rng_non_ws[] = "\x00\x08\x0b\x0c\x0e\x1f\x21\xff";
 	end = pcmp_range16 (end, len-p->off, rng_non_ws, sizeof rng_non_ws - 1); \
 	if (pcmp_unlikely (end == NULL)) {                                       \
 		if (pcmp_unlikely (done)) {                                          \
-			YIELD_ERROR (SP_ESYNTAX);                                        \
+			YIELD_ERROR (SP_JSON_ESYNTAX);                                        \
 		}                                                                    \
 		p->off = 0;                                                          \
 		return len;                                                          \
@@ -98,13 +98,13 @@ parse_string (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eo
 	ssize_t n;
 
 again:
-	EXPECT_RANGE (rng_check, SP_JSON_MAX_STRING, eof);
+	EXPECT_RANGE (rng_check, SP_JSON_MAX_STRING, eof, SP_JSON_ESYNTAX, SP_JSON_ESIZE);
 	end = pcmp_range16 (end, len-p->off, rng_check, sizeof rng_check - 1);
 	if (end == NULL) {
 		end = m + len;
 	}
 	p->off = end - m;
-	EXPECT_MAX_OFFSET (SP_JSON_MAX_STRING);
+	EXPECT_MAX_OFFSET (SP_JSON_MAX_STRING, SP_JSON_ESIZE);
 
 	n = sp_utf8_add_raw (&p->utf8, start, end - start);
 	if (n < 0) {
@@ -120,14 +120,14 @@ again:
 	}
 
 	n = sp_utf8_json_decode_next (&p->utf8, end, len - p->off);
-	if (n == SP_ETOOSHORT) {
+	if (n == SP_UTF8_ETOOSHORT) {
 		if (!eof) {
 			n = (ssize_t)p->off;
 			p->off = 0;
 			p->mark = 0;
 			return n;
 		}
-		n = SP_EESCAPE;
+		n = SP_JSON_EESCAPE;
 	}
 	if (n < 0) {
 		YIELD_ERROR (n);
@@ -149,7 +149,7 @@ parse_number (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eo
 
 	const uint8_t *end = m + p->off;
 
-	EXPECT_RANGE (rng_non_num, 511, eof);
+	EXPECT_RANGE (rng_non_num, 511, eof, SP_JSON_ESYNTAX, SP_JSON_ESIZE);
 
 	size_t n = p->off - p->mark;
 
@@ -160,7 +160,7 @@ parse_number (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eo
 	char *e;
 	p->number = strtod (buf, &e);
 	if (*e) {
-		YIELD_ERROR (SP_ESYNTAX);
+		YIELD_ERROR (SP_JSON_ESYNTAX);
 	}
 	YIELD_STACK (SP_JSON_NUMBER);
 }
@@ -172,7 +172,7 @@ parse_true (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 
 	const uint8_t *end = m + p->off;
 
-	EXPECT_PREFIX (pre_true, 0, eof);
+	EXPECT_PREFIX (pre_true, 0, eof, SP_JSON_ESYNTAX);
 	YIELD_STACK (SP_JSON_TRUE);
 }
 
@@ -183,7 +183,7 @@ parse_false (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof
 
 	const uint8_t *end = m + p->off;
 
-	EXPECT_PREFIX (pre_false, 0, eof);
+	EXPECT_PREFIX (pre_false, 0, eof, SP_JSON_ESYNTAX);
 	YIELD_STACK (SP_JSON_FALSE);
 }
 
@@ -194,7 +194,7 @@ parse_null (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 
 	const uint8_t *end = m + p->off;
 
-	EXPECT_PREFIX (pre_null, 0, eof);
+	EXPECT_PREFIX (pre_null, 0, eof, SP_JSON_ESYNTAX);
 	YIELD_STACK (SP_JSON_NULL);
 }
 
@@ -243,7 +243,7 @@ parse_any (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof)
 		p->cs = KIND_NULL;
 		return parse_null (p, m, len, eof);
 	}
-	YIELD_ERROR (SP_ESYNTAX);
+	YIELD_ERROR (SP_JSON_ESYNTAX);
 }
 
 static ssize_t
@@ -252,7 +252,7 @@ parse_array (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof
 	const uint8_t *end = m + p->off;
 
 	SKIP_WHITESPACE (eof);
-	EXPECT_SIZE (1, eof);
+	EXPECT_SIZE (1, eof, SP_JSON_ESYNTAX);
 
 	switch (p->cs & ARRAY_MASK) {
 	case ARRAY_FIRST:
@@ -278,7 +278,7 @@ parse_array (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eof
 		break;
 	}
 
-	YIELD_ERROR (SP_ESYNTAX);
+	YIELD_ERROR (SP_JSON_ESYNTAX);
 }
 
 static ssize_t
@@ -292,7 +292,7 @@ again:
 
 	switch (p->cs & OBJECT_MASK) {
 	case OBJECT_FIRST:
-		EXPECT_SIZE (1, eof);
+		EXPECT_SIZE (1, eof, SP_JSON_ESYNTAX);
 		switch (*end) {
 			case '}':
 				YIELD_IF_POP_OBJ ();
@@ -306,19 +306,19 @@ again:
 		break;
 
 	case OBJECT_KEY:
-		EXPECT_CHAR ('"', eof);
+		EXPECT_CHAR ('"', eof, SP_JSON_ESYNTAX);
 		sp_utf8_reset (&p->utf8);
 		p->mark = p->off;
 		p->cs = KIND_KEY;
 		return parse_string (p, m, len, eof);
 
 	case OBJECT_SEP:
-		EXPECT_CHAR (':', eof);
+		EXPECT_CHAR (':', eof, SP_JSON_ESYNTAX);
 		p->cs = KIND_ANY;
 		return parse_any (p, m, len, eof);
 
 	case OBJECT_NEXT:
-		EXPECT_SIZE (1, eof);
+		EXPECT_SIZE (1, eof, SP_JSON_ESYNTAX);
 		switch (*end) {
 			case '}':
 				YIELD_IF_POP_OBJ ();
@@ -332,7 +332,7 @@ again:
 		break;
 	}
 
-	YIELD_ERROR (SP_ESYNTAX);
+	YIELD_ERROR (SP_JSON_ESYNTAX);
 }
 
 static inline void
@@ -378,7 +378,7 @@ sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof)
 	assert (p != NULL);
 
 	p->type = SP_JSON_NONE;
-	EXPECT_SIZE (1, eof);
+	EXPECT_SIZE (1, eof, SP_JSON_ESYNTAX);
 
 	if (p->cs & ARRAY_MASK) {
 		return parse_array (p, buf, len, eof);
@@ -395,7 +395,7 @@ sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof)
 	case KIND_FALSE:  return parse_false (p, buf, len, eof);
 	case KIND_NULL:   return parse_null (p, buf, len, eof);
 	}
-	YIELD_ERROR (SP_ESTATE);
+	YIELD_ERROR (SP_JSON_ESTATE);
 }
 
 bool
