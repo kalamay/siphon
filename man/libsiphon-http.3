@@ -1,0 +1,200 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "LIBSIPHON\-HTTP" "3" "October 2015" "Imgix" "libsiphon"
+.
+.SH "NAME"
+\fBlibsiphon\-http\fR \- HTTP pull parser
+.
+.SH "SYNPOSIS"
+\fB#include <siphon/siphon\.h>\fR
+.
+.P
+void
+.
+.br
+\fBsp_http_init_request\fR (SpHttp *p);
+.
+.P
+void
+.
+.br
+\fBsp_http_init_response\fR (SpHttp *p);
+.
+.P
+void
+.
+.br
+\fBsp_http_reset\fR (SpHttp *p);
+.
+.P
+ssize_t
+.
+.br
+\fBsp_http_next\fR (SpHttp *p, const void *restrict buf, size_t len);
+.
+.P
+bool
+.
+.br
+\fBsp_http_is_done\fR (const SpHttp *p);
+.
+.P
+void
+.
+.br
+\fBsp_http_print\fR (const SpHttp *p, const void *restrict buf, FILE *out);
+.
+.SH "DESCRIPTION"
+The HTTP functions are used to parse and HTTP requests and responses\. The HTTP module is a pull parser that does not make any memory allocations, allowing the caller fine control over the memory use and continuation of the parser\.
+.
+.P
+The parser is accelerated when compiled to run on systems supporting SSE 4\.2\.
+.
+.SS "sp_http_init_request (SpHttp *p)"
+Initialize the parser to read an HTTP request\. The parser, \fBp\fR, can be in any state at the time of initialization\.
+.
+.SS "sp_http_init_response (SpHttp *p)"
+Initialize the parser to read an HTTP response\. The parser, \fBp\fR, can be in any state at the time of initialization\.
+.
+.SS "sp_http_reset (SpHttp *p)"
+Re\-initialize the parser the the state\. This will keep the parser in either a request or response state\.
+.
+.SS "sp_http_next (SpHttp *p, const void *restrict buf, size_t len)"
+Parses the next token in the input\. A value less than 0 will be returned to indicate an error\. Otherwise, \fBp\->type\fR will contain the value type that was matched and the return value indicates the number of bytes consumed\. The next call to this function expects \fBbuf\fR to start this many bytes furthur\. It is up to the caller to advance the buffer\. This may be accomplished through a byte offset, memmove(3), or any other scheme that ensure the condition is met\.
+.
+.P
+If \fBp\->type\fR is \fBSP_HTTP_NONE\fR, than more information must be read into the buffer before parsing can resume\. Repeatedly calling next while in this state will trigger an \fBSP_HTTP_ETOOSHORT\fR error\.
+.
+.P
+See \fIERRORS\fR for information on possible errors returned\.
+.
+.SS "sp_http_is_done (const SpHttp *p)"
+Checks if the parser is in a done state\. It is safe to call \fBsp_http_next\fR while in a done state, so it is important to check this to identify a completed request or response\.
+.
+.SS "sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out)"
+A utility function to print the value currently matched in the parser\. The \fBbuf\fR is expected to be in the same state as when \fBsp_http_next\fR was called\. The value, if any, will be written to \fBout\fR\.
+.
+.SH "ERRORS"
+When calling \fBsp_http_next\fR one of the following errors may be returned:
+.
+.TP
+\fBSP_HTTP_ESYNTAX\fR
+The byte sequence passed could not be parsed as valid HTTP
+.
+.TP
+\fBSP_HTTP_ESIZE\fR
+A value length exceeds the maximum allowed by the parser\. This could be the request URI or header field or value\. The size limits are set at compile time of the library\.
+.
+.TP
+\fBSP_HTTP_ESTATE\fR
+The internal parser state is not valid\. This typically occurs from externally changing the parser intentionally or as a result of a buffer over flow\.
+.
+.TP
+\fBSP_HTTP_ETOOSHORT\fR
+The parser failed to parse a value do to too little data\. The parser allows for several passes before triggering this error\. This error usually indicates a stalled or malicious input\.
+.
+.SH "EXAMPLE"
+.
+.nf
+
+#include <stdio\.h>
+#include <stdlib\.h>
+#include <unistd\.h>
+#include <siphon/siphon\.h>
+
+static int fd = STDIN_FILENO;
+static char buf[9192]; // buffer to read into
+static size_t end = 0; // last byte position in the buffer
+static size_t off = 0; // offset into the buffer
+
+// reads more from fd into buffer
+static void read_more (void);
+
+// reads raw body bytes from the buffer and/or socket
+static void read_raw (size_t len);
+
+int
+main (void)
+{
+    SpHttp p;
+    sp_http_init_request (&p);
+
+    while (!sp_http_is_done (&p)) {
+        ssize_t rc = sp_http_next (&p, buf+off, end\-off);
+        // TODO: handle parser errors gracefully
+        if (rc < 0) sp_exit (rc, EXIT_FAILURE);
+
+        // could not parse a token so read more
+        if (rc == 0) {
+            read_more ();
+            continue;
+        }
+
+        // TODO: do something with the token
+        sp_http_print (&p, buf+off, stdout);
+
+        // mark the used range of the buffer
+        off += rc;
+
+        // handle body values
+        if (p\.type == SP_HTTP_BODY_START) {
+            if (!p\.as\.body_start\.chunked) {
+                read_raw (p\.as\.body_start\.content_length);
+            }
+        }
+        else if (p\.type == SP_HTTP_BODY_CHUNK) {
+            read_raw (p\.as\.body_chunk\.length);
+        }
+    }
+
+    return 0;
+}
+
+void
+read_more (void)
+{
+    if (off == end) {
+        // nothing to move so reset
+        end = off = 0;
+    }
+    else if (end > sizeof (buf) / 2) {
+        // reclaim buffer space if more than half is used
+        memmove (buf, buf+off, end\-off);
+        end \-= off;
+        off = 0;
+    }
+
+    // read more at the end of the buffer
+    ssize_t n = read (fd, buf+end, sizeof (buf) \- end);
+    if (n < 0) sp_exit (errno, EXIT_FAILURE);
+
+    // push out end position
+    end += n;
+}
+
+void
+read_raw (size_t len)
+{
+    while (len > 0) {
+        // only process the amount in the buffer
+        size_t amt = len;
+        if (amt > end \- off) amt = end \- off;
+
+        // read more if nothing is availble
+        if (amt == 0) {
+            read_more ();
+            continue;
+        }
+
+        // write out the raw bytes
+        fwrite (buf+off, 1, amt, stdout);
+        fflush (stdout);
+
+        len \-= amt; // update number of raw bytes remaining
+        off += amt; // update buffer offset position
+    }
+}
+.
+.fi
+

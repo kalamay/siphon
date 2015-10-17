@@ -1,0 +1,206 @@
+libsiphon-http(3) -- HTTP pull parser
+=====================================
+
+
+
+## SYNPOSIS
+
+**\#include <siphon/siphon.h>**
+
+void<br>
+**sp_http_init_request** (SpHttp \*p);
+
+void<br>
+**sp_http_init_response** (SpHttp \*p);
+
+void<br>
+**sp_http_reset** (SpHttp \*p);
+
+ssize_t<br>
+**sp_http_next** (SpHttp \*p, const void \*restrict buf, size_t len);
+
+bool<br>
+**sp_http_is_done** (const SpHttp \*p);
+
+void<br>
+**sp_http_print** (const SpHttp \*p, const void \*restrict buf, FILE \*out);
+
+
+
+## DESCRIPTION
+
+The HTTP functions are used to parse and HTTP requests and responses. The HTTP
+module is a pull parser that does not make any memory allocations, allowing
+the caller fine control over the memory use and continuation of the parser.
+
+The parser is accelerated when compiled to run on systems supporting SSE 4.2.
+
+### sp_http_init_request (SpHttp \*p)
+
+Initialize the parser to read an HTTP request. The parser, `p`, can be in any
+state at the time of initialization.
+
+### sp_http_init_response (SpHttp \*p)
+
+Initialize the parser to read an HTTP response. The parser, `p`, can be in any
+state at the time of initialization.
+
+### sp_http_reset (SpHttp \*p)
+
+Re-initialize the parser the the state. This will keep the parser in either a
+request or response state.
+
+### sp_http_next (SpHttp \*p, const void \*restrict buf, size_t len)
+
+Parses the next token in the input. A value less than 0 will be returned to
+indicate an error. Otherwise, `p->type` will contain the value type that was
+matched and the return value indicates the number of bytes consumed. The next
+call to this function expects `buf` to start this many bytes furthur. It is
+up to the caller to advance the buffer. This may be accomplished through a
+byte offset, memmove(3), or any other scheme that ensure the condition is met.
+
+If `p->type` is `SP_HTTP_NONE`, than more information must be read into
+the buffer before parsing can resume. Repeatedly calling next while in this
+state will trigger an `SP_HTTP_ETOOSHORT` error.
+
+See [ERRORS][] for information on possible errors returned.
+
+### sp_http_is_done (const SpHttp \*p)
+
+Checks if the parser is in a done state. It is safe to call `sp_http_next` while
+in a done state, so it is important to check this to identify a completed request
+or response.
+
+### sp_http_print (const SpHttp \*p, const void \*restrict buf, FILE \*out)
+
+A utility function to print the value currently matched in the parser. The
+`buf` is expected to be in the same state as when `sp_http_next` was called.
+The value, if any, will be written to `out`.
+
+
+
+## ERRORS
+
+When calling `sp_http_next` one of the following errors may be returned:
+
+* `SP_HTTP_ESYNTAX`:
+  The byte sequence passed could not be parsed as valid HTTP
+
+* `SP_HTTP_ESIZE`:
+  A value length exceeds the maximum allowed by the parser. This could be the
+  request URI or header field or value. The size limits are set at compile time
+  of the library.
+
+* `SP_HTTP_ESTATE`:
+  The internal parser state is not valid. This typically occurs from externally
+  changing the parser intentionally or as a result of a buffer over flow.
+
+* `SP_HTTP_ETOOSHORT`:
+  The parser failed to parse a value do to too little data. The parser allows
+  for several passes before triggering this error. This error usually indicates
+  a stalled or malicious input.
+
+
+
+## EXAMPLE
+
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <siphon/siphon.h>
+
+static int fd = STDIN_FILENO;
+static char buf[9192]; // buffer to read into
+static size_t end = 0; // last byte position in the buffer
+static size_t off = 0; // offset into the buffer
+
+// reads more from fd into buffer
+static void read_more (void);
+
+// reads raw body bytes from the buffer and/or socket
+static void read_raw (size_t len);
+
+int
+main (void)
+{
+	SpHttp p;
+	sp_http_init_request (&p);
+
+	while (!sp_http_is_done (&p)) {
+		ssize_t rc = sp_http_next (&p, buf+off, end-off);
+		// TODO: handle parser errors gracefully
+		if (rc < 0) sp_exit (rc, EXIT_FAILURE);
+
+		// could not parse a token so read more
+		if (rc == 0) {
+			read_more ();
+			continue;
+		}
+
+		// TODO: do something with the token
+		sp_http_print (&p, buf+off, stdout);
+
+		// mark the used range of the buffer
+		off += rc;
+
+		// handle body values
+		if (p.type == SP_HTTP_BODY_START) {
+			if (!p.as.body_start.chunked) {
+				read_raw (p.as.body_start.content_length);
+			}
+		}
+		else if (p.type == SP_HTTP_BODY_CHUNK) {
+			read_raw (p.as.body_chunk.length);
+		}
+	}
+
+	return 0;
+}
+
+void
+read_more (void)
+{
+	if (off == end) {
+		// nothing to move so reset
+		end = off = 0;
+	}
+	else if (end > sizeof (buf) / 2) {
+		// reclaim buffer space if more than half is used
+		memmove (buf, buf+off, end-off);
+		end -= off;
+		off = 0;
+	}
+
+	// read more at the end of the buffer
+	ssize_t n = read (fd, buf+end, sizeof (buf) - end);
+	if (n < 0) sp_exit (errno, EXIT_FAILURE);
+
+	// push out end position
+	end += n;
+}
+
+void
+read_raw (size_t len)
+{
+	while (len > 0) {
+		// only process the amount in the buffer
+		size_t amt = len;
+		if (amt > end - off) amt = end - off;
+
+		// read more if nothing is availble
+		if (amt == 0) {
+			read_more ();
+			continue;
+		}
+
+		// write out the raw bytes
+		fwrite (buf+off, 1, amt, stdout);
+		fflush (stdout);
+
+		len -= amt; // update number of raw bytes remaining
+		off += amt; // update buffer offset position
+	}
+}
+```
+
