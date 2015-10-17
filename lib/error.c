@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <execinfo.h>
 
 #include "lock.h"
 
@@ -326,5 +327,45 @@ sp_error_next (const SpError *err)
 		return pos[1];
 	}
 	return NULL;
+}
+
+static void
+print (int err)
+{
+	const SpError *e = sp_error (err);
+	if (e == NULL) {
+		fprintf (stderr, "%s (%d)\n", nil_msg, err);
+	}
+	else {
+		sp_error_print (e, stderr);
+	}
+}
+
+void
+sp_exit (int code, int exitcode)
+{
+	print (code);
+	exit (exitcode);
+}
+
+void
+sp_abort (int code)
+{
+	print (code);
+
+	char **strs = NULL;
+	void *stack[32];
+	int count = 0, i = 0;
+
+	count = backtrace (stack, 32);
+	strs = backtrace_symbols (stack, count);
+
+	for (i = 1; i < count; ++i) {
+		fprintf (stderr, "\t%s\n", strs[i]);
+	}
+	fflush (stderr);
+
+	free (strs);
+	abort ();
 }
 

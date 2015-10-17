@@ -79,11 +79,14 @@ sp_eai_code (int err);
 SP_EXPORT void
 sp_error_print (const SpError *err, FILE *out);
 
-SP_EXPORT int
-sp_error_add_domain (int id, const char *name);
-
 SP_EXPORT const SpError *
 sp_error_next (const SpError *err);
+
+SP_EXPORT void
+sp_exit (int code, int exitcode);
+
+SP_EXPORT void
+sp_abort (int code);
 
 #endif
 
