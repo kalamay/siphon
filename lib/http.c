@@ -318,9 +318,14 @@ sp_http_next (SpHttp *p, const void *restrict buf, size_t len)
 {
 	assert (p != NULL);
 
+	if (len == 0) {
+		return 0;
+	}
+
 	ssize_t rc;
 	p->scans++;
 	p->cscans++;
+
 	     if (p->cs & REQ) rc = parse_request_line (p, buf, len);
 	else if (p->cs & RES) rc = parse_response_line (p, buf, len);
 	else if (p->cs & FLD) rc = parse_field (p, buf, len);
