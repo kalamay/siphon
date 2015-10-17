@@ -60,7 +60,7 @@
 
 typedef struct {
 	int code;
-	char domain[16], name[16];
+	char domain[10], name[20];
 	char msg[1]; /* expanded when allocated */
 } SpError;
 

@@ -223,7 +223,7 @@ init (void)
 #undef COUNT
 
 #define PUSH_SYS(sym, msg) push_error (sym, "system", #sym, msg);
-#define PUSH_EAI(sym, msg) push_error (SP_EAI_CODE(sym), "getaddrinfo", #sym, msg);
+#define PUSH_EAI(sym, msg) push_error (SP_EAI_CODE(sym), "addrinfo", #sym, msg);
 #define PUSH_UTF8(sym, msg) push_error (sym, "utf8", #sym, msg);
 #define PUSH_HTTP(sym, msg) push_error (sym, "http", #sym, msg);
 #define PUSH_JSON(sym, msg) push_error (sym, "json", #sym, msg);
