@@ -1,0 +1,53 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "LIBSIPHON" "3" "October 2015" "Imgix" "libsiphon"
+.
+.SH "NAME"
+\fBlibsiphon\fR \- Library for protocol and data format pull parsers
+.
+.SH "DESCRIPTION"
+Siphon is a library of highly optimized parsers for common protocol and data formats\. The design goal is to give as much control as possible to the caller and to maintain a minimal interface\. All of the parsers use a pull model: that is, the caller requests the next value from an input buffer\. This allows the caller to manage the continuation of the parser as well as the memory used for the tokens\.
+.
+.P
+The library aims to make little to no memory allocations and instead prefers that the caller maintain the input buffer until a value may be extracted from it\. The parser will not extract the value itself, but instead provide the bounds for the value within the buffer\.
+.
+.P
+Similarly, for plain byte sequences (HTTP bodies, MsgPack strings, binary and extension values), siphon will require that the caller handle the value\. This requires a little more work, but it enables much more powerful usages\. Particularly this enables mixing of zero\-copy primatives with the parser\. For example, a process could use \fBsplice(2)\fR to transfer a msgpack string from a back\-end parser, to an HTTP response body, or splice an incoming HTTP request directly to disk\.
+.
+.SH "MODULES"
+.
+.TP
+Error
+Managment system with support for system, library and custom defined errors\. See libsiphon\-error(3)\.
+.
+.TP
+HTTP
+Pull parser for HTTP 1\.x request and response data streams\. See libsiphon\-http(3)\.
+.
+.TP
+JSON
+Pull parser for JavaScript Object Notation formatted data streams\. See libsiphon\-json(3)\.
+.
+.TP
+MsgPack
+Pull parser for MsgPack formatted data streams\. See libsiphon\-msgpack(3)\.
+.
+.TP
+Line
+Pull parser for line protocols\. See libsiphon\-line(3)\.
+.
+.TP
+URI
+Single\-pass URI parser\. See libsiphon\-uri(3)\.
+.
+.TP
+Path
+Utility for working with Unix paths See libsiphon\-path(3)\.
+.
+.TP
+CRC
+Optimized CRC32 and CRC32c functions\. See libsiphon\-crc(3)\.
+.
+.SH "SEE ALSO"
+libsiphon\-error(3), libsiphon\-http(3), libsiphon\-json(3), libsiphon\-msgpack(3), libsiphon\-line(3), libsiphon\-uri(3), libsiphon\-path(3), libsiphon\-crc(3)
