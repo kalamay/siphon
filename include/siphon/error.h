@@ -67,26 +67,26 @@ typedef struct {
 SP_EXPORT const char *
 sp_strerror (int code);
 
-SP_EXPORT const SpError *
-sp_error (int code);
-
-SP_EXPORT const SpError *
-sp_error_add (int code, const char *domain, const char *name, const char *msg);
-
 SP_EXPORT int
 sp_eai_code (int err);
 
 SP_EXPORT void
-sp_error_print (const SpError *err, FILE *out);
-
-SP_EXPORT const SpError *
-sp_error_next (const SpError *err);
+sp_error_print (int code, FILE *out);
 
 SP_EXPORT void
 sp_exit (int code, int exitcode);
 
 SP_EXPORT void
 sp_abort (int code);
+
+SP_EXPORT const SpError *
+sp_error (int code);
+
+SP_EXPORT const SpError *
+sp_error_next (const SpError *err);
+
+SP_EXPORT const SpError *
+sp_error_add (int code, const char *domain, const char *name, const char *msg);
 
 #endif
 

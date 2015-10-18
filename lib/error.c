@@ -258,55 +258,63 @@ sp_strerror (int code)
 	return err ? err->msg : nil_msg;
 }
 
-const SpError *
-sp_error (int code)
-{
-	FIX_CODE (code);
-
-	const SpError **err = bsearch (&code, errors, error_len, sizeof errors[0], cmp_code);
-	return err ? *err : NULL;
-}
-
 int
 sp_eai_code (int err)
 {
 	return SP_EAI_CODE (err);
 }
 
-const SpError *
-sp_error_add (int code, const char *domain, const char *name, const char *msg)
-{
-	FIX_CODE (code);
-
-	if (code > SP_EUSER_MIN) {
-		return NULL;
-	}
-
-	const SpError *err = NULL;
-	if (sp_error (code) == NULL) {
-		LOCK ();
-		err = push_error (code, domain, name, msg);
-		if (err != NULL) {
-			sort_errors ();
-		}
-		UNLOCK ();
-	}
-
-	return err;
-}
-
 void
-sp_error_print (const SpError *err, FILE *out)
+sp_error_print (int code, FILE *out)
 {
 	if (out == NULL) {
 		out = stderr;
 	}
+	const SpError *err = sp_error (code);
 	if (err == NULL) {
-		fprintf (out, "%s\n", nil_msg);
+		fprintf (stderr, "%s (%d)\n", nil_msg, code);
 	}
 	else {
 		fprintf (out, "%s error: %s (%s)\n", err->domain, err->msg, err->name);
 	}
+}
+
+void
+sp_exit (int code, int exitcode)
+{
+	sp_error_print (code, stderr);
+	exit (exitcode);
+}
+
+void
+sp_abort (int code)
+{
+	sp_error_print (code, stderr);
+
+	char **strs = NULL;
+	void *stack[32];
+	int count = 0, i = 0;
+
+	count = backtrace (stack, 32);
+	strs = backtrace_symbols (stack, count);
+
+	for (i = 1; i < count; ++i) {
+		fprintf (stderr, "\t%s\n", strs[i]);
+	}
+	fflush (stderr);
+
+	free (strs);
+	abort ();
+}
+
+const SpError *
+sp_error (int code)
+{
+	FIX_CODE (code);
+
+	const SpError **err;
+	err = bsearch (&code, errors, error_len, sizeof errors[0], cmp_code);
+	return err ? *err : NULL;
 }
 
 const SpError *
@@ -329,43 +337,25 @@ sp_error_next (const SpError *err)
 	return NULL;
 }
 
-static void
-print (int err)
+const SpError *
+sp_error_add (int code, const char *domain, const char *name, const char *msg)
 {
-	const SpError *e = sp_error (err);
-	if (e == NULL) {
-		fprintf (stderr, "%s (%d)\n", nil_msg, err);
+	FIX_CODE (code);
+
+	if (code > SP_EUSER_MIN) {
+		return NULL;
 	}
-	else {
-		sp_error_print (e, stderr);
+
+	const SpError *err = NULL;
+	if (sp_error (code) == NULL) {
+		LOCK ();
+		err = push_error (code, domain, name, msg);
+		if (err != NULL) {
+			sort_errors ();
+		}
+		UNLOCK ();
 	}
-}
 
-void
-sp_exit (int code, int exitcode)
-{
-	print (code);
-	exit (exitcode);
-}
-
-void
-sp_abort (int code)
-{
-	print (code);
-
-	char **strs = NULL;
-	void *stack[32];
-	int count = 0, i = 0;
-
-	count = backtrace (stack, 32);
-	strs = backtrace_symbols (stack, count);
-
-	for (i = 1; i < count; ++i) {
-		fprintf (stderr, "\t%s\n", strs[i]);
-	}
-	fflush (stderr);
-
-	free (strs);
-	abort ();
+	return err;
 }
 
