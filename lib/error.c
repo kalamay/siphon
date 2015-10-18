@@ -115,7 +115,7 @@
 
 #define SP_PATH_ERRORS(XX) \
 	XX(SP_PATH_EBUFS,      "not enough buffer space available") \
-	XX(SP_PATH_ENOTFOUND,  "exdcutable not found") \
+	XX(SP_PATH_ENOTFOUND,  "executable not found") \
 
 #define SP_URI_ERRORS(XX) \
 	XX(SP_URI_EBUFS,       "not enough buffer space available") \
