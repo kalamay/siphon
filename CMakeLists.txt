@@ -86,6 +86,10 @@ install(DIRECTORY include/siphon
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.h")
 
+install(DIRECTORY man/
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man3
+	FILES_MATCHING PATTERN "*.3")
+
 
 
 add_executable(bench-http bench/http.c)
