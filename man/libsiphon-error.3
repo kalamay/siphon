@@ -1,0 +1,250 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "LIBSIPHON\-ERROR" "3" "October 2015" "Imgix" "libsiphon"
+.
+.SH "NAME"
+\fBlibsiphon\-error\fR \- Error managment
+.
+.SH "SYNPOSIS"
+\fB#include <siphon/siphon\.h>\fR
+.
+.P
+#define \fBSP_ESYSTEM\fR(code)
+.
+.P
+#define \fBSP_EAI_CODE\fR(code)
+.
+.P
+const char *
+.
+.br
+\fBsp_strerror\fR (int code);
+.
+.P
+int
+.
+.br
+\fBsp_eai_code\fR (int err);
+.
+.P
+void
+.
+.br
+\fBsp_error_print\fR (int code, FILE *out);
+.
+.P
+void
+.
+.br
+\fBsp_exit\fR (int code, int exitcode);
+.
+.P
+void
+.
+.br
+\fBsp_abort\fR (int code);
+.
+.IP "" 4
+.
+.nf
+
+typedef struct {
+    int code;
+    char domain[10], name[20];
+    char msg[1]; /* expanded when allocated */
+} SpError;
+.
+.fi
+.
+.IP "" 0
+.
+.P
+const SpError *
+.
+.br
+\fBsp_error\fR (int code);
+.
+.P
+const SpError *
+.
+.br
+\fBsp_error_next\fR (const SpError *err);
+.
+.P
+const SpError *
+.
+.br
+\fBsp_error_add\fR (int code,
+.
+.br
+const char *domain,
+.
+.br
+const char *name,
+.
+.br
+const char *msg);
+.
+.SH "DESCRIPTION"
+The error functions are used to query and register error codes and messages\. All error codes should be expressed as a negative value, however, positive versions of the number may be used interchangeably when querying the database\.
+.
+.SS "SP_ESYSTEM(code)"
+Macro to convert a system error code into an internal negative value\.
+.
+.SS "SP_EAI_CODE(code)"
+Macro to convert a getaddrinfo error code into a internal negative value\.
+.
+.SS "sp_strerror (int code)"
+Returns a constant string containing the error message for \fBcode\fR\.
+.
+.SS "sp_eai_code (int err)"
+Converts an error code from a \fBgetaddrinfo(3)\fR error into a siphon error code\.
+.
+.SS "sp_error_print (int code, FILE *out)"
+Writes the error information for the specified error \fBcode\fR to \fBout\fR\. If the code does not match a registered error, a default error message will be used\.
+.
+.SS "sp_exit (int code, int exitcode)"
+Prints an the error message for \fBcode\fR to \fBstderr\fR and call \fBexit(3)\fR with \fBexitcode\fR\.
+.
+.SS "sp_abort (int code)"
+Prints an the error message for \fBcode\fR and a stack trace and then calls \fBabort(3)\fR\.
+.
+.SS "sp_error (int code)"
+Looks up the error object that matches \fBcode\fR\. If no code is matched, \fBNULL\fR is returned\.
+.
+.SS "sp_error_next (const SpError *err)"
+Looks up the successive code object ordered after \fBerr\fR\. If \fBerr\fR is \fBNULL\fR, the first sorted error object will be returned\. If \fBerr\fR is the last sorted object, \fBNULL\fR will be returned\.
+.
+.SS "sp_error_add (int code, const char *dm, const char *nm, const char *msg)"
+Adds a new object to the error database\.
+.
+.SH "ERRORS"
+In addition to the system and getaddrinfo errors, the error database contains the following library error codes:
+.
+.TP
+\fBSP_UTF8_ESIZE\fR
+The size of the UTF\-8 buffer exceeds the maximum allowed\.
+.
+.TP
+\fBSP_UTF8_EESCAPE\fR
+Invalid escape sequence\.
+.
+.TP
+\fBSP_UTF8_ECODEPOINT\fR
+Invalid unicode code point integer\.
+.
+.TP
+\fBSP_UTF8_EENCODING\fR
+Invalid UTF\-8 byte sequence\.
+.
+.TP
+\fBSP_UTF8_ESURROGATE\fR
+Invalid surrogate pair escape sequence\.
+.
+.TP
+\fBSP_UTF8_ETOOSHORT\fR
+Escape sequence or tail byte sequence too short to decode into a codepoint\.
+.
+.TP
+\fBSP_HTTP_ESYNTAX\fR
+The byte sequence passed could not be parsed as valid HTTP
+.
+.TP
+\fBSP_HTTP_ESIZE\fR
+A value length exceeds the maximum allowed by the parser\. This could be the request URI or header field or value\. The size limits are set at compile time of the library\.
+.
+.TP
+\fBSP_HTTP_ESTATE\fR
+The internal parser state is not valid\. This typically occurs from externally changing the parser intentionally or as a result of a buffer over flow\.
+.
+.TP
+\fBSP_HTTP_ETOOSHORT\fR
+The parser failed to parse a value do to too little data\. The parser allows for several passes before triggering this error\. This error usually indicates a stalled or malicious input\.
+.
+.TP
+\fBSP_JSON_ESYNTAX\fR
+The byte sequence is not in a valid JSON format\.
+.
+.TP
+\fBSP_JSON_ESIZE\fR
+An input value length exceeds the maximum allowed\. This error occurs when a string is too long\.
+.
+.TP
+\fBSP_JSON_ESTACK\fR
+The internal stack size was exceeded\. Each array or object definition requires a stack entry\. This error is returned when the depth limit of the stack is reached\.
+.
+.TP
+\fBSP_JSON_ESTATE\fR
+The parser state is not valid\. This may happen if the parser is not properly initialized, manually changed, or possibly modified because of an overflow\.
+.
+.TP
+\fBSP_JSON_EESCAPE\fR
+An escape value in a string is invalid\.
+.
+.TP
+\fBSP_JSON_EBYTE\fR
+An invald byte was found in the JSON stream\.
+.
+.TP
+\fBSP_MSGPACK_ESYNTAX\fR
+The byte sequence is not in a valid MsgPack format\.
+.
+.TP
+\fBSP_MSGPACK_ESTACK\fR
+The internal stack size was exceeded\. Each array or map definition requires a stack entry\. This error is returned when the depth limit of the stack is reached\.
+.
+.TP
+\fBSP_LINE_ESYNTAX\fR
+A line ending was not found at the end of input\. This can only happen when the \fBeol\fR state is enabled when reading the next line\.
+.
+.TP
+\fBSP_LINE_ESIZE\fR
+The input line length exceeds the maximum allowed before matching a line termination character\.
+.
+.TP
+\fBSP_PATH_EBUFS\fR
+The provided buffer does not have enough space\.
+.
+.TP
+\fBSP_PATH_ENOTFOUND\fR
+An executable could not be found when matching against the \fBPATH\fR environment variable\.
+.
+.TP
+\fBSP_URI_EBUFS\fR
+The provided buffer does not have enough space\.
+.
+.TP
+\fBSP_URI_ESEGMENT\fR
+The provided segment value is not valid\.
+.
+.TP
+\fBSP_URI_ERANGE\fR
+The segment range is not valid\. This can happen when a start and end segments are inverted\.
+.
+.SH "EXAMPLE"
+.
+.nf
+
+#include <stdlib\.h>
+#include <errno\.h>
+#include <siphon/siphon\.h>
+
+int
+main (void)
+{
+    // add a custom error
+    sp_error_add (2001, "test", "BAD", "some bad thing");
+
+    // print some errors
+    sp_error_print (EINVAL, stderr);
+    sp_error_print (SP_EAI_CODE(EAI_FAMILY), stderr);
+
+    // print an error and exit
+    sp_exit (\-2001, EXIT_FAILURE);
+
+    return 0;
+}
+.
+.fi
+

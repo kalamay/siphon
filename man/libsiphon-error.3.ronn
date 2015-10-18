@@ -1,0 +1,222 @@
+libsiphon-error(3) -- Error managment
+=====================================
+
+
+
+## SYNPOSIS
+
+**\#include <siphon/siphon.h>**
+
+\#define **SP_ESYSTEM**(code)
+
+\#define **SP_EAI_CODE**(code)
+
+const char \*<br>
+**sp_strerror** (int code);
+
+int<br>
+**sp_eai_code** (int err);
+
+void<br>
+**sp_error_print** (int code, FILE \*out);
+
+void<br>
+**sp_exit** (int code, int exitcode);
+
+void<br>
+**sp_abort** (int code);
+
+```
+typedef struct {
+	int code;
+	char domain[10], name[20];
+	char msg[1]; /* expanded when allocated */
+} SpError;
+```
+
+const SpError \*<br>
+**sp_error** (int code);
+
+const SpError \*<br>
+**sp_error_next** (const SpError \*err);
+
+const SpError \*<br>
+**sp_error_add** (int code,<br>
+const char \*domain,<br>
+const char \*name,<br>
+const char \*msg);
+
+
+
+## DESCRIPTION
+
+The error functions are used to query and register error codes and messages. All
+error codes should be expressed as a negative value, however, positive versions of
+the number may be used interchangeably when querying the database.
+
+### SP_ESYSTEM(code)
+
+Macro to convert a system error code into an internal negative value.
+
+### SP_EAI_CODE(code)
+
+Macro to convert a getaddrinfo error code into a internal negative value.
+
+### sp_strerror (int code)
+
+Returns a constant string containing the error message for `code`.
+
+### sp_eai_code (int err)
+
+Converts an error code from a `getaddrinfo(3)` error into a siphon error code.
+
+### sp_error_print (int code, FILE \*out)
+
+Writes the error information for the specified error `code` to `out`. If the
+code does not match a registered error, a default error message will be used.
+
+### sp_exit (int code, int exitcode)
+
+Prints an the error message for `code`  to `stderr` and call `exit(3)` with
+`exitcode`.
+
+### sp_abort (int code)
+
+Prints an the error message for `code` and a stack trace and then calls `abort(3)`.
+
+### sp_error (int code)
+
+Looks up the error object that matches `code`. If no code is matched, `NULL`
+is returned.
+
+### sp_error_next (const SpError \*err)
+
+Looks up the successive code object ordered after `err`. If `err` is `NULL`,
+the first sorted error object will be returned. If `err` is the last sorted
+object, `NULL` will be returned.
+
+### sp_error_add (int code, const char \*dm, const char \*nm, const char \*msg)
+
+Adds a new object to the error database.
+
+
+
+## ERRORS
+
+In addition to the system and getaddrinfo errors, the error database contains
+the following library error codes:
+
+* `SP_UTF8_ESIZE`:
+  The size of the UTF-8 buffer exceeds the maximum allowed.
+
+* `SP_UTF8_EESCAPE`:
+  Invalid escape sequence.
+
+* `SP_UTF8_ECODEPOINT`:
+  Invalid unicode code point integer.
+
+* `SP_UTF8_EENCODING`:
+  Invalid UTF-8 byte sequence.
+  
+* `SP_UTF8_ESURROGATE`:
+  Invalid surrogate pair escape sequence.
+
+* `SP_UTF8_ETOOSHORT`:
+  Escape sequence or tail byte sequence too short to decode into a codepoint.
+
+* `SP_HTTP_ESYNTAX`:
+  The byte sequence passed could not be parsed as valid HTTP
+
+* `SP_HTTP_ESIZE`:
+  A value length exceeds the maximum allowed by the parser. This could be the
+  request URI or header field or value. The size limits are set at compile time
+  of the library.
+
+* `SP_HTTP_ESTATE`:
+  The internal parser state is not valid. This typically occurs from externally
+  changing the parser intentionally or as a result of a buffer over flow.
+
+* `SP_HTTP_ETOOSHORT`:
+  The parser failed to parse a value do to too little data. The parser allows
+  for several passes before triggering this error. This error usually indicates
+  a stalled or malicious input.
+
+* `SP_JSON_ESYNTAX`:
+  The byte sequence is not in a valid JSON format.
+
+* `SP_JSON_ESIZE`:
+  An input value length exceeds the maximum allowed. This error occurs when a
+  string is too long.
+
+* `SP_JSON_ESTACK`:
+  The internal stack size was exceeded. Each array or object definition requires
+  a stack entry. This error is returned when the depth limit of the stack is reached.
+
+* `SP_JSON_ESTATE`:
+  The parser state is not valid. This may happen if the parser is not properly
+  initialized, manually changed, or possibly modified because of an overflow.
+
+* `SP_JSON_EESCAPE`:
+  An escape value in a string is invalid.
+
+* `SP_JSON_EBYTE`:
+  An invald byte was found in the JSON stream.
+
+* `SP_MSGPACK_ESYNTAX`:
+  The byte sequence is not in a valid MsgPack format.
+
+* `SP_MSGPACK_ESTACK`:
+  The internal stack size was exceeded. Each array or map definition requires
+  a stack entry. This error is returned when the depth limit of the stack is reached.
+
+* `SP_LINE_ESYNTAX`:
+  A line ending was not found at the end of input. This can only happen when
+  the `eol` state is enabled when reading the next line.
+
+* `SP_LINE_ESIZE`:
+  The input line length exceeds the maximum allowed before matching a line
+  termination character.
+
+* `SP_PATH_EBUFS`:
+  The provided buffer does not have enough space.
+
+* `SP_PATH_ENOTFOUND`:
+  An executable could not be found when matching against the `PATH` environment
+  variable.
+
+* `SP_URI_EBUFS`:
+  The provided buffer does not have enough space.
+
+* `SP_URI_ESEGMENT`:
+  The provided segment value is not valid.
+
+* `SP_URI_ERANGE`:
+  The segment range is not valid. This can happen when a start and end segments
+  are inverted.
+
+
+
+## EXAMPLE
+
+```C
+#include <stdlib.h>
+#include <errno.h>
+#include <siphon/siphon.h>
+
+int
+main (void)
+{
+	// add a custom error
+	sp_error_add (2001, "test", "BAD", "some bad thing");
+
+	// print some errors
+	sp_error_print (EINVAL, stderr);
+	sp_error_print (SP_EAI_CODE(EAI_FAMILY), stderr);
+
+	// print an error and exit
+	sp_exit (-2001, EXIT_FAILURE);
+
+	return 0;
+}
+```
+
