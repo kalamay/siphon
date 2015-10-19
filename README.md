@@ -2,10 +2,13 @@
 
 Siphon is a library of highly optimized parsers for common protocol and data
 formats. The design goal is to give as much control as possible to the
-caller and to maintain a minimal interface. All of the parsers use a pull model:
-that is, the caller requests the next value from an input buffer. This allows
-the caller to manage the continuation of the parser as well as the memory used
-for the tokens.
+caller while maintaining a minimal interface. Additionally, it should provide
+a flexible interface for binding to from other languages. Most of this code
+was developed while binding it to LuaJITs FFI.
+
+Most of the parsers use a pull model: that is, the caller requests the next
+value from an input buffer. This allows the caller to manage the continuation
+of the parser as well as the memory used for the tokens.
 
 The library aims to make little to no memory allocations and instead prefers that
 the caller maintain the input buffer until a value may be extracted from it. The
