@@ -43,7 +43,7 @@ test_get (void)
 	e = sp_error (SP_EAI_CODE (EAI_FAMILY));
 	mu_assert_ptr_ne (e, NULL);
 	mu_assert_int_eq (e->code, SP_EAI_CODE (EAI_FAMILY));
-	mu_assert_str_eq (e->domain, "getaddrinfo");
+	mu_assert_str_eq (e->domain, "addrinfo");
 	mu_assert_str_eq (e->name, "EAI_FAMILY");
 
 	e = sp_error (SP_HTTP_ESYNTAX);

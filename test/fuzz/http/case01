@@ -8,9 +8,18 @@ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0
 Referer: https://github.com/kalamay/siphon
 Connection: keep-alive
 Transfer-Encoding: chunked
+Trailers: Test
 Cache-Control: max-age=0
 
-b
-hello world
+5
+hello
+1
+ 
+5
+world
+2
+
+
 0
+Test: value
 
