@@ -54,6 +54,21 @@ test_get (void)
 }
 
 static void
+test_missing (void)
+{
+	const SpError *e;
+
+	e = sp_error (0);
+	mu_assert_ptr_eq (e, NULL);
+
+	e = sp_error (150);
+	mu_assert_ptr_eq (e, NULL);
+
+	e = sp_error (9999);
+	mu_assert_ptr_eq (e, NULL);
+}
+
+static void
 test_iter (void)
 {
 	int last = 0;
@@ -69,6 +84,7 @@ main (void)
 {
 	test_add ();
 	test_get ();
+	test_missing ();
 	test_iter ();
 
 	mu_exit ("error");
