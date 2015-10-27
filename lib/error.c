@@ -7,6 +7,23 @@
 
 #include "lock.h"
 
+/* Fallback definitions to simplify compiling.
+ * These won't ever be used because they aren't defined (and thus not used)
+ * in linux. These definitions just allow the x-macro to be much simpler.
+ */
+#if __linux
+# ifndef EAI_CANCELED
+#  define EAI_CANCELED -33
+# endif
+# ifndef EAI_BADHINTS
+#  define EAI_BADHINTS -34
+# endif
+# ifndef EAI_PROTOCOL
+#  define EAI_PROTOCOL -35
+# endif
+#endif
+
+
 #define SP_SYSTEM_ERRORS(XX) \
 	XX(EPERM,              "operation not permitted") \
 	XX(ENOENT,             "no such file or directory") \
@@ -156,11 +173,11 @@ static const SpError *
 create_error (int code, const char *domain, const char *name, const char *msg)
 {
 	size_t len = strlen (msg);
-	SpError *new = malloc (sizeof *new + len);
+	SpError *new = calloc (1, sizeof *new + len);
 	if (new != NULL) {
 		new->code = code;
-		strlcpy (new->domain, domain, sizeof new->domain);
-		strlcpy (new->name, name, sizeof new->name);
+		strncpy (new->domain, domain, sizeof new->domain - 1);
+		strncpy (new->name, name, sizeof new->name - 1);
 		memcpy (new->msg, msg, len+1);
 	}
 	return new;

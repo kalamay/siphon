@@ -7,14 +7,6 @@
 
 #include "common.h"
 
-#ifndef EAI_CANCELED
-# if EAI_FAIL < 0
-#  define EAI_CANCELED -33
-# else
-#  define EAI_CANCELED 33
-# endif
-#endif
-
 #define SP_EAI_OFFSET (-200)
 #define SP_EUSER_MIN (-2000)
 
