@@ -304,25 +304,47 @@ sp_exit (int code, int exitcode)
 	exit (exitcode);
 }
 
+static void __attribute__((always_inline))
+stack_abort (char *buf, size_t len, size_t off)
+{
+	if (off < len - 1) {
+		buf[off++] = '\n';
+		size_t stack = sp_stack (buf+off, len - off);
+		fwrite (buf, 1, off + stack, stderr);
+	}
+	abort ();
+}
+
 void
 sp_abort (int code)
 {
-	sp_error_print (code, stderr);
+	char buf[1024];
+	int len;
 
-	char **strs = NULL;
-	void *stack[32];
-	int count = 0, i = 0;
-
-	count = backtrace (stack, 32);
-	strs = backtrace_symbols (stack, count);
-
-	for (i = 1; i < count; ++i) {
-		fprintf (stderr, "\t%s\n", strs[i]);
+	const SpError *err = sp_error (code);
+	if (err == NULL) {
+		len = snprintf (buf, sizeof buf, "%s (%d)", nil_msg, code);
 	}
-	fflush (stderr);
+	else {
+		len = snprintf (buf, sizeof buf, "%s error: %s (%s)", err->domain, err->msg, err->name);
+	}
 
-	free (strs);
-	abort ();
+	stack_abort (buf, sizeof buf, len);
+}
+
+void
+sp_fabort (const char *fmt, ...)
+{
+	char buf[1024];
+
+	va_list ap;
+	int len;
+
+	va_start(ap, fmt);
+	len = vsnprintf (buf, sizeof buf, fmt, ap);
+	va_end(ap);
+
+	stack_abort (buf, sizeof buf, len);
 }
 
 const SpError *
@@ -375,5 +397,34 @@ sp_error_add (int code, const char *domain, const char *name, const char *msg)
 	}
 
 	return err;
+}
+
+size_t __attribute__((always_inline))
+sp_stack (char *buf, size_t len)
+{
+	char **strs = NULL;
+	void *stack[32];
+	int count = 0, i = 0;
+	ssize_t total = 0;
+
+	count = backtrace (stack, 32);
+	strs = backtrace_symbols (stack, count);
+	if (strs == NULL) {
+		return 0;
+	}
+
+	for (i = 1; i < count; ++i) {
+		size_t slen = strlen (strs[i]);
+		if (slen > len - total - 3) {
+			break;
+		}
+		memcpy (buf+total, "\t", 1);
+		memcpy (buf+total+1, strs[i], slen);
+		memcpy (buf+total+1+slen, "\n", 2);
+		total += slen + 2;
+	}
+
+	free (strs);
+	return total;
 }
 
