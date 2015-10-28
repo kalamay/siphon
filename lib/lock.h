@@ -7,21 +7,24 @@
 
 # include <pthread.h>
 
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-# define LOCK() pthread_mutex_lock (&lock)
-# define UNLOCK() pthread_mutex_unlock (&lock)
+typedef pthread_mutex_t SpLock;
+# define SP_LOCK_MAKE() PTHREAD_MUTEX_INITIALIZER
+# define SP_LOCK(l) pthread_mutex_lock (&l)
+# define SP_UNLOCK(l) pthread_mutex_unlock (&l)
 
 #elif defined(__GCC_ATOMIC_TEST_AND_SET_TRUEVAL)
 
-static volatile int lock = 0;
-# define LOCK() do {} while (__sync_lock_test_and_set (&lock, 1))
-# define UNLOCK() __sync_lock_release(&lock)
+typedef volatile int SpLock;
+# define SP_LOCK_MAKE() 0
+# define SP_LOCK(l) do {} while (__sync_lock_test_and_set (&l, 1))
+# define SP_UNLOCK(l) __sync_lock_release(&l)
 
 #elif defined(_MSC_VER)
 
-static volatile long lock = 0;
-# define LOCK() do {} while (InterlockedExchange (&lock, 1))
-# define UNLOCK() do { _ReadWriteBarrier (); lock = 0; } while (0)
+typedef volatile long SpLock;
+# define SP_LOCK_MAKE() 0
+# define SP_LOCK(l) do {} while (InterlockedExchange (&l, 1))
+# define SP_UNLOCK(l) do { _ReadWriteBarrier (); l = 0; } while (0)
 
 #endif
 

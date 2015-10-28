@@ -386,14 +386,16 @@ sp_error_add (int code, const char *domain, const char *name, const char *msg)
 		return NULL;
 	}
 
+	static SpLock lock = SP_LOCK_MAKE ();
+
 	const SpError *err = NULL;
 	if (sp_error (code) == NULL) {
-		LOCK ();
+		SP_LOCK (lock);
 		err = push_error (code, domain, name, msg);
 		if (err != NULL) {
 			sort_errors ();
 		}
-		UNLOCK ();
+		SP_UNLOCK (lock);
 	}
 
 	return err;
