@@ -12,14 +12,15 @@
  * in linux. These definitions just allow the x-macro to be much simpler.
  */
 #if __linux
-# ifndef EAI_CANCELED
-#  define EAI_CANCELED -33
-# endif
 # ifndef EAI_BADHINTS
 #  define EAI_BADHINTS -34
 # endif
 # ifndef EAI_PROTOCOL
 #  define EAI_PROTOCOL -35
+# endif
+#else
+# ifndef EAI_CANCELED
+#  define EAI_CANCELED 33
 # endif
 #endif
 
@@ -289,7 +290,7 @@ sp_error_print (int code, FILE *out)
 	}
 	const SpError *err = sp_error (code);
 	if (err == NULL) {
-		fprintf (stderr, "%s (%d)\n", nil_msg, code);
+		fprintf (out, "%s (%d)\n", nil_msg, code);
 	}
 	else {
 		fprintf (out, "%s error: %s (%s)\n", err->domain, err->msg, err->name);
