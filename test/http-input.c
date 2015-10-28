@@ -78,9 +78,9 @@ readin (const char *path, size_t *outlen)
 
 	fclose (in);
 
-	char *copy = sp_mallocn (len, 1);
+	char *copy = sp_malloc (len);
 	if (copy == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
+		err (EXIT_FAILURE, "sp_malloc");
 	}
 
 	memcpy (copy, buffer, len);
@@ -91,6 +91,8 @@ readin (const char *path, size_t *outlen)
 int
 main (int argc, char **argv)
 {
+	sp_alloc_init (sp_alloc_debug, NULL);
+
 	size_t len;
 	char *buf = readin (argc > 1 ? argv[1] : NULL, &len);
 	char *cur = buf;
@@ -117,13 +119,13 @@ main (int argc, char **argv)
 		}
 	}
 
-	sp_free (buf);
+	sp_free (buf, len);
 
 	return 0;
 
 error:
 	fprintf (stderr, "http error: %s\n", sp_strerror (rc));
-	sp_free (buf);
+	sp_free (buf, len);
 	return 1;
 }
 

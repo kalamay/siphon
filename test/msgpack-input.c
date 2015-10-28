@@ -25,9 +25,9 @@ readin (const char *path, size_t *outlen)
 
 	fclose (in);
 
-	uint8_t *copy = sp_mallocn (len, 1);
+	uint8_t *copy = sp_malloc (len);
 	if (copy == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
+		err (EXIT_FAILURE, "sp_malloc");
 	}
 
 	memcpy (copy, buffer, len);
@@ -38,6 +38,8 @@ readin (const char *path, size_t *outlen)
 int
 main (int argc, char **argv)
 {
+	sp_alloc_init (sp_alloc_debug, NULL);
+
 	size_t len;
 	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
 	uint8_t *buf = val;
@@ -48,7 +50,7 @@ main (int argc, char **argv)
 	while (!sp_msgpack_is_done (&p)) {
 		ssize_t rc = sp_msgpack_next (&p, buf, len, true);
 		if (rc < 0 || (size_t)rc > len) {
-			sp_free (val);
+			sp_free (val, len);
 			errx (EXIT_FAILURE, "failed to parse");
 		}
 
@@ -108,7 +110,7 @@ main (int argc, char **argv)
 			break;
 		}
 	}
-	sp_free (val);
+	sp_free (val, len);
 	return 0;
 }
 

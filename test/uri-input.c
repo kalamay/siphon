@@ -19,9 +19,9 @@ readin (size_t *outlen)
 		len--;
 	}
 
-	char *str = sp_mallocn (len, 1);
+	char *str = sp_malloc (len);
 	if (str == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
+		err (EXIT_FAILURE, "sp_malloc");
 	}
 
 	memcpy (str, buffer, len);
@@ -32,17 +32,19 @@ readin (size_t *outlen)
 int
 main (void)
 {
+	sp_alloc_init (sp_alloc_debug, NULL);
+
 	size_t len;
 	char *str = readin (&len);
 
 	SpUri uri;
 	ssize_t rc = sp_uri_parse (&uri, str, len);
 	if (rc <= 0) {
-		sp_free (str);
+		sp_free (str, len);
 		errx (EXIT_FAILURE, "failed to parse");
 	}
 	sp_uri_print (&uri, str, stdout);
-	sp_free (str);
+	sp_free (str, len);
 
 	return 0;
 }
