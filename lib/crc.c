@@ -8,7 +8,7 @@
 } while (0)
 
 #define NEXT4(t) do {                                                        \
-	uint32_t c = crc ^ htole32(*(uint32_t *)bytes);                          \
+	uint32_t c = crc ^ sp_htole32(*(uint32_t *)bytes);                       \
 	bytes = (uint8_t *)bytes + 4;                                            \
 	crc = t[0][c & 0xff] ^                                                   \
 	      t[1][(c >> 8) & 0xff] ^                                            \
@@ -18,7 +18,7 @@
 
 #define CRC32(t) do {                                                        \
 	const void *end = (uint8_t *)bytes + len;                                \
-	crc = ~htole32 (crc);                                                    \
+	crc = ~sp_htole32 (crc);                                                 \
 	/* find the end of the unaligned sequence (up to 3 bytes) */             \
 	const void *sub = (const uint8_t *)((((uintptr_t)bytes + 3) >> 2) << 2); \
 	if (sub <= end) {                                                        \
@@ -43,7 +43,7 @@
 		NEXT1(t);                                                            \
 	}                                                                        \
                                                                              \
-	crc = le32toh (~crc);                                                    \
+	crc = sp_le32toh (~crc);                                                 \
 } while (0)
 
 static const uint32_t table32[4][256] = {{
