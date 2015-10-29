@@ -2,7 +2,6 @@
 #include "../include/siphon/endian.h"
 #include "../include/siphon/rand.h"
 
-#include <string.h>
 #include <ctype.h>
 
 static SpSeed SEED_DEFAULT = { .u128 = { 0x9ae16a3b2f90404fULL, 0xc3a5c85c97cb3127ULL } };

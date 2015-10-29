@@ -4,9 +4,7 @@
 #include "parser.h"
 
 #include <limits.h>
-#include <string.h>
 #include <errno.h>
-#include <math.h>
 #include <ctype.h>
 #include <assert.h>
 

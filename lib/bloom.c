@@ -1,8 +1,6 @@
 #include "../include/siphon/bloom.h"
 #include "../include/siphon/alloc.h"
 
-#include <string.h>
-#include <math.h>
 #include <assert.h>
 
 #define BASE_SIZE (sizeof (SpBloom) - sizeof (((SpBloom *)0)->bytes))

@@ -1,7 +1,6 @@
 #include "../include/siphon/error.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <execinfo.h>
 
 #include "lock.h"

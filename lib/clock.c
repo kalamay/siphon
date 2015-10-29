@@ -1,7 +1,6 @@
 #include "../include/siphon/clock.h"
 #include "config.h"
 
-#include <math.h>
 #include <assert.h>
 
 #if SP_MACH_CLOCK

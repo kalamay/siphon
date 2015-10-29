@@ -1,8 +1,6 @@
 #include "../include/siphon/msgpack.h"
 #include "mu/mu.h"
 
-#include <math.h>
-
 #define count(a) (sizeof (a) / sizeof ((a)[0]))
 
 typedef struct {

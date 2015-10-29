@@ -1,6 +1,5 @@
 #include "siphon/uri.h"
 
-#include <string.h>
 #include <assert.h>
 
 %%{
