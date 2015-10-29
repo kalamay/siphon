@@ -48,11 +48,6 @@ typedef struct {
 #define SP_RANGE_SUFFIX(a, abuf, b, bbuf) \
 	SP_RANGE_SUFFIX_MEM(a, abuf, (bbuf)+(b).off, (b).len)
 
-#define sp_container_of(ptr, type, member) ({            \
-	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-	(type *)( (char *)__mptr - offsetof(type,member) );  \
-})
-
 #define SP_POWER_OF_2(n) do {         \
 	if (n > 0) {                      \
 		(n)--;                        \
@@ -74,6 +69,14 @@ typedef struct {
 
 #define SP_NEXT(n, quant) \
 	(((((n) - 1) / (quant)) + 1) * (quant))
+
+#define sp_container_of(ptr, type, member) ({            \
+	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );  \
+})
+
+#define sp_len(a) \
+	(sizeof (a) / sizeof ((a)[0]))
 
 #endif
 
