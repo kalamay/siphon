@@ -48,6 +48,7 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
 add_library(siphon OBJECT
 	lib/error.c
+	lib/clock.c
 	lib/crc.c
 	lib/hash.c
 	lib/bloom.c
@@ -172,4 +173,8 @@ target_link_libraries(test-line siphon-static m)
 add_test(NAME error COMMAND test-error)
 add_executable(test-error test/error.c)
 target_link_libraries(test-error siphon-static m)
+
+add_test(NAME clock COMMAND test-clock)
+add_executable(test-clock test/clock.c)
+target_link_libraries(test-clock siphon-static m)
 
