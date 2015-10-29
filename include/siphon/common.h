@@ -80,6 +80,13 @@ typedef struct {
 #define sp_len(a) \
 	(sizeof (a) / sizeof ((a)[0]))
 
+#define sp_sym_concat(x, y) x ## y
+#define sp_sym_make(x, y) sp_sym_concat(x, y)
+#define sp_sym(n) sp_sym_make(__##n##_, __LINE__)
+
+#define sp_likely(x) __builtin_expect(!!(x), 1)
+#define sp_unlikely(x) __builtin_expect(!!(x), 0)
+
 typedef void (*SpPrint)(const void *val, FILE *out);
 
 SP_EXPORT void
