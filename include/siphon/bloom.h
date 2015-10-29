@@ -2,21 +2,24 @@
 #define SIPHON_BLOOM_H
 
 #include "common.h"
+#include "hash.h"
+
+#include <stdio.h>
 
 typedef struct {
+	const SpSeed *seed;
 	double fpp;
 	uint64_t count;
 	uint64_t bits;
-	uint32_t seed;
 	uint8_t hashes;
-	uint8_t bytes[3];
+	uint8_t bytes[31];
 } SpBloom;
 
 SP_EXPORT SpBloom *
-sp_bloom_create (size_t hint, double fpp, uint32_t seed);
+sp_bloom_new (size_t hint, double fpp, const SpSeed *restrict seed);
 
 SP_EXPORT void
-sp_bloom_destroy (SpBloom *self);
+sp_bloom_free (SpBloom *self);
 
 SP_EXPORT bool
 sp_bloom_is_capable (SpBloom *self, size_t hint, double fpp);
@@ -44,6 +47,9 @@ sp_bloom_clear (SpBloom *self);
 
 SP_EXPORT SpBloom *
 sp_bloom_copy (SpBloom *self);
+
+SP_EXPORT void
+sp_bloom_print (const SpBloom *self, FILE *out);
 
 #endif
 

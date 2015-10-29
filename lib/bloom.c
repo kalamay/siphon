@@ -1,6 +1,5 @@
-#include "siphon/bloom.h"
-#include "siphon/hash.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/bloom.h"
+#include "../include/siphon/alloc.h"
 
 #include <string.h>
 #include <math.h>
@@ -31,7 +30,7 @@ bloom_type (size_t hint, double fpp, uint64_t *bits, uint64_t *bytes, uint8_t *h
 }
 
 SpBloom *
-sp_bloom_create (size_t hint, double fpp, uint32_t seed)
+sp_bloom_new (size_t hint, double fpp, const SpSeed *restrict seed)
 {
 	uint64_t bits;
 	uint64_t bytes;
@@ -42,6 +41,7 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 	SpBloom *self = sp_malloc (BASE_SIZE + bytes);
 	if (self != NULL) {
 		self->fpp = fpp;
+		self->count = 0;
 		self->bits = bits;
 		self->seed = seed;
 		self->hashes = hashes;
@@ -51,7 +51,7 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 }
 
 void
-sp_bloom_destroy (SpBloom *self)
+sp_bloom_free (SpBloom *self)
 {
 	if (self != NULL) {
 		sp_free (self, BASE_SIZE + self->bits/8);
@@ -170,5 +170,21 @@ sp_bloom_copy (SpBloom *self)
 		memcpy (copy, self, size);
 	}
 	return copy;
+}
+
+void
+sp_bloom_print (const SpBloom *self, FILE *out)
+{
+	if (out == NULL) {
+		out = stderr;
+	}
+
+	if (self == NULL) {
+		fprintf (out, "#<SpBloom:(null)>\n");
+	}
+	else {
+		fprintf (out, "#<SpBloom:%p fpp=%f, count=%llu, bits=%llu, hashes=%u>\n",
+				(void *)self, self->fpp, self->count, self->bits, self->hashes);
+	}
 }
 
