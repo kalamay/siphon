@@ -271,6 +271,8 @@ test_unescape (void)
 int
 main (void)
 {
+	mu_init ("utf8");
+
 	test_err1 ();
 	test_err2 ();
 	test_err3 ();
@@ -296,7 +298,5 @@ main (void)
 	test_invalid_codepoints ();
 
 	test_unescape ();
-
-	mu_exit ("utf8");
 }
 

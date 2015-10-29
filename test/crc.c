@@ -1081,9 +1081,9 @@ test_crc32c (void)
 int
 main (void)
 {
+	mu_init ("crc");
+
 	test_crc32 ();
 	test_crc32c ();
-
-	mu_exit ("crc");
 }
 

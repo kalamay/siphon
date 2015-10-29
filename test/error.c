@@ -82,11 +82,11 @@ test_iter (void)
 int
 main (void)
 {
+	mu_init ("error");
+
 	test_add ();
 	test_get ();
 	test_missing ();
 	test_iter ();
-
-	mu_exit ("error");
 }
 

@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "siphon/bloom.h"
 #include "mu/mu.h"
 
@@ -46,9 +44,9 @@ test_large (void)
 int
 main (void)
 {
+	mu_init ("bloom");
+
 	test_basic ();
 	test_large ();
-
-	mu_exit ("bloom");
 }
 

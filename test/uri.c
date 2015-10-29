@@ -3,8 +3,7 @@
 
 #define assert_uri(u, s) do {                                                \
 	ssize_t rc = sp_uri_parse (u, s, strlen (s));                            \
-	mu_assert_msg (rc >= 0, "Failed to parse URI \"%s\"", (const char *)s);  \
-	if (rc < 0) mu_exit ("uri");                                             \
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", (const char *)s); \
 } while (0)
 
 #define assert_uri_segment(uri, buf, typ, str) do {                          \
@@ -1434,6 +1433,8 @@ test_ipv6 (void)
 int
 main (void)
 {
+	mu_init ("uri");
+
 	test_parse ();
 	test_sub ();
 	test_sub_no_fragment ();
@@ -1451,7 +1452,5 @@ main (void)
 	test_range_fragment_rel ();
 	test_join ();
 	test_ipv6 ();
-
-	mu_exit ("uri");
 }
 

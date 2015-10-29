@@ -120,10 +120,10 @@ test_siphash_case (void)
 int
 main (void)
 {
+	mu_init ("hash");
+	
 	test_metrohash ();
 	test_siphash ();
 	test_siphash_case ();
-	
-	mu_exit ("hash");
 }
 

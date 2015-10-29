@@ -223,6 +223,8 @@ test_env (void)
 int
 main (void)
 {
+	mu_init ("path");
+
 	test_join ();
 	test_clean ();
 	test_split ();
@@ -231,6 +233,4 @@ main (void)
 	test_match ();
 	test_proc ();
 	test_env ();
-
-	mu_exit ("path");
 }

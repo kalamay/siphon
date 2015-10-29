@@ -31,15 +31,11 @@ parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t spee
 	}
 
 	while (!sp_msgpack_is_done (p)) {
-		mu_assert_uint_ge (len, trim);
-		if (len < trim) return false;
+		mu_fassert_uint_ge (len, trim);
 
 		rc = sp_msgpack_next (p, buf, len - trim, len == inlen);
 
-		mu_assert_int_ge (rc, 0);
-		if (rc < 0) {
-			return false;
-		}
+		mu_fassert_int_ge (rc, 0);
 
 		// trim the buffer
 		buf += rc;
@@ -123,8 +119,7 @@ test_parse (ssize_t speed)
 		return;
 	}
 	
-	mu_assert_uint_eq (msg.field_count, 35);
-	if (msg.field_count != 35) return;
+	mu_fassert_uint_eq (msg.field_count, 35);
 
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_ARRAY);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 15);
@@ -254,8 +249,7 @@ test_encode_signed (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_signed (m, values[i]);
-		mu_assert_int_eq (rc, rcs[i]);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, rcs[i]);
 		m += rc;
 	}
 
@@ -265,8 +259,7 @@ test_encode_signed (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_eq (rc, rcs[i]);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, rcs[i]);
 		mu_assert_int_eq (p.type, SP_MSGPACK_SIGNED);
 		mu_assert_int_eq (p.tag.i64, values[i]);
 		m += rc;
@@ -285,8 +278,7 @@ test_encode_unsigned (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_unsigned (m, values[i]);
-		mu_assert_int_eq (rc, rcs[i]);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, rcs[i]);
 		m += rc;
 	}
 
@@ -296,8 +288,7 @@ test_encode_unsigned (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_eq (rc, rcs[i]);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, rcs[i]);
 		mu_assert_int_eq (p.type, SP_MSGPACK_UNSIGNED);
 		mu_assert_int_eq (p.tag.i64, values[i]);
 		m += rc;
@@ -315,8 +306,7 @@ test_encode_float (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_float (m, values[i]);
-		mu_assert_int_eq (rc, 5);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 5);
 		m += rc;
 	}
 
@@ -326,8 +316,7 @@ test_encode_float (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_eq (rc, 5);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 5);
 		mu_assert_int_eq (p.type, SP_MSGPACK_FLOAT);
 		char s1[16], s2[16];
 		snprintf (s1, 16, "%f", p.tag.f32);
@@ -348,8 +337,7 @@ test_encode_double (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_double (m, values[i]);
-		mu_assert_int_eq (rc, 9);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 9);
 		m += rc;
 	}
 
@@ -359,8 +347,7 @@ test_encode_double (void)
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_eq (rc, 9);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 9);
 		mu_assert_int_eq (p.type, SP_MSGPACK_DOUBLE);
 		char s1[16], s2[16];
 		snprintf (s1, 16, "%f", p.tag.f64);
@@ -385,8 +372,7 @@ test_encode_string ()
 	for (size_t i = 0; i < count (values); i++) {
 		size_t len = strlen (values[i]);
 		rc = sp_msgpack_enc_string (m, len);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		m += rc;
 		memcpy (m, values[i], len);
 		m += len;
@@ -398,8 +384,7 @@ test_encode_string ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		mu_assert_int_eq (p.type, SP_MSGPACK_STRING);
 		m += rc;
 
@@ -426,8 +411,7 @@ test_encode_binary ()
 	for (size_t i = 0; i < count (values); i++) {
 		size_t len = strlen (values[i]);
 		rc = sp_msgpack_enc_binary (m, len);
-		mu_assert_int_eq (rc, 2);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 2);
 		m += rc;
 		memcpy (m, values[i], len);
 		m += len;
@@ -439,8 +423,7 @@ test_encode_binary ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_eq (rc, 2);
-		if (rc <= 0) return;
+		mu_fassert_int_eq (rc, 2);
 		mu_assert_int_eq (p.type, SP_MSGPACK_BINARY);
 		m += rc;
 
@@ -463,8 +446,7 @@ test_encode_array ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_array (m, values[i]);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		m += rc;
 	}
 
@@ -474,8 +456,7 @@ test_encode_array ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		mu_assert_int_eq (p.type, SP_MSGPACK_ARRAY);
 		mu_assert_int_eq (p.tag.count, values[i]);
 		m += rc;
@@ -493,8 +474,7 @@ test_encode_map ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_enc_map (m, values[i]);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		m += rc;
 	}
 
@@ -504,8 +484,7 @@ test_encode_map ()
 	m = buf;
 	for (size_t i = 0; i < count (values); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 1);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 1);
 		mu_assert_int_eq (p.type, SP_MSGPACK_MAP);
 		mu_assert_int_eq (p.tag.count, values[i]);
 		m += rc;
@@ -523,8 +502,7 @@ test_encode_ext ()
 	m = buf;
 	for (size_t i = 0; i < count (lengths); i++) {
 		rc = sp_msgpack_enc_ext (m, (int8_t)i, lengths[i]);
-		mu_assert_int_ge (rc, 2);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 2);
 		m += rc;
 		memset (m, 0xff, lengths[i]);
 		m += lengths[i];
@@ -536,8 +514,7 @@ test_encode_ext ()
 	m = buf;
 	for (size_t i = 0; i < count (lengths); i++) {
 		rc = sp_msgpack_next (&p, m, sizeof buf - (m - buf), true);
-		mu_assert_int_ge (rc, 2);
-		if (rc <= 0) return;
+		mu_fassert_int_ge (rc, 2);
 		mu_assert_int_eq (p.type, SP_MSGPACK_EXT);
 		mu_assert_int_eq (p.tag.ext.type, (int8_t)i);
 		mu_assert_int_eq (p.tag.ext.len, lengths[i]);
@@ -552,6 +529,8 @@ test_encode_ext ()
 int
 main (void)
 {
+	mu_init ("msgpack");
+
 	test_parse (-1);
 	test_parse (1);
 
@@ -570,7 +549,5 @@ main (void)
 	test_encode_array ();
 	test_encode_map ();
 	test_encode_ext ();
-
-	mu_exit ("msgpack");
 }
 
