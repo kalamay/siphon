@@ -17,9 +17,17 @@ raw_equals (const void *val, const void *restrict key, size_t len)
 	return memcmp (val, key, len) == 0;
 }
 
+static bool
+case_equals (const void *val, const void *restrict key, size_t len)
+{
+	return strncasecmp (val, key, len) == 0;
+}
+
 static SpHashType HASH_RAW = { sp_metrohash64, raw_equals };
+static SpHashType HASH_CASE = { sp_siphash_case, case_equals };
 
 const SpHashType *const SP_HASH_RAW = &HASH_RAW;
+const SpHashType *const SP_HASH_CASE = &HASH_CASE;
 
 static void __attribute__((constructor))
 init (void)

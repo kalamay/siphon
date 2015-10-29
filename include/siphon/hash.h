@@ -23,6 +23,7 @@ typedef struct {
 } SpHashType;
 
 SP_EXPORT const SpHashType *const SP_HASH_RAW;
+SP_EXPORT const SpHashType *const SP_HASH_CASE;
 
 
 SP_EXPORT uint64_t
