@@ -7,11 +7,10 @@
 
 #if defined(BSD) || defined( __APPLE__)
 
-int
-sp_rand_init (void)
+static void __attribute__((constructor))
+init (void)
 {
 	arc4random_stir ();
-	return 0;
 }
 
 int
@@ -30,53 +29,43 @@ sp_rand_uint32 (uint32_t bound, uint32_t *out)
 
 #elif defined(__linux__)
 
-#include <stdio.h>
 #include <unistd.h>
-#include <errno.h>
 #include <sys/stat.h>
 
 static int fd = -1;
 
-int
-sp_rand_init (void)
+static void __attribute__((constructor))
+init (void)
 {
-	int err = 0;
-
 	while (true) {
 		fd = open ("/dev/urandom", O_RDONLY);
-		if (fd < 0) {
-			err = errno;
-			if (err == EINTR) {
-				// interrupted, try again
-				err = 0;
-				continue;
-			}
-			fprintf (stderr, "failed to open /dev/urandom: %s", strerror (err));
+		if (fd >= 0) {
+			break;
 		}
-		break;
+		if (errno != EINTR) {
+			fprintf (stderr, "*** failed to open /dev/urandom: %s", strerror (errno));
+			exit (1);
+		}
 	}
 
 	// stat the fd so it can be verified
 	struct stat sbuf;
 	if (fstat (fd, &sbuf) < 0) {
-		err = errno;
+		fprintf (stderr, "*** failed to stat /dev/urandom: %s", strerror (errno));
 		close (fd);
 		fd = -1;
-		fprintf (stderr, "failed to stat /dev/urandom: %s", strerror (err));
-		return SP_ESYSTEM (err);
+		exit (1);
 	}
 
 	// check that it is a char special
 	if (!S_ISCHR (sbuf.st_mode) ||
 			// verify that the device is /dev/random or /dev/urandom (linux only)
 			(sbuf.st_rdev != makedev (1, 8) && sbuf.st_rdev != makedev (1, 9))) {
+		fprintf (stderr, "*** /dev/urandom is an invalid device");
 		close (fd);
 		fd = -1;
-		fprintf (stderr, "/dev/urandom is an invalid device");
-		return SP_ESYSTEM (ENODEV);
+		exit (1);
 	}
-
-	return 0;
 }
 
 int
@@ -89,7 +78,7 @@ sp_rand (void *const restrict dst, size_t len)
 			amt += (size_t)r;
 		}
 		else if (r == 0 || errno != EINTR) {
-			return SP_ESYSTEM (errno);
+			return -1;
 		}
 	}
 	return 0;
@@ -99,9 +88,8 @@ int
 sp_rand_uint32 (uint32_t bound, uint32_t *out)
 {
 	uint32_t val;
-	int rc = sp_rand (&val, sizeof val);
-	if (rc < 0) {
-		return rc;
+	if (sp_rand (&val, sizeof val) < 0) {
+		return -1;
 	}
 
 	if (bound) {
@@ -114,12 +102,26 @@ sp_rand_uint32 (uint32_t bound, uint32_t *out)
 #endif
 
 int
+sp_rand_uint64 (uint64_t bound, uint64_t *out)
+{
+	uint64_t val;
+	if (sp_rand (&val, sizeof val) < 0) {
+		return -1;
+	}
+
+	if (bound) {
+		val = ((double)val / (double)UINT64_MAX) * bound;
+	}
+	*out = val;
+	return 0;
+}
+
+int
 sp_rand_double (double *out)
 {
 	uint64_t val;
-	int rc = sp_rand (&val, sizeof val);
-	if (rc < 0) {
-		return rc;
+	if (sp_rand (&val, sizeof val) < 0) {
+		return -1;
 	}
 
 	*out = (double)val / (double)UINT64_MAX;
