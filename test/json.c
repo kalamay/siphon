@@ -1,4 +1,7 @@
-#include <stdio.h>
+#include "../include/siphon/json.h"
+#include "../include/siphon/error.h"
+#include "mu/mu.h"
+
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/mman.h>
@@ -7,9 +10,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <inttypes.h>
-
-#include "siphon/siphon.h"
-#include "mu/mu.h"
 
 static bool debug = false;
 

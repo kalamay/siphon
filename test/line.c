@@ -1,3 +1,6 @@
+#include "../include/siphon/line.h"
+#include "mu/mu.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -7,9 +10,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <inttypes.h>
-
-#include "siphon/siphon.h"
-#include "mu/mu.h"
 
 typedef struct {
 	struct {

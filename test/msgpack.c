@@ -1,4 +1,4 @@
-#include "siphon/msgpack.h"
+#include "../include/siphon/msgpack.h"
 #include "mu/mu.h"
 
 #include <math.h>

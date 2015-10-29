@@ -1,4 +1,5 @@
-#include "siphon/siphon.h"
+#include "../include/siphon/path.h"
+#include "../include/siphon/error.h"
 #include "mu/mu.h"
 
 #include <errno.h>

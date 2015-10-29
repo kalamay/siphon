@@ -1,6 +1,4 @@
-#include <errno.h>
-
-#include "siphon/error.h"
+#include "../include/siphon/error.h"
 #include "mu/mu.h"
 
 static void

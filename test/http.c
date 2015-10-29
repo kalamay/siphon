@@ -1,8 +1,9 @@
-#include <stdio.h>
+#include "../include/siphon/http.h"
+#include "../include/siphon/error.h"
+#include "mu/mu.h"
+
 #include <stdlib.h>
 #include <ctype.h>
-#include "siphon/siphon.h"
-#include "mu/mu.h"
 
 typedef struct {
 	union {

@@ -1,4 +1,4 @@
-#include "siphon/bloom.h"
+#include "../include/siphon/bloom.h"
 #include "mu/mu.h"
 
 static void

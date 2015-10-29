@@ -1,4 +1,4 @@
-#include "siphon/siphon.h"
+#include "../include/siphon/uri.h"
 #include "mu/mu.h"
 
 #define assert_uri(u, s) do {                                                \

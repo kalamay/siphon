@@ -1,5 +1,5 @@
-#include "siphon/siphon.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/msgpack.h"
+#include "../include/siphon/alloc.h"
 
 #include <stdlib.h>
 #include <inttypes.h>

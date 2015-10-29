@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include "siphon/cache.h"
-
+#include "../include/siphon/cache.h"
 #include "mu/mu.h"
 
 static void

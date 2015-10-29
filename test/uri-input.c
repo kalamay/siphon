@@ -1,5 +1,5 @@
-#include "siphon/siphon.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/uri.h"
+#include "../include/siphon/alloc.h"
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,4 +1,5 @@
-#include "siphon/siphon.h"
+#include "../include/siphon/utf8.h"
+#include "../include/siphon/error.h"
 #include "mu/mu.h"
 
 static void

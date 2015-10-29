@@ -1,5 +1,6 @@
-#include "siphon/siphon.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/http.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 
 #include <unistd.h>
 #include <stdlib.h>
