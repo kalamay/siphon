@@ -54,6 +54,7 @@ add_library(siphon OBJECT
 	lib/crc.c
 	lib/hash.c
 	lib/bloom.c
+	lib/map.c
 	lib/rand.c
 	lib/utf8.c
 	lib/http.c
@@ -179,4 +180,8 @@ target_link_libraries(test-error siphon-static m)
 add_test(NAME clock COMMAND test-clock)
 add_executable(test-clock test/clock.c)
 target_link_libraries(test-clock siphon-static m)
+
+add_test(NAME map COMMAND test-map)
+add_executable(test-map test/map.c)
+target_link_libraries(test-map siphon-static m)
 
