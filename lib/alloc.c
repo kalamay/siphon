@@ -73,8 +73,8 @@ sp_alloc_system (void *data, void *ptr, size_t oldsz, size_t newsz)
 struct dbg_preamble {
 	uint64_t magic;
 	void *ptr;
-	uintptr_t size;
-	char stack[DBG_PREAMBLE_SIZE - 8 - (2 * sizeof (uintptr_t))];
+	uintptr_t size, cap;
+	char stack[DBG_PREAMBLE_SIZE - 8 - (3 * sizeof (uintptr_t))];
 };
 
 static const uint64_t dbg_magic = 0xf0231f251949aa2ULL;
@@ -155,9 +155,8 @@ sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz)
 
 	if (newsz > 0) {
 		size_t alloc = dbg_size (newsz);
-		char *p;
-		
-		if (posix_memalign ((void **)&p, pagesize, alloc + pagesize) == -1) {
+		char *p = mmap (NULL, alloc+pagesize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+		if (p == MAP_FAILED) {
 			return NULL;
 		}
 
@@ -187,6 +186,7 @@ sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz)
 		pre->magic = dbg_magic;
 		pre->ptr = p;
 		pre->size = newsz;
+		pre->cap = alloc + pagesize;
 
 		sp_stack (pre->stack, sizeof pre->stack);
 
@@ -202,7 +202,7 @@ sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz)
 		}
 		dbg_protect (pre, PROT_READ | PROT_WRITE);
 		pre->magic = 0;
-		free (pre->ptr);
+		munmap (pre->ptr, pre->cap);
 	}
 
 	return ret;
