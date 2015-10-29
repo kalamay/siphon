@@ -1,4 +1,4 @@
-#include "siphon/line.h"
+#include "../include/siphon/line.h"
 #include "common.h"
 
 #include <assert.h>

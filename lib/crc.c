@@ -1,5 +1,5 @@
-#include "siphon/crc.h"
-#include "siphon/endian.h"
+#include "../include/siphon/crc.h"
+#include "../include/siphon/endian.h"
 
 #define NEXT1(t) do {                                                        \
 	uint32_t c = (crc & 0xff) ^ *(uint8_t *)bytes;                           \

@@ -1,6 +1,6 @@
-#include "siphon/msgpack.h"
-#include "siphon/error.h"
-#include "siphon/endian.h"
+#include "../include/siphon/msgpack.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/endian.h"
 
 #include <stdio.h>
 #include <assert.h>

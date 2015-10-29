@@ -1,6 +1,6 @@
-#include "siphon/uri.h"
-#include "siphon/path.h"
-#include "siphon/error.h"
+#include "../include/siphon/uri.h"
+#include "../include/siphon/path.h"
+#include "../include/siphon/error.h"
 
 #include <stdlib.h>
 #include <string.h>

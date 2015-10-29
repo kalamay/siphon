@@ -1,4 +1,4 @@
-#include "siphon/json.h"
+#include "../include/siphon/json.h"
 #include "common.h"
 
 #include <stdlib.h>

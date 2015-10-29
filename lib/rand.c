@@ -1,5 +1,5 @@
-#include "siphon/rand.h"
-#include "siphon/error.h"
+#include "../include/siphon/rand.h"
+#include "../include/siphon/error.h"
 
 #include <stdlib.h>
 #include <fcntl.h>

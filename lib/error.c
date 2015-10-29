@@ -1,4 +1,4 @@
-#include "siphon/error.h"
+#include "../include/siphon/error.h"
 
 #include <stdlib.h>
 #include <stdio.h>

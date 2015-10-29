@@ -1,5 +1,5 @@
-#include "siphon/alloc.h"
-#include "siphon/error.h"
+#include "../include/siphon/alloc.h"
+#include "../include/siphon/error.h"
 #include "lock.h"
 
 #include <string.h>

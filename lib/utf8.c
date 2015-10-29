@@ -1,6 +1,6 @@
-#include "siphon/utf8.h"
-#include "siphon/error.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/utf8.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 #include "common.h"
 
 #include <limits.h>

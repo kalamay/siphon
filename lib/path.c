@@ -1,5 +1,5 @@
-#include "siphon/path.h"
-#include "siphon/error.h"
+#include "../include/siphon/path.h"
+#include "../include/siphon/error.h"
 
 #include <stdlib.h>
 #include <unistd.h>
