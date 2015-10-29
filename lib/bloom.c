@@ -1,9 +1,9 @@
 #include "siphon/bloom.h"
 #include "siphon/hash.h"
+#include "siphon/alloc.h"
 
 #include <string.h>
 #include <math.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #define BASE_SIZE (sizeof (SpBloom) - sizeof (((SpBloom *)0)->bytes))
@@ -39,12 +39,13 @@ sp_bloom_create (size_t hint, double fpp, uint32_t seed)
 
 	bloom_type (hint, fpp, &bits, &bytes, &hashes);
 
-	SpBloom *self = calloc (1, BASE_SIZE + bytes);
+	SpBloom *self = sp_malloc (BASE_SIZE + bytes);
 	if (self != NULL) {
 		self->fpp = fpp;
 		self->bits = bits;
 		self->seed = seed;
 		self->hashes = hashes;
+		memset (self->bytes, 0, bytes);
 	}
 	return self;
 }
@@ -53,7 +54,7 @@ void
 sp_bloom_destroy (SpBloom *self)
 {
 	if (self != NULL) {
-		free (self);
+		sp_free (self, BASE_SIZE + self->bits/8);
 	}
 }
 
@@ -164,7 +165,7 @@ SpBloom *
 sp_bloom_copy (SpBloom *self)
 {
 	size_t size = BASE_SIZE + self->bits/8;
-	SpBloom *copy = malloc (size);
+	SpBloom *copy = sp_malloc (size);
 	if (copy != NULL) {
 		memcpy (copy, self, size);
 	}

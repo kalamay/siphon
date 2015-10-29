@@ -1,8 +1,8 @@
 #include "siphon/utf8.h"
 #include "siphon/error.h"
+#include "siphon/alloc.h"
 #include "common.h"
 
-#include <stdlib.h>
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
@@ -61,7 +61,7 @@ sp_utf8_final (SpUtf8 *u)
 {
 	assert (u != NULL);
 
-	free (u->buf);
+	sp_free (u->buf, u->cap);
 	u->buf = NULL;
 	u->cap = 0;
 	u->len = 0;
@@ -106,7 +106,7 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 		cap = (((cap - 1) / MAX_POWER_OF_2) + 1) * MAX_POWER_OF_2;
 	}
 
-	uint8_t *buf = realloc (u->buf, cap);
+	uint8_t *buf = sp_realloc (u->buf, u->cap, cap);
 	if (buf == NULL) {
 		return SP_ESYSTEM(errno);
 	}
