@@ -1,4 +1,3 @@
-
 #include "siphon/siphon.h"
 
 #include <assert.h>

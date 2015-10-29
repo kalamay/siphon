@@ -3,8 +3,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include <stdio.h>
-
 %%{
 	machine cache_control_parser;
 

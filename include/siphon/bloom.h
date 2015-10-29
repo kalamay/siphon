@@ -4,8 +4,6 @@
 #include "common.h"
 #include "hash.h"
 
-#include <stdio.h>
-
 typedef struct {
 	const SpSeed *seed;
 	double fpp;

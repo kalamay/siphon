@@ -49,6 +49,8 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.h
 add_library(siphon OBJECT
 	lib/error.c
 	lib/clock.c
+	lib/common.c
+	lib/fmt.c
 	lib/crc.c
 	lib/hash.c
 	lib/bloom.c

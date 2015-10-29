@@ -2,7 +2,6 @@
 #include "../include/siphon/error.h"
 #include "../include/siphon/endian.h"
 
-#include <stdio.h>
 #include <assert.h>
 
 

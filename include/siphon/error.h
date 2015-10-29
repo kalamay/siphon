@@ -1,12 +1,11 @@
 #ifndef SIPHON_ERROR_H
 #define SIPHON_ERROR_H
 
-#include <stdio.h>
+#include "common.h"
+
 #include <errno.h>
 #include <netdb.h>
 #include <stdarg.h>
-
-#include "common.h"
 
 #define SP_EAI_OFFSET (-200)
 #define SP_EUSER_MIN (-2000)

@@ -1,6 +1,7 @@
 #ifndef SIPHON_COMMON_H
 #define SIPHON_COMMON_H
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -77,6 +78,14 @@ typedef struct {
 
 #define sp_len(a) \
 	(sizeof (a) / sizeof ((a)[0]))
+
+typedef void (*SpPrint)(const void *val, FILE *out);
+
+SP_EXPORT void
+sp_print_ptr (const void *val, FILE *out);
+
+SP_EXPORT void
+sp_print_str (const void *val, FILE *out);
 
 #endif
 

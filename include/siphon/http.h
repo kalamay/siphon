@@ -3,8 +3,6 @@
 
 #include "common.h"
 
-#include <stdio.h>
-
 #define SP_HTTP_MAX_METHOD 32
 #define SP_HTTP_MAX_URI 8192
 #define SP_HTTP_MAX_REASON 256
