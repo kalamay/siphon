@@ -1,6 +1,7 @@
 #include "../include/siphon/clock.h"
 #include "config.h"
 
+#include <errno.h>
 #include <assert.h>
 
 #if SP_MACH_CLOCK
@@ -34,16 +35,18 @@ sp_clock_real (SpClock *clock)
 	assert (clock != NULL);
 
 #if SP_POSIX_CLOCK
-	return clock_gettime (SP_CLOCK_REALIME, &clock);
+	if (clock_gettime (SP_CLOCK_REALIME, &clock) < 0) {
+		return -errno;
+	}
 #elif SP_MACH_CLOCK
 	mach_timespec_t ts;
 	if (clock_get_time (clock_serv, &ts) != KERN_SUCCESS) {
-		return -1;
+		return -errno;
 	}
 	clock->tv_sec = ts.tv_sec;
 	clock->tv_nsec = ts.tv_nsec;
-	return 0;
 #endif
+	return 0;
 }
 
 int
@@ -52,11 +55,13 @@ sp_clock_mono (SpClock *clock)
 	assert (clock != NULL);
 
 #if SP_POSIX_CLOCK
-	return clock_gettime (SP_CLOCK_MONOTONIC, &clock);
+	if (clock_gettime (SP_CLOCK_MONOTONIC, &clock) < 0) {
+		return -errno;
+	}
 #elif SP_MACH_CLOCK
 	SP_CLOCK_SET_NSEC (clock, (mach_absolute_time () * info.numer) / info.denom);
-	return 0;
 #endif
+	return 0;
 }
 
 double
