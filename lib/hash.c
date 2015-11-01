@@ -1,39 +1,7 @@
 #include "../include/siphon/hash.h"
 #include "../include/siphon/endian.h"
-#include "../include/siphon/rand.h"
 
 #include <ctype.h>
-
-static SpSeed SEED_DEFAULT = { .u128 = { 0x9ae16a3b2f90404fULL, 0xc3a5c85c97cb3127ULL } };
-static SpSeed SEED_RANDOM;
-
-const SpSeed *const restrict SP_SEED_DEFAULT = &SEED_DEFAULT;
-const SpSeed *const restrict SP_SEED_RANDOM = &SEED_RANDOM;
-
-
-static bool
-raw_equals (const void *val, const void *restrict key, size_t len)
-{
-	return memcmp (val, key, len) == 0;
-}
-
-static bool
-case_equals (const void *val, const void *restrict key, size_t len)
-{
-	return strncasecmp (val, key, len) == 0;
-}
-
-static SpHashType HASH_RAW = { sp_metrohash64, raw_equals };
-static SpHashType HASH_CASE = { sp_siphash_case, case_equals };
-
-const SpHashType *const SP_HASH_RAW = &HASH_RAW;
-const SpHashType *const SP_HASH_CASE = &HASH_CASE;
-
-static void __attribute__((constructor))
-init (void)
-{
-	sp_rand (&SEED_RANDOM, sizeof SEED_RANDOM);
-}
 
 inline static uint64_t
 rotr (uint64_t v, unsigned k)

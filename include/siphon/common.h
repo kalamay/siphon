@@ -87,7 +87,29 @@ typedef struct {
 #define sp_likely(x) __builtin_expect(!!(x), 1)
 #define sp_unlikely(x) __builtin_expect(!!(x), 0)
 
+typedef union {
+	struct { uint64_t low, high; } u128;
+	uint64_t u64;
+	uint32_t u32;
+	uint8_t bytes[16];
+} SpSeed;
+
+typedef uint64_t (*SpHash)(const void *restrict key, size_t len, const SpSeed *restrict seed);
+typedef bool (*SpIsKey)(const void *val, const void *key, size_t len);
+typedef void *(*SpCopy)(void *val);
+typedef void (*SpFree)(void *val);
 typedef void (*SpPrint)(const void *val, FILE *out);
+
+typedef struct {
+	SpHash hash;
+	SpIsKey iskey;
+	SpCopy copy;
+	SpFree free;
+	SpPrint print;
+} SpType;
+
+SP_EXPORT const SpSeed *const restrict SP_SEED_DEFAULT;
+SP_EXPORT const SpSeed *const restrict SP_SEED_RANDOM;
 
 SP_EXPORT void
 sp_print_ptr (const void *val, FILE *out);
