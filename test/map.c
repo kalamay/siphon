@@ -20,14 +20,14 @@ key_equals (const void *restrict val, const void *restrict key, size_t len)
 	return strncmp (val, key, len) == 0;
 }
 
-SpMapType junk_type = {
+SpType junk_type = {
 	.hash = junk_hash,
-	.equals = key_equals
+	.iskey = key_equals
 };
 
-SpMapType good_type = {
+SpType good_type = {
 	.hash = sp_metrohash64,
-	.equals = key_equals
+	.iskey = key_equals
 };
 
 #define TEST_ADD_NEW(map, key, count) do {             \
@@ -261,7 +261,7 @@ test_downsize (void)
 static void
 test_large (void)
 {
-	SpMapType type = good_type;
+	SpType type = good_type;
 	type.copy = (SpCopy)strdup;
 	type.free = free;
 
@@ -304,7 +304,7 @@ test_free (void *val)
 static void
 test_copy_free (void)
 {
-	SpMapType type = good_type;
+	SpType type = good_type;
 	type.copy = test_copy;
 	type.free = test_free;
 
@@ -353,7 +353,7 @@ test_each (void)
 static void
 test_bloom (void)
 {
-	SpMapType type = good_type;
+	SpType type = good_type;
 	type.copy = (SpCopy)strdup;
 	type.free = free;
 

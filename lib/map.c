@@ -2,7 +2,7 @@
 #include "../include/siphon/error.h"
 
 #include <stdlib.h>
-#include <string.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <assert.h>
 
@@ -41,41 +41,45 @@ probe (const SpMap *self, uint64_t hash, size_t idx)
 }
 
 int
-sp_map_init (SpMap *self, size_t hint, double loadf, const SpHashType *type)
+sp_map_init (SpMap *self, size_t hint, double loadf, const SpType *type)
 {
 	assert (self != NULL);
 	assert (type != NULL);
 	assert (type->hash != NULL);
-	assert (type->equals != NULL);
+	assert (type->iskey != NULL);
 
 	*self = SP_MAP_MAKE (type);
 	return sp_map_set_load_factor (self, hint, loadf);
 }
 
 void
-sp_map_final (SpMap *self, SpMapCallback func, void *data)
+sp_map_final (SpMap *self)
 {
 	assert (self != NULL);
 
-	sp_map_clear (self, func, data);
+	sp_bloom_free (self->bloom);
+	self->bloom = NULL;
+
+	sp_map_clear (self);
 	free (self->entries);
-	*self = SP_MAP_MAKE (&self->type);
+	*self = SP_MAP_MAKE (self->type);
 }
 
 void
-sp_map_clear (SpMap *self, SpMapCallback func, void *data)
+sp_map_clear (SpMap *self)
 {
 	assert (self != NULL);
 
-	if (func) {
+	if (self->type->free) {
 		for (size_t i=0; i<self->capacity; i++) {
 			if (self->entries[i].hash) {
-				func (self->entries[i].value, self->entries[i].hash, data);
+				self->type->free (self->entries[i].value);
 			}
 		}
 	}
 	memset (self->entries, 0, sizeof *self->entries * self->capacity);
 	self->count = 0;
+	sp_bloom_clear (self->bloom);
 }
 
 size_t
@@ -137,12 +141,12 @@ sp_map_set_load_factor (SpMap *self, size_t hint, double loadf)
 }
 
 uint64_t
-sp_map_compute (const SpMap *self, const void *restrict key, size_t len)
+sp_map_hash (const SpMap *self, const void *restrict key, size_t len)
 {
 	assert (self != NULL);
 	assert (key != NULL);
 
-	return self->type.hash (key, len, SP_SEED_RANDOM);
+	return self->type->hash (key, len, SP_SEED_RANDOM);
 }
 
 static size_t
@@ -227,10 +231,49 @@ sp_map_resize (SpMap *self, size_t hint)
 	return 0;
 }
 
+int
+sp_map_use_bloom (SpMap *self, size_t hint, double fpp)
+{
+	assert (self != NULL);
+
+	if (isnan (fpp) || fpp <= 0.0) {
+		sp_bloom_free (self->bloom);
+		self->bloom = NULL;
+		return 0;
+	}
+
+	if (hint < self->count) {
+		hint = self->count;
+	}
+	if (sp_bloom_is_capable (self->bloom, hint, fpp)) {
+		return 0;
+	}
+
+	sp_bloom_free (self->bloom);
+	self->bloom = sp_bloom_new (hint, fpp);
+	if (self->bloom == NULL) {
+		return -errno;
+	}
+
+	const SpMapEntry *entry;
+	sp_map_each (self, entry) {
+		sp_bloom_put_hash (self->bloom, entry->hash);
+	}
+	return 0;
+}
+
+static bool
+definitely_no (const SpMap *self, uint64_t h)
+{
+	return self->count == 0 ||
+		(self->bloom != NULL && !sp_bloom_maybe_hash (self->bloom, h));
+
+}
+
 static SpMapEntry *
 get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
 {
-	if (self->entries == NULL) {
+	if (definitely_no (self, h)) {
 		return NULL;
 	}
 
@@ -243,7 +286,7 @@ get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
 			return NULL;
 		}
 		if (h == hash_tmp) {
-			if (sp_likely (self->type.equals (self->entries[idx].value, key, len))) {
+			if (sp_likely (self->type->iskey (self->entries[idx].value, key, len))) {
 				return &self->entries[idx];
 			}
 		}
@@ -256,16 +299,7 @@ sp_map_has_key (const SpMap *self, const void *restrict key, size_t len)
 	assert (self != NULL);
 	assert (key != NULL);
 
-	uint64_t h = sp_map_compute (self, key, len);
-	return sp_map_has_key_pre (self, h, key, len);
-}
-
-bool
-sp_map_has_key_pre (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
-{
-	assert (self != NULL);
-	assert (key != NULL);
-
+	uint64_t h = sp_map_hash (self, key, len);
 	return get (self, h, key, len) != NULL;
 }
 
@@ -275,65 +309,48 @@ sp_map_get (const SpMap *self, const void *restrict key, size_t len)
 	assert (self != NULL);
 	assert (key != NULL);
 
-	uint64_t h = sp_map_compute (self, key, len);
-	return sp_map_get_pre (self, h, key, len);
-}
-
-void *
-sp_map_get_pre (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
-{
-	assert (self != NULL);
-	assert (key != NULL);
-
+	uint64_t h = sp_map_hash (self, key, len);
 	SpMapEntry *e = get (self, h, key, len);
-	if (e == NULL) {
-		errno = EINVAL;
-		return NULL;
-	}
-	errno = 0;
-	return e->value;
+	return e ? e->value : NULL;
 }
 
-void *
+int
 sp_map_put (SpMap *self, const void *restrict key, size_t len, void *val)
 {
 	assert (self != NULL);
 	assert (key != NULL);
 
-	uint64_t h = sp_map_compute (self, key, len);
-	return sp_map_put_pre (self, h, key, len, val);
-}
-
-void *
-sp_map_put_pre (SpMap *self, uint64_t h, const void *restrict key, size_t len, void *val)
-{
-	assert (self != NULL);
-	assert (key != NULL);
+	if (val == NULL) {
+		return sp_map_del (self, key, len);
+	}
 
 	bool new;
-	void **pos = sp_map_reserve_pre (self, h, key, len, &new);
+	void **pos = sp_map_reserve (self, key, len, &new);
 	if (pos == NULL) {
-		return NULL;
+		return -errno;
 	}
-	void *old = new ? NULL : *pos;
-	*pos = val;
-	errno = 0;
-	return old;
+	if (!new && self->type->free) {
+		self->type->free (*pos);
+	}
+	*pos = self->type->copy ? self->type->copy (val) : val;
+	return !new;
+}
+
+bool
+sp_map_del (SpMap *self, const void *restrict key, size_t len)
+{
+	void *value = sp_map_steal (self, key, len);
+	if (value == NULL) {
+		return false;
+	}
+	if (self->type->free) {
+		self->type->free (value);
+	}
+	return true;
 }
 
 void **
 sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
-{
-	assert (self != NULL);
-	assert (key != NULL);
-	assert (isnew != NULL);
-
-	uint64_t h = sp_map_compute (self, key, len);
-	return sp_map_reserve_pre (self, h, key, len, isnew);
-}
-
-void **
-sp_map_reserve_pre (SpMap *self, uint64_t h, const void *restrict key, size_t len, bool *isnew)
 {
 	assert (self != NULL);
 	assert (key != NULL);
@@ -345,6 +362,7 @@ sp_map_reserve_pre (SpMap *self, uint64_t h, const void *restrict key, size_t le
 		}
 	}
 
+	uint64_t h = sp_map_hash (self, key, len);
 	SpMapEntry entry = { h, NULL };
 	size_t idx = start (self, entry.hash);
 	size_t dist, next;
@@ -362,7 +380,7 @@ sp_map_reserve_pre (SpMap *self, uint64_t h, const void *restrict key, size_t le
 			break;
 		}
 		if (entry.hash == tmp.hash) {
-			if (self->type.equals (tmp.value, key, len)) {
+			if (self->type->iskey (tmp.value, key, len)) {
 				result = &self->entries[idx].value;
 				*isnew = false;
 				break;
@@ -380,24 +398,24 @@ sp_map_reserve_pre (SpMap *self, uint64_t h, const void *restrict key, size_t le
 		}
 	}
 
+	if (sp_likely (result != NULL)) {
+		sp_bloom_put_hash (self->bloom, h);
+	}
+
 	return result;
 }
 
 void *
-sp_map_del (SpMap *self, const void *restrict key, size_t len)
+sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 {
 	assert (self != NULL);
 	assert (key != NULL);
 
-	uint64_t h = sp_map_compute (self, key, len);
-	return sp_map_del_pre (self, h, key, len);
-}
+	uint64_t h = sp_map_hash (self, key, len);
 
-void *
-sp_map_del_pre (SpMap *self, uint64_t h, const void *restrict key, size_t len)
-{
-	assert (self != NULL);
-	assert (key != NULL);
+	if (definitely_no (self, h)) {
+		return NULL;
+	}
 
 	SpMapEntry entry = { h, NULL };
 	size_t idx = start (self, entry.hash), prev = 0;
@@ -419,7 +437,7 @@ sp_map_del_pre (SpMap *self, uint64_t h, const void *restrict key, size_t len)
 			prev = idx;
 		}
 		else if (entry.hash == tmp.hash) {
-			if (sp_likely (self->type.equals (tmp.value, key, len))) {
+			if (sp_likely (self->type->iskey (tmp.value, key, len))) {
 				value = tmp.value;
 				self->entries[idx].hash = 0;
 				shift = true;
@@ -433,11 +451,13 @@ sp_map_del_pre (SpMap *self, uint64_t h, const void *restrict key, size_t len)
 }
 
 void
-sp_map_print (const SpMap *self, FILE *out, SpPrint print)
+sp_map_print (const SpMap *self, FILE *out)
 {
 	if (out == NULL) {
 		out = stderr;
 	}
+
+	SpPrint print = self->type->print;
 	if (print == NULL) {
 		print = sp_print_ptr;
 	}
