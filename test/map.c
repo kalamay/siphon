@@ -20,40 +20,38 @@ key_equals (const void *restrict val, const void *restrict key, size_t len)
 	return strncmp (val, key, len) == 0;
 }
 
-SpHashType junk_type = {
+SpMapType junk_type = {
 	.hash = junk_hash,
 	.equals = key_equals
 };
 
-SpHashType good_type = {
+SpMapType good_type = {
 	.hash = sp_metrohash64,
 	.equals = key_equals
 };
 
-#define TEST_ADD_NEW(map, key, count) do {                \
-	void *val = sp_map_put (map, key, strlen (key), key); \
-	mu_assert_ptr_eq (val, NULL);                         \
-	mu_assert_uint_eq (sp_map_count (map), count);        \
+#define TEST_ADD_NEW(map, key, count) do {             \
+	int rc = sp_map_put (map, key, strlen (key), key); \
+	mu_assert_int_eq (rc, 0);                          \
+	mu_assert_uint_eq (sp_map_count (map), count);     \
 } while (0)
 
-#define TEST_ADD_OLD(map, key, count) do {                \
-	void *val = sp_map_put (map, key, strlen (key), key); \
-	mu_assert_ptr_ne (val, NULL);                         \
-	if (val != NULL) mu_assert_str_eq (val, key);         \
-	mu_assert_uint_eq (sp_map_count (map), count);        \
+#define TEST_ADD_OLD(map, key, count) do {             \
+	int rc = sp_map_put (map, key, strlen (key), key); \
+	mu_assert_int_eq (rc, 1);                          \
+	mu_assert_uint_eq (sp_map_count (map), count);     \
 } while (0)
 
-#define TEST_REM_NEW(map, key, count) do {           \
-	void *val = sp_map_del (map, key, strlen (key)); \
-	mu_assert_ptr_eq (val, NULL);                    \
-	mu_assert_uint_eq (sp_map_count (map), count);   \
+#define TEST_REM_NEW(map, key, count) do {         \
+	bool rc = sp_map_del (map, key, strlen (key)); \
+	mu_assert_int_eq (rc, false);                  \
+	mu_assert_uint_eq (sp_map_count (map), count); \
 } while (0)
 
-#define TEST_REM_OLD(map, key, count) do {           \
-	void *val = sp_map_del (map, key, strlen (key)); \
-	mu_assert_ptr_ne (val, NULL);                    \
-	if (val != NULL) mu_assert_str_eq (val, key);    \
-	mu_assert_uint_eq (sp_map_count (map), count);   \
+#define TEST_REM_OLD(map, key, count) do {         \
+	bool rc = sp_map_del (map, key, strlen (key)); \
+	mu_assert_int_eq (rc, true);                   \
+	mu_assert_uint_eq (sp_map_count (map), count); \
 } while (0)
 
 static void
@@ -79,7 +77,7 @@ test_single_collision (void)
 	TEST_REM_OLD (&map, "a2", 1);
 	TEST_REM_OLD (&map, "a1", 0);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -97,7 +95,7 @@ test_single_bucket_collision (void)
 	TEST_REM_OLD (&map, "q", 1);
 	TEST_REM_OLD (&map, "a", 0);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -117,7 +115,7 @@ test_single_collision_wrap (void)
 	TEST_REM_OLD (&map, "o2", 1);
 	TEST_REM_OLD (&map, "o1", 0);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -145,7 +143,7 @@ test_bucket_collision_steal (void)
 	mu_assert_str_eq (map.entries[2].value, "b");
 	TEST_REM_OLD (&map, "b", 0);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -176,7 +174,7 @@ test_hash_to_bucket_collision (void)
 	mu_assert_str_eq (map.entries[2].value, "b");
 	mu_assert_str_eq (map.entries[3].value, "c");
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -226,7 +224,7 @@ test_hash_to_bucket_collision2 (void)
 	mu_assert_str_eq (map.entries[2].value, "b");
 	mu_assert_str_eq (map.entries[3].value, "c");
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -237,7 +235,7 @@ test_lookup_collision (void)
 	TEST_ADD_NEW (&map, "a1", 1);
 	mu_assert_ptr_eq (sp_map_get (&map, "a2", 2), NULL);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
@@ -257,55 +255,72 @@ test_downsize (void)
 	mu_assert_str_eq (sp_map_get (&map, "k2", 2), "k2");
 	mu_assert_str_eq (sp_map_get (&map, "k3", 2), "k3");
 	mu_assert_str_eq (sp_map_get (&map, "k4", 2), "k4");
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
 }
 
 static void
 test_large (void)
 {
-	SpMap map = SP_MAP_MAKE (&good_type);
+	SpMapType type = good_type;
+	type.copy = (SpCopy)strdup;
+	type.free = free;
+
+	SpMap map = SP_MAP_MAKE (&type);
 
 	for (int i = 0; i < 1 << 16; i++) {
 		char buf[32];
 		int len = snprintf (buf, sizeof buf, "item %d", i);
-		void *val = sp_map_put (&map, buf, len, strndup (buf, len));
-		mu_assert_ptr_eq (val, NULL);
+		int rc = sp_map_put (&map, buf, len, buf);
+		mu_assert_int_eq (rc, 0);
 	}
 
 	for (int i = 0; i < 1 << 16; i++) {
 		char buf[32];
 		int len = snprintf (buf, sizeof buf, "item %d", i);
-		void *val = sp_map_del (&map, buf, len);
-		mu_assert_ptr_ne (val, NULL);
-		mu_assert_str_eq (val, buf);
-		free (val);
+		bool rc = sp_map_del (&map, buf, len);
+		mu_assert_int_eq (rc, true);
 	}
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
+}
+
+static int copy_count = 0;
+static int free_count = 0;
+
+static void *
+test_copy (void *val)
+{
+	copy_count++;
+	return strdup (val);
 }
 
 static void
-clean (void *val, uint64_t hash, void *data)
+test_free (void *val)
 {
-	(void)hash;
-	(void)data;
+	free_count++;
 	free (val);
 }
 
 static void
-test_finalizer (void)
+test_copy_free (void)
 {
-	SpMap map = SP_MAP_MAKE (&good_type);
+	SpMapType type = good_type;
+	type.copy = test_copy;
+	type.free = test_free;
+
+	SpMap map = SP_MAP_MAKE (&type);
 
 	for (int i = 0; i < 1 << 8; i++) {
 		char buf[32];
 		int len = snprintf (buf, sizeof buf, "item %d", i);
-		void *val = strndup (buf, len);
-		void *old = sp_map_put (&map, buf, len, val);
-		mu_assert_ptr_eq (old, NULL);
+		int rc = sp_map_put (&map, buf, len, buf);
+		mu_assert_int_eq (rc, 0);
 	}
 
-	sp_map_final (&map, clean, NULL);
+	sp_map_final (&map);
+
+	mu_assert_int_eq (copy_count, 1 << 8);
+	mu_assert_int_eq (free_count, 1 << 8);
 }
 
 static void
@@ -316,10 +331,10 @@ test_each (void)
 	for (uintptr_t i = 0; i < 100; i++) {
 		char buf[32];
 		int len = snprintf (buf, sizeof buf, "item %lu", i);
-		void *old = sp_map_put (&map, buf, len, (void *)i);
-		mu_assert_ptr_eq (old, NULL);
+		int rc = sp_map_put (&map, buf, len, (void *)i);
+		mu_assert_int_eq (rc, 0);
 	}
-	mu_assert_uint_eq (sp_map_count (&map), 100);
+	mu_assert_uint_eq (sp_map_count (&map), 99);
 
 	const SpMapEntry *entry;
 	uintptr_t total = 0;
@@ -332,7 +347,52 @@ test_each (void)
 	}
 	mu_assert_int_eq (total, 4950);
 
-	sp_map_final (&map, NULL, NULL);
+	sp_map_final (&map);
+}
+
+static void
+test_bloom (void)
+{
+	SpMapType type = good_type;
+	type.copy = (SpCopy)strdup;
+	type.free = free;
+
+	SpMap map = SP_MAP_MAKE (&type);
+	sp_map_use_bloom (&map, 1 << 16, 0.01);
+
+	for (int i = 0; i < 1 << 16; i++) {
+		char buf[32];
+		int len = snprintf (buf, sizeof buf, "item %d", i);
+		int rc = sp_map_put (&map, buf, len, buf);
+		mu_assert_int_eq (rc, 0);
+	}
+
+	for (int i = 0; i < 1 << 16; i++) {
+		char buf[32];
+		int len = snprintf (buf, sizeof buf, "item %d", i);
+		void *val = sp_map_get (&map, buf, len);
+		mu_assert_str_eq (val, buf);
+		
+		uint64_t h = sp_map_hash (&map, buf, len);
+		mu_assert_int_eq (sp_bloom_maybe_hash (map.bloom, h), true);
+	}
+
+	int false_pos = 0;
+
+	for (int i = 0; i < 1 << 16; i++) {
+		char buf[32];
+		int len = snprintf (buf, sizeof buf, "other %d", i);
+		void *val = sp_map_get (&map, buf, len);
+		mu_assert_ptr_eq (val, NULL);
+		
+		uint64_t h = sp_map_hash (&map, buf, len);
+		if (sp_bloom_maybe_hash (map.bloom, h)) {
+			false_pos++;
+		}
+	}
+	mu_assert_int_gt (false_pos, 0);
+
+	sp_map_final (&map);
 }
 
 int
@@ -350,7 +410,8 @@ main (void)
 	test_lookup_collision ();
 	test_downsize ();
 	test_large ();
-	test_finalizer ();
+	test_copy_free ();
 	test_each ();
+	test_bloom ();
 }
 
