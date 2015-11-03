@@ -43,6 +43,7 @@ main (int argc, char **argv)
 	size_t len;
 	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
 	uint8_t *buf = val;
+	size_t freelen = len;
 
 	SpJson p;
 	sp_json_init (&p);
@@ -89,7 +90,7 @@ main (int argc, char **argv)
 			break;
 		}
 	}
-	sp_free (val, len);
+	sp_free (val, freelen);
 	return 0;
 }
 

@@ -99,6 +99,7 @@ main (int argc, char **argv)
 	char *cur = buf;
 	char *end = buf + len;
 	ssize_t rc;
+	size_t freelen = len;
 
 	SpHttp p;
 	sp_http_init_request (&p);
@@ -120,7 +121,7 @@ main (int argc, char **argv)
 		}
 	}
 
-	sp_free (buf, len);
+	sp_free (buf, freelen);
 
 	return 0;
 
