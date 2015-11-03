@@ -72,9 +72,9 @@ typedef struct {
 #define SP_NEXT(n, quant) \
 	(((((n) - 1) / (quant)) + 1) * (quant))
 
-#define sp_container_of(ptr, type, member) ({            \
-	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-	(type *)( (char *)__mptr - offsetof(type,member) );  \
+#define sp_container_of(ptr, type, member) __extension__ ({ \
+	const __typeof( ((type *)0)->member ) *__mptr = (ptr);  \
+	(type *)( (char *)__mptr - offsetof(type,member) );     \
 })
 
 #define sp_len(a) \
