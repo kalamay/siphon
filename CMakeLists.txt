@@ -56,6 +56,7 @@ add_library(siphon OBJECT
 	lib/bloom.c
 	lib/map.c
 	lib/vec.c
+	lib/trie.c
 	lib/rand.c
 	lib/utf8.c
 	lib/http.c
@@ -189,4 +190,8 @@ target_link_libraries(test-map siphon-static m)
 add_test(NAME vec COMMAND test-vec)
 add_executable(test-vec test/vec.c)
 target_link_libraries(test-vec siphon-static m)
+
+add_test(NAME trie COMMAND test-trie)
+add_executable(test-trie test/trie.c)
+target_link_libraries(test-trie siphon-static m)
 
