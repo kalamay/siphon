@@ -575,6 +575,94 @@ test_each_prefix_leaf (void)
 	sp_trie_clear (&trie);
 }
 
+#define TEST_PREFIX(t, key, expect, remain) do {                          \
+	size_t off;                                                           \
+	const char *val = sp_trie_prefix (t, key, sizeof key - 1, &off, '/'); \
+	if (expect == NULL) {                                                 \
+		mu_assert_ptr_eq (val, NULL);                                     \
+	}                                                                     \
+	else {                                                                \
+		mu_assert_str_eq (val, expect);                                   \
+	}                                                                     \
+	char buf[64];                                                         \
+	memcpy (buf, (const char *)key+off, sizeof key - off);                \
+	mu_assert_str_eq (buf, remain);                                       \
+} while (0)
+
+static void
+test_prefix (void)
+{
+	SpTrie trie = SP_TRIE_MAKE (&type);
+
+	sp_trie_put (&trie, "/abc", 4, "first");
+	sp_trie_put (&trie, "/abc/def", 8, "second");
+
+	TEST_PREFIX (&trie, "/ab", NULL, "/ab");
+	TEST_PREFIX (&trie, "/abc", "first", "");
+	TEST_PREFIX (&trie, "/abc/", "first", "/");
+	TEST_PREFIX (&trie, "/abc/de", "first", "/de");
+	TEST_PREFIX (&trie, "/abc/def", "second", "");
+	TEST_PREFIX (&trie, "/abc/def/", "second", "/");
+	TEST_PREFIX (&trie, "/abc/def/ghi", "second", "/ghi");
+
+	sp_trie_final (&trie);
+}
+
+typedef struct {
+	const char *match;
+} MatchData;
+
+static bool
+matcher (const void *key, size_t len, size_t off, void *val, void *data)
+{
+	(void)val;
+
+	// only match full key or at '/' boundary
+	if (off < len && ((char *)key)[off] != '/') {
+		return false;
+	}
+
+	MatchData *md = data;
+	md->match = (const char *)key + off;
+	return true;
+}
+
+#define TEST_MATCH(t, key, expect, remain) do {                               \
+	MatchData data = { key };                                                 \
+	const char *val = sp_trie_match (t, key, sizeof key - 1, matcher, &data); \
+	if (expect == NULL) {                                                     \
+		mu_assert_ptr_eq (val, NULL);                                         \
+	}                                                                         \
+	else {                                                                    \
+		mu_assert_str_eq (val, expect);                                       \
+	}                                                                         \
+	if (remain == NULL) {                                                     \
+		mu_assert_ptr_eq (data.match, NULL);                                  \
+	}                                                                         \
+	else {                                                                    \
+		mu_assert_str_eq (data.match, remain);                                \
+	}                                                                         \
+} while (0)
+
+static void
+test_match (void)
+{
+	SpTrie trie = SP_TRIE_MAKE (&type);
+
+	sp_trie_put (&trie, "/abc", 4, "first");
+	sp_trie_put (&trie, "/abc/def", 8, "second");
+
+	TEST_MATCH (&trie, "/ab", NULL, "/ab");
+	TEST_MATCH (&trie, "/abc", "first", "");
+	TEST_MATCH (&trie, "/abc/", "first", "/");
+	TEST_MATCH (&trie, "/abc/de", "first", "/de");
+	TEST_MATCH (&trie, "/abc/def", "second", "");
+	TEST_MATCH (&trie, "/abc/def/", "second", "/");
+	TEST_MATCH (&trie, "/abc/def/ghi", "second", "/ghi");
+
+	sp_trie_final (&trie);
+}
+
 
 int
 main (void)
@@ -601,5 +689,7 @@ main (void)
 	test_each ();
 	test_each_prefix ();
 	test_each_prefix_leaf ();
+	test_prefix ();
+	test_match ();
 }
 

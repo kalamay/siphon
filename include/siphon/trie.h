@@ -53,7 +53,7 @@ sp_trie_has_prefix (const SpTrie *self, const void *restrict key, size_t len,
 
 SP_EXPORT bool
 sp_trie_has_match (const SpTrie *self, const void *restrict key, size_t len,
-		size_t *off, SpTrieMatch cb, void *data);
+		SpTrieMatch cb, void *data);
 
 SP_EXPORT void *
 sp_trie_min (const SpTrie *self);
@@ -67,7 +67,7 @@ sp_trie_prefix (const SpTrie *self, const void *restrict key, size_t len,
 
 SP_EXPORT void *
 sp_trie_match (const SpTrie *self, const void *restrict key, size_t len,
-		size_t *off, SpTrieMatch cb, void *data);
+		SpTrieMatch cb, void *data);
 
 SP_EXPORT int
 sp_trie_put (SpTrie *self, const void *restrict key, size_t len, void *val);

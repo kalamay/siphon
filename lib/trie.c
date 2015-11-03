@@ -276,12 +276,12 @@ sp_trie_has_prefix (const SpTrie *self, const void *restrict key, size_t len, si
 }
 
 bool
-sp_trie_has_match (const SpTrie *self, const void *restrict key, size_t len, size_t *off, SpTrieMatch cb, void *data)
+sp_trie_has_match (const SpTrie *self, const void *restrict key, size_t len, SpTrieMatch cb, void *data)
 {
 	assert (self != NULL);
 	assert (key != NULL);
 
-	return match (self, key, len, off, cb, data) != NULL;
+	return match (self, key, len, NULL, cb, data) != NULL;
 }
 
 void *
@@ -305,12 +305,12 @@ sp_trie_prefix (const SpTrie *self, const void *restrict key, size_t len, size_t
 }
 
 void *
-sp_trie_match (const SpTrie *self, const void *restrict key, size_t len, size_t *off, SpTrieMatch cb, void *data)
+sp_trie_match (const SpTrie *self, const void *restrict key, size_t len, SpTrieMatch cb, void *data)
 {
 	assert (self != NULL);
 	assert (key != NULL);
 
-	SpTrieLeaf *l = match (self, key, len, off, cb, data);
+	SpTrieLeaf *l = match (self, key, len, NULL, cb, data);
 	return l ? l->value : NULL;
 }
 
