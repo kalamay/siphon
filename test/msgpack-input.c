@@ -38,8 +38,6 @@ readin (const char *path, size_t *outlen)
 int
 main (int argc, char **argv)
 {
-	sp_alloc_init (sp_alloc_debug, NULL);
-
 	size_t len;
 	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
 	uint8_t *buf = val;

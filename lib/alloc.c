@@ -8,59 +8,12 @@
 #include <errno.h>
 
 static size_t pagesize;
-static SpAlloc alloc_fn = sp_alloc_system;
-static void *alloc_data = NULL;
 
 static void __attribute__((constructor))
 init (void)
 {
 	pagesize = getpagesize ();
 }
-
-
-
-void
-sp_alloc_init (SpAlloc alloc, void *data)
-{
-	alloc_fn = alloc;
-	alloc_data = data;
-}
-
-void *
-sp_malloc (size_t newsz)
-{
-	return alloc_fn (alloc_data, NULL, 0, newsz);
-}
-
-void *
-sp_realloc (void *p, size_t oldsz, size_t newsz)
-{
-	return alloc_fn (alloc_data, p, oldsz, newsz);
-}
-
-void
-sp_free (void *p, size_t oldsz)
-{
-	(void)alloc_fn (p, p, oldsz, 0);
-}
-
-
-
-void *
-sp_alloc_system (void *data, void *ptr, size_t oldsz, size_t newsz)
-{
-	(void)data;
-	(void)oldsz;
-	if (newsz == 0) {
-		free (ptr);
-		return NULL;
-	}
-	else {
-		return realloc (ptr, newsz);
-	}
-}
-
-
 
 // TODO: select proper alignment requirements for platform
 #define DBG_ALIGN 1
@@ -143,17 +96,14 @@ dbg_protect (struct dbg_preamble *pre, int flags)
 }
 
 void *
-sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz)
+sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz)
 {
-	(void)data;
-	(void)oldsz;
-
 	void *ret = NULL;
 
 	if (newsz > 0) {
 		size_t alloc = dbg_size (newsz);
-		char *p = mmap (NULL, alloc+pagesize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-		if (p == MAP_FAILED) {
+		char *p = NULL;
+		if (posix_memalign ((void **)&p, pagesize, alloc + pagesize) < 0) {
 			return NULL;
 		}
 
@@ -199,7 +149,7 @@ sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz)
 		}
 		dbg_protect (pre, PROT_READ | PROT_WRITE);
 		pre->magic = 0;
-		munmap (pre->ptr, pre->cap);
+		free (pre->ptr);
 	}
 
 	return ret;

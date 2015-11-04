@@ -32,8 +32,6 @@ readin (size_t *outlen)
 int
 main (void)
 {
-	sp_alloc_init (sp_alloc_debug, NULL);
-
 	size_t len;
 	char *str = readin (&len);
 

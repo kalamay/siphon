@@ -92,8 +92,6 @@ readin (const char *path, size_t *outlen)
 int
 main (int argc, char **argv)
 {
-	sp_alloc_init (sp_alloc_debug, NULL);
-
 	size_t len;
 	char *buf = readin (argc > 1 ? argv[1] : NULL, &len);
 	char *cur = buf;

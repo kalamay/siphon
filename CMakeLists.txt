@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 
 project(siphon C)
 
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden")
-set(CMAKE_C_FLAGS_DEBUG "-g")
+set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 SET(CMAKE_MACOSX_RPATH ON)
 

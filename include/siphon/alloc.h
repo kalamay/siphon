@@ -1,16 +1,36 @@
+#undef sp_malloc
+#undef sp_calloc
+#undef sp_realloc
+#undef sp_free
+
+#ifdef SP_ALLOC_DEBUG
+
+#define sp_malloc(size) sp_alloc_debug (NULL, 0, (size))
+#define sp_calloc(count, size) sp_alloc_debug (NULL, 0, (count)*(size))
+#define sp_realloc(ptr, oldsz, newsz) sp_alloc_debug ((ptr), (oldsz), (newsz))
+#define sp_free(ptr, size) sp_alloc_debug ((ptr), (size), 0)
+
+#else
+
+#include <stdlib.h>
+
+#define sp_malloc(size) malloc (size)
+#define sp_calloc(count, size) calloc ((count), ((size))
+#define sp_realloc(ptr, oldsz, newsz) __extension__ ({ \
+	(void)(oldsz);                                     \
+	realloc ((ptr), (newsz));                          \
+})
+#define sp_free(ptr, size) do { \
+	(void)(size);               \
+	free ((ptr));               \
+} while (0)
+
+#endif
+
 #ifndef SIPHON_ALLOC_H
 #define SIPHON_ALLOC_H
 
 #include "common.h"
-
-typedef void *(*SpAlloc)(void *data, void *ptr, size_t oldsz, size_t newsz);
-
-/**
- * This maps to the system allocator or any allocator preloaded using
- * the system allocator interface.
- */
-SP_EXPORT void *
-sp_alloc_system (void *data, void *ptr, size_t oldsz, size_t newsz);
 
 /**
  * The goal of this allocator is to cause a program crash when invalid 
@@ -21,31 +41,10 @@ sp_alloc_system (void *data, void *ptr, size_t oldsz, size_t newsz);
  * debugging memory allocator only. The design wastes a LOT of memory,
  * but can be quite helpful; especially when combined with a fuzzer.
  *
- * The sp_mallocn function allows the returned pointer to be aligned to
- * an arbitraty alignment. This is particularly helpful when using byte
- * arrays or strings with an acceptable alignment of 1. When allocating
- * with sp_malloc, the alignment will be 16.
- *
- * Any value allocated with sp_mallocn, sp_malloc, sp_calloc, or sp_realloc
- * MUST only be freed with sp_free as free(3) is unable to directly free
- * these allocations.
+ * Any value allocated with this function MUST also be freed with it.
  */
 SP_EXPORT void *
-sp_alloc_debug (void *data, void *ptr, size_t oldsz, size_t newsz);
-
-
-
-SP_EXPORT void
-sp_alloc_init (SpAlloc alloc, void *data);
-
-SP_EXPORT void *
-sp_malloc (size_t newsz);
-
-SP_EXPORT void *
-sp_realloc (void *p, size_t oldsz, size_t newsz);
-
-SP_EXPORT void
-sp_free (void *p, size_t oldsz);
+sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz);
 
 #endif
 
