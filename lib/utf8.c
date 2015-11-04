@@ -60,9 +60,7 @@ sp_utf8_final (SpUtf8 *u)
 	assert (u != NULL);
 
 	sp_free (u->buf, u->cap);
-	u->buf = NULL;
-	u->cap = 0;
-	u->len = 0;
+	sp_utf8_init (u);
 }
 
 uint8_t *
