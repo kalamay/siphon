@@ -134,6 +134,7 @@
 	XX(SP_PATH_ENOTFOUND,  "executable not found") \
 
 #define SP_URI_ERRORS(XX) \
+	XX(SP_URI_ESYNTAX,     "invalid syntax") \
 	XX(SP_URI_EBUFS,       "not enough buffer space available") \
 	XX(SP_URI_ESEGMENT,    "invalid segment value") \
 	XX(SP_URI_ERANGE,      "invalid segment range") \
