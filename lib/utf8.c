@@ -98,11 +98,11 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 	}
 	else if (cap < MAX_POWER_OF_2) {
 		// calculate the next power of 2
-		cap = (size_t)pow (2, ceil (log2 (cap)));
+		cap = sp_power_of_2 (cap);
 	}
 	else {
 		// calculate the nearest multiple of MAX_POWER_OF_2
-		cap = (((cap - 1) / MAX_POWER_OF_2) + 1) * MAX_POWER_OF_2;
+		cap = sp_next_quantum (cap, MAX_POWER_OF_2);
 	}
 
 	uint8_t *buf = sp_realloc (u->buf, u->cap, cap);

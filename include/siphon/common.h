@@ -50,26 +50,28 @@ typedef struct {
 #define SP_RANGE_SUFFIX(a, abuf, b, bbuf) \
 	SP_RANGE_SUFFIX_MEM(a, abuf, (bbuf)+(b).off, (b).len)
 
-#define SP_POWER_OF_2(n) do {         \
-	if (n > 0) {                      \
-		(n)--;                        \
-		(n) |= (n) >> 1;              \
-		(n) |= (n) >> 2;              \
-		(n) |= (n) >> 4;              \
-		if (sizeof (n) > 1) {         \
-			(n) |= (n) >> 8;          \
-			if (sizeof (n) > 2) {     \
-				(n) |= (n) >> 16;     \
-				if (sizeof (n) > 4) { \
-					(n) |= (n) >> 32; \
-				}                     \
-			}                         \
-		}                             \
-		(n)++;                        \
-	}                                 \
-} while (0)
+#define sp_power_of_2(n) __extension__ ({ \
+	__typeof (n) x = (n);                 \
+	if (x > 0) {                          \
+		x--;                              \
+		x |= x >> 1;                      \
+		x |= x >> 2;                      \
+		x |= x >> 4;                      \
+		if (sizeof x > 1) {               \
+			x |= x >> 8;                  \
+			if (sizeof x > 2) {           \
+				x |= x >> 16;             \
+				if (sizeof x > 4) {       \
+					x |= x >> 32;         \
+				}                         \
+			}                             \
+		}                                 \
+		x++;                              \
+	}                                     \
+	x;                                    \
+})
 
-#define SP_NEXT(n, quant) \
+#define sp_next_quantum(n, quant) \
 	(((((n) - 1) / (quant)) + 1) * (quant))
 
 #define sp_container_of(ptr, type, member) __extension__ ({ \

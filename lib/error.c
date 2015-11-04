@@ -190,7 +190,7 @@ resize_errors (size_t hint)
 		return true;
 	}
 
-	SP_POWER_OF_2 (hint);
+	hint = sp_power_of_2 (hint);
 
 	const SpError **new = realloc (errors, sizeof *new * hint);
 	if (new == NULL) {

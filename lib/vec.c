@@ -48,7 +48,7 @@ static inline SpVec *
 resize (SpVec *v, void **vec, size_t size, size_t cap, size_t count)
 {
 	if (cap & ~(size_t)15) {
-		SP_POWER_OF_2 (cap);
+		cap = sp_power_of_2 (cap);
 	}
 	else {
 		cap = 16;

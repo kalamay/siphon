@@ -163,7 +163,7 @@ capacity (size_t hint, double loadf)
 	}
 #endif
 	else {
-		SP_POWER_OF_2 (hint);
+		hint = sp_power_of_2 (hint);
 	}
 
 	return hint;
