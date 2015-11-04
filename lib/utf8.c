@@ -118,9 +118,9 @@ sp_utf8_add_raw (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
-	if (sp_utf8_ensure (u, len) < 0) {
-		return SP_ESYSTEM(errno);
-	}
+	int rc = sp_utf8_ensure (u, len);
+	if (rc < 0) { return rc; }
+
 	memcpy (u->buf + u->len, src, len);
 	u->len += len;
 	u->buf[u->len] = '\0';
