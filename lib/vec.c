@@ -1,6 +1,6 @@
 #include "../include/siphon/vec.h"
+#include "../include/siphon/alloc.h"
 
-#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -54,7 +54,7 @@ resize (SpVec *v, void **vec, size_t size, size_t cap, size_t count)
 		cap = 16;
 	}
 
-	v = malloc (sizeof *v + size*cap);
+	v = sp_malloc (sizeof *v + size*cap);
 	if (v == NULL) { return NULL; }
 
 	memcpy (HEAD (v), vec, size*count);
@@ -93,11 +93,11 @@ sp_vecp_clear (void **vec)
 }
 
 void
-sp_vecp_free (void **vec)
+sp_vecp_free (void **vec, size_t size)
 {
 	SpVec *v = VEC (vec);
 	if (v != &NIL) {
-		free (v);
+		sp_free (v, v->capacity * size);
 		*vec = NULL;
 	}
 }

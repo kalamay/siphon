@@ -13,7 +13,7 @@
 	sp_vecp_clear ((void **)&(v))
 
 #define sp_vec_free(v) \
-	sp_vecp_free ((void **)&(v))
+	sp_vecp_free ((void **)&(v), sizeof *(v))
 
 #define sp_vec_ensure(v, n) \
 	sp_vecp_ensure ((void **)&(v), sizeof *(v), n)
@@ -75,7 +75,7 @@ SP_EXPORT void
 sp_vecp_clear (void **vec);
 
 SP_EXPORT void
-sp_vecp_free (void **vec);
+sp_vecp_free (void **vec, size_t size);
 
 SP_EXPORT int
 sp_vecp_ensure (void **vec, size_t size, size_t nitems);

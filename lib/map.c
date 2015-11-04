@@ -1,7 +1,7 @@
 #include "../include/siphon/map.h"
 #include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 
-#include <stdlib.h>
 #include <unistd.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -61,7 +61,7 @@ sp_map_final (SpMap *self)
 	self->bloom = NULL;
 
 	sp_map_clear (self);
-	free (self->entries);
+	sp_free (self->entries, self->capacity * sizeof *self->entries);
 	*self = SP_MAP_MAKE (self->type);
 }
 
@@ -186,14 +186,16 @@ sp_map_resize (SpMap *self, size_t hint)
 		return 0;
 	}
 
-	SpMapEntry *entries = self->entries;
-	size_t capacity = self->capacity;
+	SpMapEntry *const entries = self->entries;
+	const size_t capacity = self->capacity;
 
-	self->entries = calloc (hint, sizeof *self->entries);
+	self->entries = sp_malloc (hint * sizeof *self->entries);
 	if (self->entries == NULL) {
 		self->entries = entries;
 		return -1;
 	}
+	
+	memset (self->entries, 0, sizeof *self->entries * hint);
 
 	self->capacity = hint;
 	self->mask = hint - 1;
@@ -226,7 +228,7 @@ sp_map_resize (SpMap *self, size_t hint)
 		}
 	}
 
-	free (entries);
+	sp_free (entries, sizeof *entries * capacity);
 
 	return 0;
 }

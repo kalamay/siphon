@@ -576,7 +576,7 @@ test_each_prefix_leaf (void)
 }
 
 #define TEST_PREFIX(t, key, expect, remain) do {                          \
-	size_t off;                                                           \
+	size_t off = 0;                                                           \
 	const char *val = sp_trie_prefix (t, key, sizeof key - 1, &off, '/'); \
 	if (expect == NULL) {                                                 \
 		mu_assert_ptr_eq (val, NULL);                                     \

@@ -1,5 +1,6 @@
 #include "../include/siphon/trie.h"
 #include "../include/siphon/fmt.h"
+#include "../include/siphon/alloc.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -118,6 +119,20 @@ sp_trie_count (const SpTrie *self)
 }
 
 static void
+free_leaf (SpTrieLeaf *l)
+{
+	assert (IS_LEAF ((SpTrieNode *)l));
+	sp_free (l, sizeof *l + l->key_len);
+}
+
+static void
+free_branch (SpTrieBranch *b)
+{
+	assert (IS_BRANCH ((SpTrieNode *)b));
+	sp_free (b, sizeof *b + CAPACITY (b) * sizeof b->children[0]);
+}
+
+static void
 clear (SpTrieNode *n, SpFree func)
 {
 	if (n == NULL) {
@@ -125,10 +140,11 @@ clear (SpTrieNode *n, SpFree func)
 	}
 
 	if (IS_LEAF (n)) {
+		SpTrieLeaf *l = LEAF (n);
 		if (func) {
-			SpTrieLeaf *l = LEAF (n);
 			func (l->value);
 		}
+		free_leaf (l);
 	}
 	else {
 		SpTrieBranch *b = BRANCH (n);
@@ -136,9 +152,8 @@ clear (SpTrieNode *n, SpFree func)
 		for (int i = 0; i < CAPACITY (b); i++) {
 			clear (b->children[i], func);
 		}
+		free_branch (b);
 	}
-
-	free (n);
 }
 
 void
@@ -370,7 +385,9 @@ reserve (SpTrieBranch **ref, uint8_t c)
 		assert (cap > 1);
 		assert (off <= c);
 
-		b = realloc (b, sizeof *b + cap * sizeof b->children[0]);
+		b = sp_realloc (b,
+				sizeof *b + CAPACITY (b) * sizeof b->children[0],
+				sizeof *b + cap * sizeof b->children[0]);
 		if (b == NULL) return NULL;
 
 		memmove (b->children + low, b->children, len * sizeof b->children[0]);
@@ -406,7 +423,7 @@ branch_create (uint8_t c1, uint8_t c2, const void *key, size_t len)
 		off = min (c1, c2);
 	}
 
-	SpTrieBranch *b = malloc (sizeof *b + cap * sizeof b->children[0]);
+	SpTrieBranch *b = sp_malloc (sizeof *b + cap * sizeof b->children[0]);
 	if (b == NULL) return NULL;
 
 	SET_CAPACITY (b, cap);
@@ -537,7 +554,7 @@ sp_trie_reserve (SpTrie *self, const void *restrict key, size_t len, bool *isnew
 		}
 	}
 
-	SpTrieLeaf *leaf = malloc (sizeof *leaf + len);
+	SpTrieLeaf *leaf = sp_malloc (sizeof *leaf + len);
 	if (leaf == NULL) return NULL;
 
 	SET_LEAF (leaf);
@@ -596,12 +613,12 @@ compact (SpTrieBranch **b)
 		// move child into branch position
 		SpTrieNode *tmp = *child;
 		*child = NULL;
-		free (*b);
+		free_branch (*b);
 		*(SpTrieNode **)b = tmp;
 	}
 	// if the branch is empty just free and clear it
 	else {
-		free (*b);
+		free_branch (*b);
 		*b = NULL;
 	}
 
@@ -645,7 +662,7 @@ sp_trie_steal (SpTrie *self, const void *restrict key, size_t len)
 		for (size_t i = depth; i > 0 && compact (path[i-1]); i--);
 
 		value = l->value;
-		free (l);
+		free_leaf (l);
 		self->count--;
 	}
 	return value;
