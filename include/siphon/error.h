@@ -46,6 +46,7 @@
 #define SP_PATH_EBUFS       (-1051)
 #define SP_PATH_ENOTFOUND   (-1052)
 
+#define SP_URI_ESYNTAX      (-1060)
 #define SP_URI_EBUFS        (-1061)
 #define SP_URI_ESEGMENT     (-1062)
 #define SP_URI_ERANGE       (-1063)
