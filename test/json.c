@@ -15,7 +15,7 @@ static bool debug = false;
 
 typedef struct {
 	struct {
-		const uint8_t *string;
+		uint8_t string[64];
 		double number;
 		SpJsonType type;
 	} fields[64];
@@ -111,7 +111,7 @@ parse (SpJson *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 
 		switch (p->type) {
 			case SP_JSON_STRING:
-				msg->fields[msg->field_count].string = sp_utf8_steal (&p->utf8, NULL, NULL);
+				sp_utf8_copy (&p->utf8, msg->fields[msg->field_count].string, 64);
 				msg->fields[msg->field_count++].type = SP_JSON_STRING;
 				break;
 			case SP_JSON_NUMBER:
