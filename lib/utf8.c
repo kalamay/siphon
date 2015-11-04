@@ -93,7 +93,10 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 	}
 
 	// round up required capacity
-	if (cap < MAX_POWER_OF_2) {
+	if (cap < 64) {
+		cap = 64;
+	}
+	else if (cap < MAX_POWER_OF_2) {
 		// calculate the next power of 2
 		cap = (size_t)pow (2, ceil (log2 (cap)));
 	}
