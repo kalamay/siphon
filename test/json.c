@@ -222,6 +222,8 @@ test_parse (ssize_t speed)
 	mu_fassert_int_eq (msg.fields[28].type, SP_JSON_TRUE);
 	mu_fassert_int_eq (msg.fields[29].type, SP_JSON_OBJECT_END);
 	mu_fassert_int_eq (msg.fields[30].type, SP_JSON_OBJECT_END);
+
+	sp_json_final (&p);
 }
 
 static ssize_t
