@@ -29,6 +29,9 @@ sp_utf8_final (SpUtf8 *u);
 SP_EXPORT uint8_t *
 sp_utf8_steal (SpUtf8 *u, size_t *len, size_t *cap);
 
+SP_EXPORT size_t
+sp_utf8_copy (const SpUtf8 *u, void *buf, size_t len);
+
 SP_EXPORT int
 sp_utf8_ensure (SpUtf8 *u, size_t len);
 

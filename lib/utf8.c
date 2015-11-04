@@ -75,6 +75,20 @@ sp_utf8_steal (SpUtf8 *u, size_t *len, size_t *cap)
 	return buf;
 }
 
+size_t
+sp_utf8_copy (const SpUtf8 *u, void *buf, size_t len)
+{
+	assert (u != NULL);
+
+	size_t out = u->len;
+	if (out >= len) { 
+		out = len - 1;
+	}
+	memcpy (buf, u->buf, out);
+	((char *)buf)[out] = '\0';
+	return out;
+}
+
 int
 sp_utf8_ensure (SpUtf8 *u, size_t len)
 {
