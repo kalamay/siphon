@@ -97,7 +97,7 @@ sp_vecp_free (void **vec, size_t size)
 {
 	SpVec *v = VEC (vec);
 	if (v != &NIL) {
-		sp_free (v, v->capacity * size);
+		sp_free (v, sizeof *v + v->capacity * size);
 		*vec = NULL;
 	}
 }
