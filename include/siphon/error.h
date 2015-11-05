@@ -63,6 +63,9 @@ sp_strerror (int code);
 SP_EXPORT int
 sp_eai_code (int err);
 
+SP_EXPORT size_t
+sp_error_string (int code, char *buf, size_t size);
+
 SP_EXPORT void
 sp_error_print (int code, FILE *out);
 

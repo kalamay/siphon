@@ -84,60 +84,60 @@
 	XX(EPROTO,             "protocol error") \
 
 #define SP_EAI_ERRORS(XX) \
-	XX(EAI_ADDRFAMILY,     "address family not supported") \
-	XX(EAI_AGAIN,          "temporary failure") \
-	XX(EAI_BADFLAGS,       "bad ai_flags value") \
-	XX(EAI_CANCELED,       "request canceled") \
-	XX(EAI_FAIL,           "permanent failure") \
-	XX(EAI_FAMILY,         "ai_family not supported") \
-	XX(EAI_MEMORY,         "out of memory") \
-	XX(EAI_NODATA,         "no address") \
-	XX(EAI_NONAME,         "unknown node or service") \
-	XX(EAI_OVERFLOW,       "argument buffer overflow") \
-	XX(EAI_SERVICE,        "service not available for socket type") \
-	XX(EAI_SOCKTYPE,       "socket type not supported") \
-	XX(EAI_BADHINTS,       "invalid value for hints") \
-	XX(EAI_PROTOCOL,       "resolved protocol is unknown") \
+	XX(ADDRFAMILY,         "address family not supported") \
+	XX(AGAIN,              "temporary failure") \
+	XX(BADFLAGS,           "bad ai_flags value") \
+	XX(CANCELED,           "request canceled") \
+	XX(FAIL,               "permanent failure") \
+	XX(FAMILY,             "ai_family not supported") \
+	XX(MEMORY,             "out of memory") \
+	XX(NODATA,             "no address") \
+	XX(NONAME,             "unknown node or service") \
+	XX(OVERFLOW,           "argument buffer overflow") \
+	XX(SERVICE,            "service not available for socket type") \
+	XX(SOCKTYPE,           "socket type not supported") \
+	XX(BADHINTS,           "invalid value for hints") \
+	XX(PROTOCOL,           "resolved protocol is unknown") \
 
 #define SP_UTF8_ERRORS(XX) \
-	XX(SP_UTF8_ESIZE,      "size of value exceeded maximum allowed") \
-	XX(SP_UTF8_EESCAPE,    "invalid escape sequence") \
-	XX(SP_UTF8_ECODEPOINT, "invalid code point") \
-	XX(SP_UTF8_EENCODING,  "invalid encoding") \
-	XX(SP_UTF8_ESURROGATE, "invalid surrogate pair") \
-	XX(SP_UTF8_ETOOSHORT , "sequence is too short") \
+	XX(ESIZE,              "size of value exceeded maximum allowed") \
+	XX(EESCAPE,            "invalid escape sequence") \
+	XX(ECODEPOINT,         "invalid code point") \
+	XX(EENCODING,          "invalid encoding") \
+	XX(ESURROGATE,         "invalid surrogate pair") \
+	XX(ETOOSHORT ,         "sequence is too short") \
 
 #define SP_HTTP_ERRORS(XX) \
-	XX(SP_HTTP_ESYNTAX,    "invalid syntax") \
-	XX(SP_HTTP_ESIZE,      "size of value exceeded maximum allowed") \
-	XX(SP_HTTP_ESTATE,     "parser state is invalid") \
-	XX(SP_HTTP_ETOOSHORT,  "input is too short") \
+	XX(ESYNTAX,            "invalid syntax") \
+	XX(ESIZE,              "size of value exceeded maximum allowed") \
+	XX(ESTATE,             "parser state is invalid") \
+	XX(ETOOSHORT,          "input is too short") \
 
 #define SP_JSON_ERRORS(XX) \
-	XX(SP_JSON_ESYNTAX,    "invalid syntax") \
-	XX(SP_JSON_ESIZE,      "size of value exceeded maximum allowed") \
-	XX(SP_JSON_ESTACK,     "stack size exceeded") \
-	XX(SP_JSON_ESTATE,     "parser state is invalid") \
-	XX(SP_JSON_EESCAPE,    "invalid escape sequence") \
-	XX(SP_JSON_EBYTE,      "invalid byte value") \
+	XX(ESYNTAX,            "invalid syntax") \
+	XX(ESIZE,              "size of value exceeded maximum allowed") \
+	XX(ESTACK,             "stack size exceeded") \
+	XX(ESTATE,             "parser state is invalid") \
+	XX(EESCAPE,            "invalid escape sequence") \
+	XX(EBYTE,              "invalid byte value") \
 
 #define SP_MSGPACK_ERRORS(XX) \
-	XX(SP_MSGPACK_ESYNTAX, "invalid syntax") \
-	XX(SP_MSGPACK_ESTACK,  "stack size exceeded") \
+	XX(ESYNTAX,            "invalid syntax") \
+	XX(ESTACK,             "stack size exceeded") \
 
 #define SP_LINE_ERRORS(XX) \
-	XX(SP_LINE_ESYNTAX,    "invalid syntax") \
-	XX(SP_LINE_ESIZE,      "size of value exceeded maximum allowed") \
+	XX(ESYNTAX,            "invalid syntax") \
+	XX(ESIZE,              "size of value exceeded maximum allowed") \
 
 #define SP_PATH_ERRORS(XX) \
-	XX(SP_PATH_EBUFS,      "not enough buffer space available") \
-	XX(SP_PATH_ENOTFOUND,  "executable not found") \
+	XX(EBUFS,              "not enough buffer space available") \
+	XX(ENOTFOUND,          "executable not found") \
 
 #define SP_URI_ERRORS(XX) \
-	XX(SP_URI_ESYNTAX,     "invalid syntax") \
-	XX(SP_URI_EBUFS,       "not enough buffer space available") \
-	XX(SP_URI_ESEGMENT,    "invalid segment value") \
-	XX(SP_URI_ERANGE,      "invalid segment range") \
+	XX(ESYNTAX,            "invalid syntax") \
+	XX(EBUFS,              "not enough buffer space available") \
+	XX(ESEGMENT,           "invalid segment value") \
+	XX(ERANGE,             "invalid segment range") \
 
 #define FIX_CODE(n) do { \
 	if ((n) > 0) {       \
@@ -241,13 +241,13 @@ init (void)
 #undef COUNT
 
 #define PUSH_SYS(sym, msg) push_error (sym, "system", #sym, msg);
-#define PUSH_EAI(sym, msg) push_error (SP_EAI_CODE(sym), "addrinfo", #sym, msg);
-#define PUSH_UTF8(sym, msg) push_error (sym, "utf8", #sym, msg);
-#define PUSH_HTTP(sym, msg) push_error (sym, "http", #sym, msg);
-#define PUSH_JSON(sym, msg) push_error (sym, "json", #sym, msg);
-#define PUSH_MSGPACK(sym, msg) push_error (sym, "msgpack", #sym, msg);
-#define PUSH_PATH(sym, msg) push_error (sym, "path", #sym, msg);
-#define PUSH_URI(sym, msg) push_error (sym, "uri", #sym, msg);
+#define PUSH_EAI(sym, msg) push_error (SP_EAI_CODE(EAI_##sym), "addr", "E" #sym, msg);
+#define PUSH_UTF8(sym, msg) push_error (SP_UTF8_##sym, "utf8", #sym, msg);
+#define PUSH_HTTP(sym, msg) push_error (SP_HTTP_##sym, "http", #sym, msg);
+#define PUSH_JSON(sym, msg) push_error (SP_JSON_##sym, "json", #sym, msg);
+#define PUSH_MSGPACK(sym, msg) push_error (SP_MSGPACK_##sym, "msgpack", #sym, msg);
+#define PUSH_PATH(sym, msg) push_error (SP_PATH_##sym, "path", #sym, msg);
+#define PUSH_URI(sym, msg) push_error (SP_URI_##sym, "uri", #sym, msg);
 	SP_SYSTEM_ERRORS(PUSH_SYS)
 	SP_EAI_ERRORS(PUSH_EAI)
 	SP_UTF8_ERRORS(PUSH_UTF8)
@@ -281,19 +281,37 @@ sp_eai_code (int err)
 	return SP_EAI_CODE (err);
 }
 
+size_t
+sp_error_string (int code, char *buf, size_t size)
+{
+	const SpError *err = sp_error (code);
+	int len = 0;
+	if (err == NULL) {
+		len = snprintf (buf, size, "%s (%d)", nil_msg, code);
+	}
+	else {
+		len = snprintf (buf, size, "%s (%s.%s)", err->msg, err->domain, err->name);
+	}
+	if (len < 0 || sp_unlikely ((size_t)len >= size)) {
+		buf[0] = '\0';
+		len = 0;
+	}
+	return (size_t)len;
+}
+
 void
 sp_error_print (int code, FILE *out)
 {
+	char buf[128];
+	ssize_t len;
+
 	if (out == NULL) {
 		out = stderr;
 	}
-	const SpError *err = sp_error (code);
-	if (err == NULL) {
-		fprintf (out, "%s (%d)\n", nil_msg, code);
-	}
-	else {
-		fprintf (out, "%s error: %s (%s)\n", err->domain, err->msg, err->name);
-	}
+
+	len = sp_error_string (code, buf, sizeof buf - 1);
+	buf[len++] = '\n';
+	fwrite (buf, 1, len, out);
 }
 
 void
@@ -320,14 +338,7 @@ sp_abort (int code)
 	char buf[1024];
 	int len;
 
-	const SpError *err = sp_error (code);
-	if (err == NULL) {
-		len = snprintf (buf, sizeof buf, "%s (%d)", nil_msg, code);
-	}
-	else {
-		len = snprintf (buf, sizeof buf, "%s error: %s (%s)", err->domain, err->msg, err->name);
-	}
-
+	len = sp_error_string (code, buf, sizeof buf);
 	stack_abort (buf, sizeof buf, len);
 }
 
