@@ -2,6 +2,7 @@
 #define SIPHON_URI_H
 
 #include "common.h"
+#include "range.h"
 
 typedef enum {
 	SP_URI_NONE   = -1,

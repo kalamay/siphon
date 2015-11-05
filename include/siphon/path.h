@@ -2,6 +2,7 @@
 #define SIPHON_PATH_H
 
 #include "common.h"
+#include "range.h"
 
 typedef enum {
 	SP_PATH_TRAIL_SLASH = 1 << 0,  // keep trailing slash

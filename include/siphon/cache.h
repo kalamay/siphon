@@ -2,6 +2,7 @@
 #define SIPHON_CACHE_H
 
 #include "common.h"
+#include "range.h"
 
 typedef enum {
 	SP_CACHE_PUBLIC            = 1 << 0,
