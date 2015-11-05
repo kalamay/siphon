@@ -2,6 +2,7 @@
 #define SIPHON_MAP_H
 
 #include "common.h"
+#include "type.h"
 #include "hash.h"
 #include "bloom.h"
 

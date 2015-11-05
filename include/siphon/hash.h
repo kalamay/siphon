@@ -2,6 +2,7 @@
 #define SIPHON_HASH_H
 
 #include "common.h"
+#include "seed.h"
 
 SP_EXPORT uint64_t
 sp_metrohash64 (const void *restrict s, size_t len, const SpSeed *restrict seed);

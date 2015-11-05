@@ -2,6 +2,7 @@
 #define SIPHON_TRIE_H
 
 #include "common.h"
+#include "type.h"
 
 typedef struct SpTrie SpTrie;
 typedef struct SpTrieNode SpTrieNode;

@@ -64,6 +64,7 @@ add_library(siphon OBJECT
 	lib/error.c
 	lib/clock.c
 	lib/common.c
+	lib/seed.c
 	lib/fmt.c
 	lib/crc.c
 	lib/hash.c
