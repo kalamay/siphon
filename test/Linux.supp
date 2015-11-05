@@ -1,0 +1,15 @@
+{
+	push_error
+	Memcheck:Leak
+	fun:calloc
+	fun:create_error
+	fun:push_error
+	...
+}
+{
+	resize_errors
+	Memcheck:Leak
+	fun:malloc
+	fun:resize_errors
+	...
+}

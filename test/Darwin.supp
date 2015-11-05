@@ -1,8 +1,37 @@
 {
+	push_error
+	Memcheck:Leak
+	fun:calloc
+	fun:create_error
+	fun:push_error
+	...
+}
+{
+	resize_errors
+	Memcheck:Leak
+	fun:malloc
+	fun:resize_errors
+	...
+}
+{
+	test_iter
+	Memcheck:Cond
+	fun:test_iter
+	fun:main
+}
+{
 	strtod_l
 	Memcheck:Leak
 	fun:malloc
 	...
 	fun:strtod_l
+	...
+}
+{
+	vsnprintf
+	Memcheck:Leak
+	fun:malloc
+	...
+	fun:vsnprintf
 	...
 }

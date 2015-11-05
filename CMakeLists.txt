@@ -122,7 +122,7 @@ target_link_libraries(bench-crc siphon-static m)
 enable_testing()
 
 set(MEMORYCHECK_TYPE Valgrind)
-set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50")
+set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50 --error-exitcode=2")
 if(APPLE)
 	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
 endif()
