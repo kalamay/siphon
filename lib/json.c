@@ -1,8 +1,7 @@
-#include "siphon/json.h"
-#include "common.h"
+#include "../include/siphon/json.h"
+#include "parser.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 

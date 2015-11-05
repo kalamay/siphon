@@ -1,5 +1,5 @@
-#include "siphon/siphon.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/json.h"
+#include "../include/siphon/alloc.h"
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -25,9 +25,9 @@ readin (const char *path, size_t *outlen)
 
 	fclose (in);
 
-	uint8_t *copy = sp_mallocn (len, 1);
+	uint8_t *copy = sp_malloc (len);
 	if (copy == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
+		err (EXIT_FAILURE, "sp_malloc");
 	}
 
 	memcpy (copy, buffer, len);
@@ -41,6 +41,7 @@ main (int argc, char **argv)
 	size_t len;
 	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
 	uint8_t *buf = val;
+	size_t freelen = len;
 
 	SpJson p;
 	sp_json_init (&p);
@@ -48,7 +49,7 @@ main (int argc, char **argv)
 	while (!sp_json_is_done (&p)) {
 		ssize_t rc = sp_json_next (&p, buf, len, true);
 		if (rc < 0 || (size_t)rc > len) {
-			sp_free (val);
+			sp_free (val, len);
 			errx (EXIT_FAILURE, "failed to parse");
 		}
 
@@ -87,7 +88,7 @@ main (int argc, char **argv)
 			break;
 		}
 	}
-	sp_free (val);
+	sp_free (val, freelen);
 	return 0;
 }
 

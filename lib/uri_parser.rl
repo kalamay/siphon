@@ -1,8 +1,6 @@
 #include "siphon/uri.h"
 
-#include <string.h>
 #include <assert.h>
-#include <stdio.h>
 
 %%{
 	machine uri_parser;

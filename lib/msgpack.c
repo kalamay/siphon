@@ -1,8 +1,7 @@
-#include "siphon/msgpack.h"
-#include "siphon/error.h"
-#include "siphon/endian.h"
+#include "../include/siphon/msgpack.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/endian.h"
 
-#include <stdio.h>
 #include <assert.h>
 
 
@@ -107,11 +106,11 @@
  * @len: byte length available on stream
  * @eof: if the byte length mark the end of input
  */
-#define LOAD_UINT(p, bits, src, len, eof) do {                                 \
-	EXPECT_SIZE (bits/8 + 1, len, eof);                                        \
-	p->type = SP_MSGPACK_UNSIGNED;                                             \
-	p->tag.u64 = (uint##bits##_t)be##bits##toh (*(uint##bits##_t *)((src)+1)); \
-	return bits/8 + 1;                                                         \
+#define LOAD_UINT(p, bits, src, len, eof) do {                                    \
+	EXPECT_SIZE (bits/8 + 1, len, eof);                                           \
+	p->type = SP_MSGPACK_UNSIGNED;                                                \
+	p->tag.u64 = (uint##bits##_t)sp_be##bits##toh (*(uint##bits##_t *)((src)+1)); \
+	return bits/8 + 1;                                                            \
 } while (0)
 
 /**
@@ -122,18 +121,18 @@
  * @len: byte length available on stream
  * @eof: if the byte length mark the end of input
  */
-#define LOAD_SINT(p, bits, src, len, eof) do {                                \
-	EXPECT_SIZE (bits/8 + 1, len, eof);                                       \
-	int64_t val = (int##bits##_t)be##bits##toh (*(int##bits##_t *)((src)+1)); \
-	if (val < 0) {                                                            \
-		p->type = SP_MSGPACK_SIGNED;                                          \
-		p->tag.i64 = val;                                                     \
-	}                                                                         \
-	else {                                                                    \
-		p->type = SP_MSGPACK_UNSIGNED;                                        \
-		p->tag.u64 = (uint64_t)val;                                           \
-	}                                                                         \
-	return bits/8 + 1;                                                        \
+#define LOAD_SINT(p, bits, src, len, eof) do {                                   \
+	EXPECT_SIZE (bits/8 + 1, len, eof);                                          \
+	int64_t val = (int##bits##_t)sp_be##bits##toh (*(int##bits##_t *)((src)+1)); \
+	if (val < 0) {                                                               \
+		p->type = SP_MSGPACK_SIGNED;                                             \
+		p->tag.i64 = val;                                                        \
+	}                                                                            \
+	else {                                                                       \
+		p->type = SP_MSGPACK_UNSIGNED;                                           \
+		p->tag.u64 = (uint64_t)val;                                              \
+	}                                                                            \
+	return bits/8 + 1;                                                           \
 } while (0)
 
 /**
@@ -145,7 +144,7 @@
 #define READ_DINT(dst, src, len) do {                   \
 	uint64_t out = 0;                                   \
 	memcpy ((uint8_t *)(&out)+(8-(len)), (src), (len)); \
-	(dst) = be64toh (out);                              \
+	(dst) = sp_be64toh (out);                           \
 } while (0)
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -518,14 +517,14 @@ sp_msgpack_enc_signed (void *buf, int64_t val)
 		return 2;
 	}
 	if (val >= INT16_MIN) {
-		WRITE_INT (buf, B_INT16, int16_t, htobe16 (val));
+		WRITE_INT (buf, B_INT16, int16_t, sp_htobe16 (val));
 		return 3;
 	}
 	if (val >= INT32_MIN) {
-		WRITE_INT (buf, B_INT32, int32_t, htobe32 (val));
+		WRITE_INT (buf, B_INT32, int32_t, sp_htobe32 (val));
 		return 5;
 	}
-	WRITE_INT (buf, B_INT64, int64_t, htobe64 (val));
+	WRITE_INT (buf, B_INT64, int64_t, sp_htobe64 (val));
 	return 9;
 }
 
@@ -541,14 +540,14 @@ sp_msgpack_enc_unsigned (void *buf, uint64_t val)
 		return 2;
 	}
 	if (val <= UINT16_MAX) {
-		WRITE_INT (buf, B_UINT16, uint16_t, htobe16 (val));
+		WRITE_INT (buf, B_UINT16, uint16_t, sp_htobe16 (val));
 		return 3;
 	}
 	if (val <= UINT32_MAX) {
-		WRITE_INT (buf, B_UINT32, uint32_t, htobe32 (val));
+		WRITE_INT (buf, B_UINT32, uint32_t, sp_htobe32 (val));
 		return 5;
 	}
-	WRITE_INT (buf, B_UINT64, uint64_t, htobe64 (val));
+	WRITE_INT (buf, B_UINT64, uint64_t, sp_htobe64 (val));
 	return 9;
 }
 
@@ -582,10 +581,10 @@ sp_msgpack_enc_string (void *buf, uint32_t len)
 		return 2;
 	}
 	if (len <= UINT16_MAX) {
-		WRITE_INT (buf, B_STR16, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_STR16, uint16_t, sp_htobe16 (len));
 		return 3;
 	}
-	WRITE_INT (buf, B_STR32, uint32_t, htobe32 (len));
+	WRITE_INT (buf, B_STR32, uint32_t, sp_htobe32 (len));
 	return 5;
 }
 
@@ -597,10 +596,10 @@ sp_msgpack_enc_binary (void *buf, uint32_t len)
 		return 2;
 	}
 	if (len <= UINT16_MAX) {
-		WRITE_INT (buf, B_BIN16, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_BIN16, uint16_t, sp_htobe16 (len));
 		return 3;
 	}
-	WRITE_INT (buf, B_BIN32, uint32_t, htobe32 (len));
+	WRITE_INT (buf, B_BIN32, uint32_t, sp_htobe32 (len));
 	return 5;
 }
 
@@ -612,10 +611,10 @@ sp_msgpack_enc_array (void *buf, uint32_t count)
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
-		WRITE_INT (buf, B_ARR16, uint16_t, htobe16 (count));
+		WRITE_INT (buf, B_ARR16, uint16_t, sp_htobe16 (count));
 		return 3;
 	}
-	WRITE_INT (buf, B_ARR32, uint32_t, htobe32 (count));
+	WRITE_INT (buf, B_ARR32, uint32_t, sp_htobe32 (count));
 	return 5;
 }
 
@@ -627,10 +626,10 @@ sp_msgpack_enc_map (void *buf, uint32_t count)
 		return 1;
 	}
 	if (count <= UINT16_MAX) {
-		WRITE_INT (buf, B_MAP16, uint16_t, htobe16 (count));
+		WRITE_INT (buf, B_MAP16, uint16_t, sp_htobe16 (count));
 		return 3;
 	}
-	WRITE_INT (buf, B_MAP32, uint32_t, htobe32 (count));
+	WRITE_INT (buf, B_MAP32, uint32_t, sp_htobe32 (count));
 	return 5;
 }
 
@@ -653,11 +652,11 @@ sp_msgpack_enc_ext (void *buf, int8_t type, uint32_t len)
 		off = 2;
 	}
 	else if (len <= UINT16_MAX) {
-		WRITE_INT (buf, B_EXT16, uint16_t, htobe16 (len));
+		WRITE_INT (buf, B_EXT16, uint16_t, sp_htobe16 (len));
 		off = 3;
 	}
 	else {
-		WRITE_INT (buf, B_EXT32, uint32_t, htobe32 (len));
+		WRITE_INT (buf, B_EXT32, uint32_t, sp_htobe32 (len));
 		off = 5;
 	}
 

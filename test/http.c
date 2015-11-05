@@ -1,8 +1,9 @@
-#include <stdio.h>
+#include "../include/siphon/http.h"
+#include "../include/siphon/error.h"
+#include "mu/mu.h"
+
 #include <stdlib.h>
 #include <ctype.h>
-#include "siphon/siphon.h"
-#include "mu/mu.h"
 
 typedef struct {
 	union {
@@ -351,12 +352,10 @@ test_invalid_header (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, 25);
-	if (rc > 0) {
-		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
-		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_HTTP_ESYNTAX);
-	}
+	mu_fassert_int_eq (rc, 25);
+	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+	rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+	mu_assert_int_eq (rc, SP_HTTP_ESYNTAX);
 }
 
 static void
@@ -407,12 +406,10 @@ test_limit_name_size (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, 25);
-	if (rc > 0) {
-		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
-		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, 265);
-	}
+	mu_fassert_int_eq (rc, 25);
+	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+	rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+	mu_assert_int_eq (rc, 265);
 }
 
 static void
@@ -429,12 +426,10 @@ test_exceed_name_size (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, 25);
-	if (rc > 0) {
-		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
-		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_HTTP_ESIZE);
-	}
+	mu_fassert_int_eq (rc, 25);
+	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+	rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+	mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 }
 
 static void
@@ -451,12 +446,10 @@ test_limit_value_size (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, 25);
-	if (rc > 0) {
-		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
-		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, 1031);
-	}
+	mu_fassert_int_eq (rc, 25);
+	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+	rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+	mu_assert_int_eq (rc, 1031);
 }
 
 static void
@@ -473,18 +466,18 @@ test_exceed_value_size (void)
 
 	sp_http_init_request (&p);
 	rc = sp_http_next (&p, request, sizeof request - 1);
-	mu_assert_int_eq (rc, 25);
-	if (rc > 0) {
-		mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
-		rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
-		mu_assert_int_eq (rc, SP_HTTP_ESIZE);
-	}
+	mu_fassert_int_eq (rc, 25);
+	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
+	rc = sp_http_next (&p, request + rc, sizeof request - 1 - rc);
+	mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 }
 
 
 int
 main (void)
 {
+	mu_init ("http");
+
 	test_request (-1); // parse full message
 	test_request (1);  // parse 1 byte at a time
 	test_request (2);  // parse 2 bytes at a time
@@ -513,7 +506,5 @@ main (void)
 	test_exceed_name_size ();
 	test_limit_value_size ();
 	test_exceed_value_size ();
-
-	mu_exit ("http");
 }
 

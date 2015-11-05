@@ -1,4 +1,7 @@
-#include <stdio.h>
+#include "../include/siphon/json.h"
+#include "../include/siphon/error.h"
+#include "mu/mu.h"
+
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/mman.h>
@@ -8,14 +11,11 @@
 #include <sys/stat.h>
 #include <inttypes.h>
 
-#include "siphon/siphon.h"
-#include "mu/mu.h"
-
 static bool debug = false;
 
 typedef struct {
 	struct {
-		const uint8_t *string;
+		uint8_t string[64];
 		double number;
 		SpJsonType type;
 	} fields[64];
@@ -111,7 +111,7 @@ parse (SpJson *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 
 		switch (p->type) {
 			case SP_JSON_STRING:
-				msg->fields[msg->field_count].string = sp_utf8_steal (&p->utf8, NULL, NULL);
+				sp_utf8_copy (&p->utf8, msg->fields[msg->field_count].string, 64);
 				msg->fields[msg->field_count++].type = SP_JSON_STRING;
 				break;
 			case SP_JSON_NUMBER:
@@ -169,60 +169,61 @@ test_parse (ssize_t speed)
 		return;
 	}
 
-	mu_assert_uint_eq (msg.field_count, 31);
-	if (msg.field_count != 31) return;
-	mu_assert_int_eq (msg.fields[0].type, SP_JSON_OBJECT);
-	mu_assert_int_eq (msg.fields[1].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[1].string, "test");
-	mu_assert_int_eq (msg.fields[2].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[2].string, "value");
-	mu_assert_int_eq (msg.fields[3].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[3].string, "foo");
-	mu_assert_int_eq (msg.fields[4].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[4].string, "b\"a and \\ r");
-	mu_assert_int_eq (msg.fields[5].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[5].string, "array");
-	mu_assert_int_eq (msg.fields[6].type, SP_JSON_ARRAY);
-	mu_assert_int_eq (msg.fields[7].type, SP_JSON_NUMBER);
-	mu_assert_int_eq (msg.fields[7].number, 1);
-	mu_assert_int_eq (msg.fields[8].type, SP_JSON_NUMBER);
-	mu_assert_int_eq (msg.fields[8].number, 2);
-	mu_assert_int_eq (msg.fields[9].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[9].string, "three");
-	mu_assert_int_eq (msg.fields[10].type, SP_JSON_NUMBER);
-	mu_assert_int_eq (msg.fields[10].number, 4);
-	mu_assert_int_eq (msg.fields[11].type, SP_JSON_ARRAY_END);
-	mu_assert_int_eq (msg.fields[12].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[12].string, "baz");
-	mu_assert_int_eq (msg.fields[13].type, SP_JSON_OBJECT);
-	mu_assert_int_eq (msg.fields[14].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[14].string, "a");
-	mu_assert_int_eq (msg.fields[15].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[15].string, "b");
-	mu_assert_int_eq (msg.fields[16].type, SP_JSON_OBJECT_END);
-	mu_assert_int_eq (msg.fields[17].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[17].string, "num");
-	mu_assert_int_eq (msg.fields[18].type, SP_JSON_NUMBER);
-	mu_assert_int_eq (msg.fields[18].number * 100, 12345);
-	mu_assert_int_eq (msg.fields[19].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[19].string, "bool");
-	mu_assert_int_eq (msg.fields[20].type, SP_JSON_TRUE);
-	mu_assert_int_eq (msg.fields[21].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[21].string, "utf8");
-	mu_assert_int_eq (msg.fields[22].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[22].string, "$¢€𤪤");
-	mu_assert_int_eq (msg.fields[23].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[23].string, "key");
-	mu_assert_int_eq (msg.fields[24].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[24].string, "value\n\"newline\"");
-	mu_assert_int_eq (msg.fields[25].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[25].string, "obj");
-	mu_assert_int_eq (msg.fields[26].type, SP_JSON_OBJECT);
-	mu_assert_int_eq (msg.fields[27].type, SP_JSON_STRING);
-	mu_assert_str_eq (msg.fields[27].string, "true");
-	mu_assert_int_eq (msg.fields[28].type, SP_JSON_TRUE);
-	mu_assert_int_eq (msg.fields[29].type, SP_JSON_OBJECT_END);
-	mu_assert_int_eq (msg.fields[30].type, SP_JSON_OBJECT_END);
+	mu_fassert_uint_eq (msg.field_count, 31);
+	mu_fassert_int_eq (msg.fields[0].type, SP_JSON_OBJECT);
+	mu_fassert_int_eq (msg.fields[1].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[1].string, "test");
+	mu_fassert_int_eq (msg.fields[2].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[2].string, "value");
+	mu_fassert_int_eq (msg.fields[3].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[3].string, "foo");
+	mu_fassert_int_eq (msg.fields[4].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[4].string, "b\"a and \\ r");
+	mu_fassert_int_eq (msg.fields[5].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[5].string, "array");
+	mu_fassert_int_eq (msg.fields[6].type, SP_JSON_ARRAY);
+	mu_fassert_int_eq (msg.fields[7].type, SP_JSON_NUMBER);
+	mu_fassert_int_eq (msg.fields[7].number, 1);
+	mu_fassert_int_eq (msg.fields[8].type, SP_JSON_NUMBER);
+	mu_fassert_int_eq (msg.fields[8].number, 2);
+	mu_fassert_int_eq (msg.fields[9].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[9].string, "three");
+	mu_fassert_int_eq (msg.fields[10].type, SP_JSON_NUMBER);
+	mu_fassert_int_eq (msg.fields[10].number, 4);
+	mu_fassert_int_eq (msg.fields[11].type, SP_JSON_ARRAY_END);
+	mu_fassert_int_eq (msg.fields[12].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[12].string, "baz");
+	mu_fassert_int_eq (msg.fields[13].type, SP_JSON_OBJECT);
+	mu_fassert_int_eq (msg.fields[14].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[14].string, "a");
+	mu_fassert_int_eq (msg.fields[15].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[15].string, "b");
+	mu_fassert_int_eq (msg.fields[16].type, SP_JSON_OBJECT_END);
+	mu_fassert_int_eq (msg.fields[17].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[17].string, "num");
+	mu_fassert_int_eq (msg.fields[18].type, SP_JSON_NUMBER);
+	mu_fassert_int_eq (msg.fields[18].number * 100, 12345);
+	mu_fassert_int_eq (msg.fields[19].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[19].string, "bool");
+	mu_fassert_int_eq (msg.fields[20].type, SP_JSON_TRUE);
+	mu_fassert_int_eq (msg.fields[21].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[21].string, "utf8");
+	mu_fassert_int_eq (msg.fields[22].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[22].string, "$¢€𤪤");
+	mu_fassert_int_eq (msg.fields[23].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[23].string, "key");
+	mu_fassert_int_eq (msg.fields[24].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[24].string, "value\n\"newline\"");
+	mu_fassert_int_eq (msg.fields[25].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[25].string, "obj");
+	mu_fassert_int_eq (msg.fields[26].type, SP_JSON_OBJECT);
+	mu_fassert_int_eq (msg.fields[27].type, SP_JSON_STRING);
+	mu_fassert_str_eq (msg.fields[27].string, "true");
+	mu_fassert_int_eq (msg.fields[28].type, SP_JSON_TRUE);
+	mu_fassert_int_eq (msg.fields[29].type, SP_JSON_OBJECT_END);
+	mu_fassert_int_eq (msg.fields[30].type, SP_JSON_OBJECT_END);
+
+	sp_json_final (&p);
 }
 
 static ssize_t
@@ -314,6 +315,8 @@ out:
 int
 main (void)
 {
+	mu_init ("json");
+
 	test_parse (-1);
 	test_parse (1);
 
@@ -366,7 +369,5 @@ main (void)
 	mu_assert_int_eq (1, parse_file ("pass6.json", 20));
 	mu_assert_int_eq (1, parse_file ("pass7.json", 20));
 	mu_assert_int_eq (1, parse_file ("pass8.json", 20));
-
-	mu_exit ("json");
 }
 

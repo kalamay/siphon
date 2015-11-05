@@ -1,11 +1,11 @@
 #ifndef SIPHON_ERROR_H
 #define SIPHON_ERROR_H
 
-#include <stdio.h>
+#include "common.h"
+
 #include <errno.h>
 #include <netdb.h>
-
-#include "common.h"
+#include <stdarg.h>
 
 #define SP_EAI_OFFSET (-200)
 #define SP_EUSER_MIN (-2000)
@@ -72,6 +72,9 @@ sp_exit (int code, int exitcode);
 SP_EXPORT void
 sp_abort (int code);
 
+SP_EXPORT void __attribute__((__format__ (__printf__, 1, 2)))
+sp_fabort (const char *fmt, ...);
+
 SP_EXPORT const SpError *
 sp_error (int code);
 
@@ -80,6 +83,9 @@ sp_error_next (const SpError *err);
 
 SP_EXPORT const SpError *
 sp_error_add (int code, const char *domain, const char *name, const char *msg);
+
+SP_EXPORT size_t
+sp_stack (char *buf, size_t len);
 
 #endif
 

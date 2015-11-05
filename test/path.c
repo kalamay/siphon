@@ -1,4 +1,5 @@
-#include "siphon/siphon.h"
+#include "../include/siphon/path.h"
+#include "../include/siphon/error.h"
 #include "mu/mu.h"
 
 #include <errno.h>
@@ -205,7 +206,7 @@ test_match (void)
 static void
 test_proc (void)
 {
-	char buf[SP_PATH_MAX];
+	char buf[SP_PATH_MAX] = {0};
 	int len = sp_path_proc (buf, sizeof buf);
 	printf ("DEBUG: process path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
@@ -214,7 +215,7 @@ test_proc (void)
 static void
 test_env (void)
 {
-	char buf[SP_PATH_MAX];
+	char buf[SP_PATH_MAX] = {0};
 	int len = sp_path_env ("vi", buf, sizeof buf);
 	printf ("DEBUG: vi path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
@@ -223,6 +224,8 @@ test_env (void)
 int
 main (void)
 {
+	mu_init ("path");
+
 	test_join ();
 	test_clean ();
 	test_split ();
@@ -231,6 +234,4 @@ main (void)
 	test_match ();
 	test_proc ();
 	test_env ();
-
-	mu_exit ("path");
 }

@@ -1,5 +1,6 @@
-#include "siphon/siphon.h"
-#include "siphon/alloc.h"
+#include "../include/siphon/http.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -78,9 +79,9 @@ readin (const char *path, size_t *outlen)
 
 	fclose (in);
 
-	char *copy = sp_mallocn (len, 1);
+	char *copy = sp_malloc (len);
 	if (copy == NULL) {
-		err (EXIT_FAILURE, "sp_mallocn");
+		err (EXIT_FAILURE, "sp_malloc");
 	}
 
 	memcpy (copy, buffer, len);
@@ -96,6 +97,7 @@ main (int argc, char **argv)
 	char *cur = buf;
 	char *end = buf + len;
 	ssize_t rc;
+	size_t freelen = len;
 
 	SpHttp p;
 	sp_http_init_request (&p);
@@ -117,13 +119,13 @@ main (int argc, char **argv)
 		}
 	}
 
-	sp_free (buf);
+	sp_free (buf, freelen);
 
 	return 0;
 
 error:
 	fprintf (stderr, "http error: %s\n", sp_strerror (rc));
-	sp_free (buf);
+	sp_free (buf, len);
 	return 1;
 }
 

@@ -2,8 +2,7 @@
 #define SIPHON_HTTP_H
 
 #include "common.h"
-
-#include <stdio.h>
+#include "range.h"
 
 #define SP_HTTP_MAX_METHOD 32
 #define SP_HTTP_MAX_URI 8192

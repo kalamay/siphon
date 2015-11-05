@@ -1,4 +1,6 @@
-#include <stdio.h>
+#include "../include/siphon/line.h"
+#include "mu/mu.h"
+
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/mman.h>
@@ -7,9 +9,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <inttypes.h>
-
-#include "siphon/siphon.h"
-#include "mu/mu.h"
 
 typedef struct {
 	struct {
@@ -85,8 +84,7 @@ test_parse (ssize_t speed)
 		return;
 	}
 
-	mu_assert_uint_eq (msg.count, 3);
-	if (msg.count != 3) return;
+	mu_fassert_uint_eq (msg.count, 3);
 
 	char cmp[64];
 
@@ -103,12 +101,12 @@ test_parse (ssize_t speed)
 int
 main (void)
 {
+	mu_init ("line");
+
 	test_parse (-1);
 	test_parse (1);
 
 	test_parse (2);
 	test_parse (11);
-
-	mu_exit ("line");
 }
 

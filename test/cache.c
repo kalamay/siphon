@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include "siphon/cache.h"
-
+#include "../include/siphon/cache.h"
 #include "mu/mu.h"
 
 static void
@@ -187,11 +185,11 @@ test_all (void)
 int
 main (void)
 {
+	mu_init ("cache");
+
 	test_max_stale ();
 	test_private ();
 	test_no_cache ();
 	test_all ();
-
-	mu_exit ("cache");
 }
 

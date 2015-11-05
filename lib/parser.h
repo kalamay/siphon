@@ -1,4 +1,4 @@
-#include "siphon/error.h"
+#include "../include/siphon/error.h"
 
 #include "pcmp/eq16.h"
 #include "pcmp/leq.h"

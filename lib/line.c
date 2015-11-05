@@ -1,5 +1,5 @@
-#include "siphon/line.h"
-#include "common.h"
+#include "../include/siphon/line.h"
+#include "parser.h"
 
 #include <assert.h>
 

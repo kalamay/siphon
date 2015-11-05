@@ -2,10 +2,24 @@ cmake_minimum_required(VERSION 2.8)
 
 project(siphon C)
 
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden")
-set(CMAKE_C_FLAGS_DEBUG "-g")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
+set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 SET(CMAKE_MACOSX_RPATH ON)
+
+find_program(VALGRIND_COMMAND valgrind)
+
+if(VALGRIND_COMMAND AND CMAKE_BUILD_TYPE MATCHES Debug)
+	get_filename_component(VALGRIND_INCLUDE ${VALGRIND_COMMAND} DIRECTORY)
+	get_filename_component(VALGRIND_INCLUDE ${VALGRIND_INCLUDE} DIRECTORY)
+	set(VALGRIND_INCLUDE "${VALGRIND_INCLUDE}/include")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DSP_USE_VALGRIND")
+	include_directories(BEFORE ${VALGRIND_INCLUDE})
+endif()
 
 set(SIPHON_VER_MAJOR 0)
 set(SIPHON_VER_MINOR 2)
@@ -48,9 +62,16 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
 add_library(siphon OBJECT
 	lib/error.c
+	lib/clock.c
+	lib/common.c
+	lib/seed.c
+	lib/fmt.c
 	lib/crc.c
 	lib/hash.c
 	lib/bloom.c
+	lib/map.c
+	lib/vec.c
+	lib/trie.c
 	lib/rand.c
 	lib/utf8.c
 	lib/http.c
@@ -106,8 +127,7 @@ target_link_libraries(bench-crc siphon-static m)
 enable_testing()
 
 set(MEMORYCHECK_TYPE Valgrind)
-find_program(VALGRIND_COMMAND valgrind)
-set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50")
+set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50 --error-exitcode=2")
 if(APPLE)
 	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
 endif()
@@ -172,4 +192,20 @@ target_link_libraries(test-line siphon-static m)
 add_test(NAME error COMMAND test-error)
 add_executable(test-error test/error.c)
 target_link_libraries(test-error siphon-static m)
+
+add_test(NAME clock COMMAND test-clock)
+add_executable(test-clock test/clock.c)
+target_link_libraries(test-clock siphon-static m)
+
+add_test(NAME map COMMAND test-map)
+add_executable(test-map test/map.c)
+target_link_libraries(test-map siphon-static m)
+
+add_test(NAME vec COMMAND test-vec)
+add_executable(test-vec test/vec.c)
+target_link_libraries(test-vec siphon-static m)
+
+add_test(NAME trie COMMAND test-trie)
+add_executable(test-trie test/trie.c)
+target_link_libraries(test-trie siphon-static m)
 

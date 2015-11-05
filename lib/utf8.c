@@ -1,12 +1,10 @@
-#include "siphon/utf8.h"
-#include "siphon/error.h"
-#include "common.h"
+#include "../include/siphon/utf8.h"
+#include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
+#include "parser.h"
 
-#include <stdlib.h>
 #include <limits.h>
-#include <string.h>
 #include <errno.h>
-#include <math.h>
 #include <ctype.h>
 #include <assert.h>
 
@@ -61,10 +59,8 @@ sp_utf8_final (SpUtf8 *u)
 {
 	assert (u != NULL);
 
-	free (u->buf);
-	u->buf = NULL;
-	u->cap = 0;
-	u->len = 0;
+	sp_free (u->buf, u->cap);
+	sp_utf8_init (u);
 }
 
 uint8_t *
@@ -77,6 +73,20 @@ sp_utf8_steal (SpUtf8 *u, size_t *len, size_t *cap)
 	if (cap) *cap = u->cap;
 	sp_utf8_init (u);
 	return buf;
+}
+
+size_t
+sp_utf8_copy (const SpUtf8 *u, void *buf, size_t len)
+{
+	assert (u != NULL);
+
+	size_t out = u->len;
+	if (out >= len) { 
+		out = len - 1;
+	}
+	memcpy (buf, u->buf, out);
+	((char *)buf)[out] = '\0';
+	return out;
 }
 
 int
@@ -97,16 +107,19 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 	}
 
 	// round up required capacity
-	if (cap < MAX_POWER_OF_2) {
+	if (cap < 64) {
+		cap = 64;
+	}
+	else if (cap < MAX_POWER_OF_2) {
 		// calculate the next power of 2
-		cap = (size_t)pow (2, ceil (log2 (cap)));
+		cap = sp_power_of_2 (cap);
 	}
 	else {
 		// calculate the nearest multiple of MAX_POWER_OF_2
-		cap = (((cap - 1) / MAX_POWER_OF_2) + 1) * MAX_POWER_OF_2;
+		cap = sp_next_quantum (cap, MAX_POWER_OF_2);
 	}
 
-	uint8_t *buf = realloc (u->buf, cap);
+	uint8_t *buf = sp_realloc (u->buf, u->cap, cap);
 	if (buf == NULL) {
 		return SP_ESYSTEM(errno);
 	}
@@ -120,9 +133,9 @@ sp_utf8_add_raw (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
-	if (sp_utf8_ensure (u, len) < 0) {
-		return SP_ESYSTEM(errno);
-	}
+	int rc = sp_utf8_ensure (u, len);
+	if (rc < 0) { return rc; }
+
 	memcpy (u->buf + u->len, src, len);
 	u->len += len;
 	u->buf[u->len] = '\0';
