@@ -60,7 +60,7 @@ void
 sp_bloom_free (SpBloom *self)
 {
 	if (self != NULL) {
-		//sp_free (self, BASE_SIZE + self->bits/8);
+		sp_free (self, BASE_SIZE + self->bits/8);
 	}
 }
 

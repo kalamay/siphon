@@ -57,9 +57,10 @@ resize (SpVec *v, void **vec, size_t size, size_t cap, size_t count)
 	v = sp_malloc (sizeof *v + size*cap);
 	if (v == NULL) { return NULL; }
 
-	memcpy (HEAD (v), vec, size*count);
+	memcpy (HEAD (v), *vec, size*count);
 	v->count = count;
 	v->capacity = cap;
+	sp_vecp_free (vec, size);
 	*vec = v + 1;
 
 	return v;

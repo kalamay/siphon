@@ -77,6 +77,13 @@ test_grow (void)
 
 	mu_assert_uint_eq (sp_vec_count (vec), 99);
 	mu_assert_int_eq (grows, 4);
+
+	for (int i = 1; i < 100; i++) {
+		mu_assert_int_eq (vec[i-1], i);
+	}
+
+	sp_vec_free (vec);
+	mu_assert_uint_eq (sp_vec_count (vec), 0);
 }
 
 static void
