@@ -8,8 +8,14 @@ endif()
 
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden")
 set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 SET(CMAKE_MACOSX_RPATH ON)
+
+find_program(VALGRIND_COMMAND valgrind)
+
+if(VALGRIND_COMMAND AND CMAKE_BUILD_TYPE MATCHES Debug)
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DSP_USE_VALGRIND")
+endif()
 
 set(SIPHON_VER_MAJOR 0)
 set(SIPHON_VER_MINOR 2)
@@ -116,7 +122,6 @@ target_link_libraries(bench-crc siphon-static m)
 enable_testing()
 
 set(MEMORYCHECK_TYPE Valgrind)
-find_program(VALGRIND_COMMAND valgrind)
 set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50")
 if(APPLE)
 	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")

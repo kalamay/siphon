@@ -1,6 +1,7 @@
 #include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
 #include "lock.h"
+#include "config.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -98,12 +99,24 @@ dbg_protect (struct dbg_preamble *pre, int flags)
 void *
 sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz)
 {
+#if SP_VALGRIND
+	if (RUNNING_ON_VALGRIND) {
+		if (newsz == 0) {
+			free (ptr);
+			return NULL;
+		}
+		else {
+			return realloc (ptr, newsz);
+		}
+	}
+#endif
+
 	void *ret = NULL;
 
 	if (newsz > 0) {
 		size_t alloc = dbg_size (newsz);
-		char *p = NULL;
-		if (posix_memalign ((void **)&p, pagesize, alloc + pagesize) < 0) {
+		char *p = mmap (NULL, alloc+pagesize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+		if (p == MAP_FAILED) {
 			return NULL;
 		}
 
@@ -149,7 +162,7 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz)
 		}
 		dbg_protect (pre, PROT_READ | PROT_WRITE);
 		pre->magic = 0;
-		free (pre->ptr);
+		munmap (pre->ptr, pre->cap);
 	}
 
 	return ret;
