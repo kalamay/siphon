@@ -209,3 +209,7 @@ add_test(NAME trie COMMAND test-trie)
 add_executable(test-trie test/trie.c)
 target_link_libraries(test-trie siphon-static m)
 
+add_test(NAME rand COMMAND test-rand)
+add_executable(test-rand test/rand.c)
+target_link_libraries(test-rand siphon-static m)
+

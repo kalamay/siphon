@@ -12,7 +12,7 @@ static SpSeed SEED_DEFAULT = {
 const SpSeed *const restrict SP_SEED_RANDOM = &SEED_RANDOM;
 const SpSeed *const restrict SP_SEED_DEFAULT = &SEED_DEFAULT;
 
-static void __attribute__((constructor))
+static void __attribute__((constructor(102)))
 init (void)
 {
 	sp_rand (&SEED_RANDOM, sizeof SEED_RANDOM);
