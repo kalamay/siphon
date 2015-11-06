@@ -11,16 +11,6 @@ set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 SET(CMAKE_MACOSX_RPATH ON)
 
-find_program(VALGRIND_COMMAND valgrind)
-
-if(VALGRIND_COMMAND AND CMAKE_BUILD_TYPE MATCHES Debug)
-	get_filename_component(VALGRIND_INCLUDE ${VALGRIND_COMMAND} DIRECTORY)
-	get_filename_component(VALGRIND_INCLUDE ${VALGRIND_INCLUDE} DIRECTORY)
-	set(VALGRIND_INCLUDE "${VALGRIND_INCLUDE}/include")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DSP_USE_VALGRIND")
-	include_directories(BEFORE ${VALGRIND_INCLUDE})
-endif()
-
 set(SIPHON_VER_MAJOR 0)
 set(SIPHON_VER_MINOR 2)
 set(SIPHON_VER_PATCH 0)
@@ -113,103 +103,105 @@ install(DIRECTORY man/
 
 
 
-add_executable(bench-http bench/http.c)
-target_link_libraries(bench-http siphon-static m)
+if(CMAKE_BUILD_TYPE MATCHES Debug)
 
-add_executable(bench-json bench/json.c)
-target_link_libraries(bench-json siphon-static m)
+	find_program(VALGRIND_COMMAND valgrind)
 
-add_executable(bench-crc bench/crc.c)
-target_link_libraries(bench-crc siphon-static m)
+	if(VALGRIND_COMMAND)
+		get_filename_component(VALGRIND_INCLUDE ${VALGRIND_COMMAND} DIRECTORY)
+		get_filename_component(VALGRIND_INCLUDE ${VALGRIND_INCLUDE} DIRECTORY)
+		set(VALGRIND_INCLUDE "${VALGRIND_INCLUDE}/include")
+		set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DSP_USE_VALGRIND")
+		include_directories(BEFORE ${VALGRIND_INCLUDE})
+	endif()
 
+	enable_testing()
 
+	set(MEMORYCHECK_TYPE Valgrind)
+	set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50 --error-exitcode=2")
+	if(APPLE)
+		set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
+	endif()
+	find_file(MEMORYCHECK_SUPPRESSIONS_FILE ${CMAKE_SYSTEM_NAME}.supp
+		PATHS ${PROJECT_SOURCE_DIR}/test
+		NO_DEFAULT_PATH)
 
-enable_testing()
+	include(CTest)
 
-set(MEMORYCHECK_TYPE Valgrind)
-set(VALGRIND_COMMAND_OPTIONS "-q --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=50 --error-exitcode=2")
-if(APPLE)
-	set(VALGRIND_COMMAND_OPTIONS "${VALGRIND_COMMAND_OPTIONS} --dsymutil=yes")
+	add_test(NAME crc COMMAND test-crc)
+	add_executable(test-crc test/crc.c)
+	target_link_libraries(test-crc siphon-static m)
+
+	add_test(NAME hash COMMAND test-hash)
+	add_executable(test-hash test/hash.c)
+	target_link_libraries(test-hash siphon-static m)
+
+	add_test(NAME utf8 COMMAND test-utf8)
+	add_executable(test-utf8 test/utf8.c)
+	target_link_libraries(test-utf8 siphon-static m)
+
+	add_test(NAME http COMMAND test-http)
+	add_executable(test-http test/http.c)
+	target_link_libraries(test-http siphon-static m)
+	add_executable(test-http-input test/http-input.c)
+	target_link_libraries(test-http-input siphon-static m)
+
+	add_test(NAME json COMMAND test-json)
+	add_executable(test-json test/json.c)
+	target_link_libraries(test-json siphon-static m)
+	add_executable(test-json-input test/json-input.c)
+	target_link_libraries(test-json-input siphon-static m)
+
+	add_test(NAME msgpack COMMAND test-msgpack)
+	add_executable(test-msgpack test/msgpack.c)
+	target_link_libraries(test-msgpack siphon-static m)
+	add_executable(test-msgpack-input test/msgpack-input.c)
+	target_link_libraries(test-msgpack-input siphon-static m)
+
+	add_test(NAME path COMMAND test-path)
+	add_executable(test-path test/path.c)
+	target_link_libraries(test-path siphon-static m)
+
+	add_test(NAME uri COMMAND test-uri)
+	add_executable(test-uri test/uri.c)
+	target_link_libraries(test-uri siphon-static m)
+	add_executable(test-uri-input test/uri-input.c)
+	target_link_libraries(test-uri-input siphon-static m)
+
+	add_test(NAME bloom COMMAND test-bloom)
+	add_executable(test-bloom test/bloom.c)
+	target_link_libraries(test-bloom siphon-static m)
+
+	add_test(NAME cache COMMAND test-cache)
+	add_executable(test-cache test/cache.c)
+	target_link_libraries(test-cache siphon-static m)
+
+	add_test(NAME line COMMAND test-line)
+	add_executable(test-line test/line.c)
+	target_link_libraries(test-line siphon-static m)
+
+	add_test(NAME error COMMAND test-error)
+	add_executable(test-error test/error.c)
+	target_link_libraries(test-error siphon-static m)
+
+	add_test(NAME clock COMMAND test-clock)
+	add_executable(test-clock test/clock.c)
+	target_link_libraries(test-clock siphon-static m)
+
+	add_test(NAME map COMMAND test-map)
+	add_executable(test-map test/map.c)
+	target_link_libraries(test-map siphon-static m)
+
+	add_test(NAME vec COMMAND test-vec)
+	add_executable(test-vec test/vec.c)
+	target_link_libraries(test-vec siphon-static m)
+
+	add_test(NAME trie COMMAND test-trie)
+	add_executable(test-trie test/trie.c)
+	target_link_libraries(test-trie siphon-static m)
+
+	add_test(NAME rand COMMAND test-rand)
+	add_executable(test-rand test/rand.c)
+	target_link_libraries(test-rand siphon-static m)
 endif()
-find_file(MEMORYCHECK_SUPPRESSIONS_FILE ${CMAKE_SYSTEM_NAME}.supp
-	PATHS ${PROJECT_SOURCE_DIR}/test
-	NO_DEFAULT_PATH)
-
-include(CTest)
-
-add_test(NAME crc COMMAND test-crc)
-add_executable(test-crc test/crc.c)
-target_link_libraries(test-crc siphon-static m)
-
-add_test(NAME hash COMMAND test-hash)
-add_executable(test-hash test/hash.c)
-target_link_libraries(test-hash siphon-static m)
-
-add_test(NAME utf8 COMMAND test-utf8)
-add_executable(test-utf8 test/utf8.c)
-target_link_libraries(test-utf8 siphon-static m)
-
-add_test(NAME http COMMAND test-http)
-add_executable(test-http test/http.c)
-target_link_libraries(test-http siphon-static m)
-add_executable(test-http-input test/http-input.c)
-target_link_libraries(test-http-input siphon-static m)
-
-add_test(NAME json COMMAND test-json)
-add_executable(test-json test/json.c)
-target_link_libraries(test-json siphon-static m)
-add_executable(test-json-input test/json-input.c)
-target_link_libraries(test-json-input siphon-static m)
-
-add_test(NAME msgpack COMMAND test-msgpack)
-add_executable(test-msgpack test/msgpack.c)
-target_link_libraries(test-msgpack siphon-static m)
-add_executable(test-msgpack-input test/msgpack-input.c)
-target_link_libraries(test-msgpack-input siphon-static m)
-
-add_test(NAME path COMMAND test-path)
-add_executable(test-path test/path.c)
-target_link_libraries(test-path siphon-static m)
-
-add_test(NAME uri COMMAND test-uri)
-add_executable(test-uri test/uri.c)
-target_link_libraries(test-uri siphon-static m)
-add_executable(test-uri-input test/uri-input.c)
-target_link_libraries(test-uri-input siphon-static m)
-
-add_test(NAME bloom COMMAND test-bloom)
-add_executable(test-bloom test/bloom.c)
-target_link_libraries(test-bloom siphon-static m)
-
-add_test(NAME cache COMMAND test-cache)
-add_executable(test-cache test/cache.c)
-target_link_libraries(test-cache siphon-static m)
-
-add_test(NAME line COMMAND test-line)
-add_executable(test-line test/line.c)
-target_link_libraries(test-line siphon-static m)
-
-add_test(NAME error COMMAND test-error)
-add_executable(test-error test/error.c)
-target_link_libraries(test-error siphon-static m)
-
-add_test(NAME clock COMMAND test-clock)
-add_executable(test-clock test/clock.c)
-target_link_libraries(test-clock siphon-static m)
-
-add_test(NAME map COMMAND test-map)
-add_executable(test-map test/map.c)
-target_link_libraries(test-map siphon-static m)
-
-add_test(NAME vec COMMAND test-vec)
-add_executable(test-vec test/vec.c)
-target_link_libraries(test-vec siphon-static m)
-
-add_test(NAME trie COMMAND test-trie)
-add_executable(test-trie test/trie.c)
-target_link_libraries(test-trie siphon-static m)
-
-add_test(NAME rand COMMAND test-rand)
-add_executable(test-rand test/rand.c)
-target_link_libraries(test-rand siphon-static m)
 
