@@ -3,7 +3,6 @@
 #include "../include/siphon/alloc.h"
 
 #include <unistd.h>
-#include <inttypes.h>
 #include <assert.h>
 
 /*

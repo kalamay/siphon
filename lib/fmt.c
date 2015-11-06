@@ -1,7 +1,6 @@
 #include "../include/siphon/fmt.h"
 
 #include <ctype.h>
-#include <inttypes.h>
 
 #define WRITE(buf, len) do {                 \
 	size_t step = fwrite (buf, len, 1, out); \

@@ -187,7 +187,7 @@ sp_bloom_print (const SpBloom *self, FILE *out)
 		fprintf (out, "#<SpBloom:(null)>\n");
 	}
 	else {
-		fprintf (out, "#<SpBloom:%p fpp=%f, count=%llu, bits=%llu, hashes=%u>\n",
+		fprintf (out, "#<SpBloom:%p fpp=%f, count=%" PRIu64 ", bits=%" PRIu64 ", hashes=%u>\n",
 				(void *)self, self->fpp, self->count, self->bits, self->hashes);
 	}
 }

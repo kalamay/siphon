@@ -321,7 +321,7 @@ sp_exit (int code, int exitcode)
 	exit (exitcode);
 }
 
-static void __attribute__((always_inline))
+static inline void
 stack_abort (char *buf, size_t len, size_t off)
 {
 	if (off < len - 1) {
@@ -411,7 +411,7 @@ sp_error_add (int code, const char *domain, const char *name, const char *msg)
 	return err;
 }
 
-size_t __attribute__((always_inline))
+inline size_t
 sp_stack (char *buf, size_t len)
 {
 	char **strs = NULL;

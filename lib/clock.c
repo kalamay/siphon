@@ -35,7 +35,7 @@ sp_clock_real (SpClock *clock)
 	assert (clock != NULL);
 
 #if SP_POSIX_CLOCK
-	if (clock_gettime (SP_CLOCK_REALIME, &clock) < 0) {
+	if (clock_gettime (SP_CLOCK_REALIME, clock) < 0) {
 		return -errno;
 	}
 #elif SP_MACH_CLOCK
@@ -55,7 +55,7 @@ sp_clock_mono (SpClock *clock)
 	assert (clock != NULL);
 
 #if SP_POSIX_CLOCK
-	if (clock_gettime (SP_CLOCK_MONOTONIC, &clock) < 0) {
+	if (clock_gettime (SP_CLOCK_MONOTONIC, clock) < 0) {
 		return -errno;
 	}
 #elif SP_MACH_CLOCK

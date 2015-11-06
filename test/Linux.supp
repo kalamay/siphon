@@ -13,3 +13,9 @@
 	fun:resize_errors
 	...
 }
+{
+	test_iter
+	Memcheck:Cond
+	fun:test_iter
+	fun:main
+}
