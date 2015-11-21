@@ -188,13 +188,11 @@ sp_map_resize (SpMap *self, size_t hint)
 	SpMapEntry *const entries = self->entries;
 	const size_t capacity = self->capacity;
 
-	self->entries = sp_malloc (hint * sizeof *self->entries);
+	self->entries = sp_calloc (hint, sizeof *self->entries);
 	if (self->entries == NULL) {
 		self->entries = entries;
 		return -1;
 	}
-	
-	memset (self->entries, 0, sizeof *self->entries * hint);
 
 	self->capacity = hint;
 	self->mask = hint - 1;
