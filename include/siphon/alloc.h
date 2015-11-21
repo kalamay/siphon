@@ -5,10 +5,10 @@
 
 #ifdef SP_ALLOC_DEBUG
 
-#define sp_malloc(size) sp_alloc_debug (NULL, 0, (size))
-#define sp_calloc(count, size) sp_alloc_debug (NULL, 0, (count)*(size))
-#define sp_realloc(ptr, oldsz, newsz) sp_alloc_debug ((ptr), (oldsz), (newsz))
-#define sp_free(ptr, size) sp_alloc_debug ((ptr), (size), 0)
+#define sp_malloc(size) sp_alloc_debug (NULL, 0, (size), false)
+#define sp_calloc(count, size) sp_alloc_debug (NULL, 0, (count)*(size), true)
+#define sp_realloc(ptr, oldsz, newsz) sp_alloc_debug ((ptr), (oldsz), (newsz), false)
+#define sp_free(ptr, size) sp_alloc_debug ((ptr), (size), 0, false)
 
 #else
 
@@ -44,7 +44,7 @@
  * Any value allocated with this function MUST also be freed with it.
  */
 SP_EXPORT void *
-sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz);
+sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero);
 
 #endif
 

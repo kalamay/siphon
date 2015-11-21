@@ -97,7 +97,7 @@ dbg_protect (struct dbg_preamble *pre, int flags)
 }
 
 void *
-sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz)
+sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 {
 #if SP_VALGRIND
 	if (RUNNING_ON_VALGRIND) {
@@ -106,7 +106,11 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz)
 			return NULL;
 		}
 		else {
-			return realloc (ptr, newsz);
+			ptr = realloc (ptr, newsz);
+			if (zero && ptr != NULL && oldsz < newsz) {
+				memset ((char *)ptr+oldsz, 0, newsz-oldsz);
+			}
+			return ptr;
 		}
 	}
 #endif
