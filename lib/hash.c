@@ -3,6 +3,52 @@
 
 #include <ctype.h>
 
+uint32_t
+sp_mix_uint32 (uint32_t x)
+{
+	x ^= x >> 16;
+	x *= 0x85ebca6b;
+	x ^= x >> 13;
+	x *= 0xc2b2ae35;
+	x ^= x >> 16;
+	return x;
+}
+
+uint32_t
+sp_mix_uint32s (uint32_t x, uint32_t y)
+{
+	static const uint32_t mul = 0xdeadfa11;
+	uint32_t a = (x ^ y) * mul;
+	a ^= (a >> 19);
+	uint32_t b = (y ^ a) * mul;
+	b ^= (b >> 19);
+	b *= mul;
+	return b;
+}
+
+uint64_t
+sp_mix_uint64 (uint64_t x)
+{
+	x ^= x >> 33;
+	x *= 0xff51afd7ed558ccdULL;
+	x ^= x >> 33;
+	x *= 0xc4ceb9fe1a85ec53ULL;
+	x ^= x >> 33;
+	return x;
+}
+
+uint64_t
+sp_mix_uint64s (uint64_t x, uint64_t y)
+{
+	static const uint64_t mul = 0x9ddfea08eb382d69ULL;
+	uint64_t a = (x ^ y) * mul;
+	a ^= (a >> 47);
+	uint64_t b = (y ^ a) * mul;
+	b ^= (b >> 47);
+	b *= mul;
+	return b;
+}
+
 inline static uint64_t
 rotr (uint64_t v, unsigned k)
 {
