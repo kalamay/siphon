@@ -71,7 +71,7 @@ sp_map_clear (SpMap *self)
 
 	if (self->type->free) {
 		for (size_t i=0; i<self->capacity; i++) {
-			if (self->entries[i].value != NULL) {
+			if (self->entries[i].hash && self->entries[i].value != NULL) {
 				self->type->free (self->entries[i].value);
 			}
 		}
