@@ -32,7 +32,7 @@ For a quick HTTP example:
 #include <siphon/siphon.h>
 
 static int fd = STDIN_FILENO;
-static char buf[9192]; // buffer to read into
+static char buf[8192]; // buffer to read into
 static size_t end = 0; // last byte position in the buffer
 static size_t off = 0; // offset into the buffer
 
