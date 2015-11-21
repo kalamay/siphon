@@ -113,6 +113,8 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 			return ptr;
 		}
 	}
+#else
+	(void)zero;
 #endif
 
 	void *ret = NULL;

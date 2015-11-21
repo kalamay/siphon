@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 #define sp_malloc(size) malloc (size)
-#define sp_calloc(count, size) calloc ((count), ((size))
+#define sp_calloc(count, size) calloc ((count), (size))
 #define sp_realloc(ptr, oldsz, newsz) __extension__ ({ \
 	(void)(oldsz);                                     \
 	realloc ((ptr), (newsz));                          \
