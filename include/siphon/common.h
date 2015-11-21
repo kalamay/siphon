@@ -47,7 +47,7 @@
 
 #define sp_sym_concat(x, y) x ## y
 #define sp_sym_make(x, y) sp_sym_concat(x, y)
-#define sp_sym(n) sp_sym_make(__##n##_, __LINE__)
+#define sp_sym(n) sp_sym_make(sym__##n##_, __LINE__)
 
 #define sp_likely(x) __builtin_expect(!!(x), 1)
 #define sp_unlikely(x) __builtin_expect(!!(x), 0)
