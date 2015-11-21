@@ -2,6 +2,7 @@
 #define SIPHON_VEC_H
 
 #include "common.h"
+#include <stdlib.h>
 
 #define sp_vec_count(v) \
 	sp_vecp_count ((void **)&(v))
@@ -64,6 +65,14 @@
 		sp_sym(tmp)[b] = tmp;                           \
 	}                                                   \
 } while (0)
+
+#define sp_vec_sort(v, cmp) do {                                         \
+	__typeof (v) sp_sym(tmp) = (v);                                      \
+	qsort (sp_sym(tmp), sp_vec_count (sp_sym(tmp)), sizeof *(v), (cmp)); \
+} while (0)
+
+#define sp_vec_each(v, i)                                                 \
+	for (size_t sp_sym(n)=((i)=0, sp_vec_count(v)); (i)<sp_sym(n); (i)++) \
 
 SP_EXPORT size_t
 sp_vecp_count (void **vec);
