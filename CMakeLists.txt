@@ -71,6 +71,7 @@ add_library(siphon OBJECT
 	lib/uri.c
 	lib/alloc.c
 	lib/line.c
+	lib/ring.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
 )
@@ -203,5 +204,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 	add_test(NAME rand COMMAND test-rand)
 	add_executable(test-rand test/rand.c)
 	target_link_libraries(test-rand siphon-static m)
+
+	add_test(NAME ring COMMAND test-ring)
+	add_executable(test-ring test/ring.c)
+	target_link_libraries(test-ring siphon-static m)
 endif()
 
