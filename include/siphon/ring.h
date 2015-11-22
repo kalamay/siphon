@@ -5,7 +5,10 @@
 #include "map.h"
 #include "vec.h"
 
+typedef struct SpRing SpRing;
+
 typedef struct {
+	SpRing *ring;
 	size_t keylen;
 	int avail;
 	uint8_t key[1];
@@ -16,11 +19,11 @@ typedef struct {
 	SpRingNode *node;
 } SpRingReplica;
 
-typedef struct {
+struct SpRing {
 	SpMap nodes;
 	SpRingReplica *replicas;
 	SpHash hash;
-} SpRing;
+};
 
 SP_EXPORT int
 sp_ring_init (SpRing *self, SpHash fn);

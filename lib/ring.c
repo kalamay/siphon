@@ -47,11 +47,12 @@ sp_ring_final (SpRing *self)
 }
 
 static SpRingNode *
-create_node (const void *restrict key, size_t len, int avail)
+create_node (SpRing *self, const void *restrict key, size_t len, int avail)
 {
 	SpRingNode *node = sp_malloc (sizeof *node + len);
 	if (node == NULL) return NULL;
 
+	node->ring = self;
 	node->keylen = len;
 	node->avail = avail;
 	memcpy (node->key, key, len);
@@ -112,7 +113,7 @@ sp_ring_put (SpRing *self,
 	if (pos == NULL) { return -errno; }
 	if (!new) { return -EINVAL; } // TODO: better error code
 
-	SpRingNode *node = create_node (key, len, avail);
+	SpRingNode *node = create_node (self, key, len, avail);
 	if (node == NULL) {
 		int rc = -errno;
 		sp_map_del (&self->nodes, key, len);
@@ -226,7 +227,7 @@ void
 sp_ring_restore (const SpRing *self, const SpRingNode *node)
 {
 	assert (self != NULL);
-	assert (sp_map_get (&self->nodes, node->key, node->keylen) == node);
+	assert (node->ring == self);
 	(void)self;
 
 	((SpRingNode *)node)->avail++;
