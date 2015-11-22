@@ -10,9 +10,9 @@ test_find (void)
 	SpRing ring;
 	sp_ring_init (&ring, sp_siphash);
 
-	sp_ring_add (&ring, "test1", 5, 3, 2);
-	sp_ring_add (&ring, "test2", 5, 3, 2);
-	sp_ring_add (&ring, "test3", 5, 3, 2);
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	const SpRingReplica *r;
 
@@ -45,9 +45,9 @@ test_reserve (void)
 	SpRing ring;
 	sp_ring_init (&ring, sp_siphash);
 
-	sp_ring_add (&ring, "test1", 5, 3, 2);
-	sp_ring_add (&ring, "test2", 5, 3, 2);
-	sp_ring_add (&ring, "test3", 5, 3, 2);
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	const SpRingNode *n;
 	const SpRingReplica *r;
@@ -80,9 +80,9 @@ test_restore (void)
 	SpRing ring;
 	sp_ring_init (&ring, sp_siphash);
 
-	sp_ring_add (&ring, "test1", 5, 3, 2);
-	sp_ring_add (&ring, "test2", 5, 3, 2);
-	sp_ring_add (&ring, "test3", 5, 3, 2);
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	const SpRingNode *n;
 	const SpRingReplica *r;
@@ -117,9 +117,9 @@ test_next (void)
 	SpRing ring;
 	sp_ring_init (&ring, sp_siphash);
 
-	sp_ring_add (&ring, "test1", 5, 3, 2);
-	sp_ring_add (&ring, "test2", 5, 3, 2);
-	sp_ring_add (&ring, "test3", 5, 3, 2);
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	const SpRingReplica *r;
 	r = FIND (&ring, "/");
@@ -144,9 +144,9 @@ test_del (void)
 	SpRing ring;
 	sp_ring_init (&ring, sp_siphash);
 
-	sp_ring_add (&ring, "test1", 5, 3, 2);
-	sp_ring_add (&ring, "test2", 5, 3, 2);
-	sp_ring_add (&ring, "test3", 5, 3, 2);
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	mu_assert_int_eq (sp_vec_count (ring.replicas), 9);
 	mu_assert (sp_ring_del (&ring, "test2", 5));

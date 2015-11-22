@@ -97,7 +97,7 @@ replicate (SpRing *self, SpRingNode *node,
 }
 
 int
-sp_ring_add (SpRing *self,
+sp_ring_put (SpRing *self,
 		const void *restrict key, size_t len,
 		unsigned replicas, int avail)
 {

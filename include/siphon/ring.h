@@ -29,7 +29,7 @@ SP_EXPORT void
 sp_ring_final (SpRing *self);
 
 SP_EXPORT int
-sp_ring_add (SpRing *self,
+sp_ring_put (SpRing *self,
 		const void *restrict key, size_t len,
 		unsigned replicas, int avail);
 
