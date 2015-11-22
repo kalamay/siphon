@@ -1,7 +1,7 @@
-#include "../../include/siphon/ring.h"
-#include "../../include/siphon/alloc.h"
-#include "../../include/siphon/hash.h"
-#include "../../include/siphon/fmt.h"
+#include "../include/siphon/ring.h"
+#include "../include/siphon/alloc.h"
+#include "../include/siphon/hash.h"
+#include "../include/siphon/fmt.h"
 
 #include <errno.h>
 #include <assert.h>
