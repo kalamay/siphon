@@ -204,6 +204,13 @@ resize_errors (size_t hint)
 }
 
 static const SpError *
+get_error (int code)
+{
+	const SpError **pos = bsearch (&code, errors, error_len, sizeof errors[0], cmp_code);
+	return pos ? *pos : NULL;
+}
+
+static const SpError *
 push_error (int code, const char *domain, const char *name, const char *msg)
 {
 	FIX_CODE (code);
@@ -362,9 +369,14 @@ sp_error (int code)
 {
 	FIX_CODE (code);
 
-	const SpError **err;
-	err = bsearch (&code, errors, error_len, sizeof errors[0], cmp_code);
-	return err ? *err : NULL;
+	static SpLock lock = SP_LOCK_MAKE ();
+	const SpError *err = NULL;
+
+	SP_LOCK (lock);
+	err = get_error (code);
+	SP_UNLOCK (lock);
+
+	return err;
 }
 
 const SpError *
@@ -378,13 +390,17 @@ sp_error_next (const SpError *err)
 		return errors[0];
 	}
 
-	const SpError **pos;
-	pos = bsearch (&err->code, errors, error_len, sizeof errors[0], cmp_code);
+	static SpLock lock = SP_LOCK_MAKE ();
+	const SpError **pos, *val = NULL;
 
+	SP_LOCK (lock);
+	pos = bsearch (&err->code, errors, error_len, sizeof errors[0], cmp_code);
 	if (pos && pos < errors+error_len) {
-		return pos[1];
+		val = pos[1];
 	}
-	return NULL;
+	SP_UNLOCK (lock);
+
+	return val;
 }
 
 const SpError *
@@ -397,16 +413,41 @@ sp_error_add (int code, const char *domain, const char *name, const char *msg)
 	}
 
 	static SpLock lock = SP_LOCK_MAKE ();
-
 	const SpError *err = NULL;
-	if (sp_error (code) == NULL) {
-		SP_LOCK (lock);
+
+	SP_LOCK (lock);
+	if (get_error (code) == NULL) {
 		err = push_error (code, domain, name, msg);
 		if (err != NULL) {
 			sort_errors ();
 		}
-		SP_UNLOCK (lock);
 	}
+	SP_UNLOCK (lock);
+
+	return err;
+}
+
+const SpError *
+sp_error_checkset (int code, const char *domain, const char *name, const char *msg)
+{
+	FIX_CODE (code);
+
+	if (code > SP_EUSER_MIN) {
+		return NULL;
+	}
+
+	static SpLock lock = SP_LOCK_MAKE ();
+	const SpError *err = NULL;
+
+	SP_LOCK (lock);
+	err = get_error (code);
+	if (err == NULL) {
+		err = push_error (code, domain, name, msg);
+		if (err != NULL) {
+			sort_errors ();
+		}
+	}
+	SP_UNLOCK (lock);
 
 	return err;
 }

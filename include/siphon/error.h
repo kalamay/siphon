@@ -87,6 +87,9 @@ sp_error_next (const SpError *err);
 SP_EXPORT const SpError *
 sp_error_add (int code, const char *domain, const char *name, const char *msg);
 
+SP_EXPORT const SpError *
+sp_error_checkset (int code, const char *domain, const char *name, const char *msg);
+
 SP_EXPORT size_t
 sp_stack (char *buf, size_t len);
 
