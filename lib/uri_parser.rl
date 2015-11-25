@@ -75,8 +75,18 @@
 
 	uri_pct_enc     = "%" xdigit xdigit ;
 
-	uri_pchar_spec  = uri_unreserved | uri_pct_enc | uri_sub_delims | ":" | "@" | "|" ;
-	uri_pchar_ext   = uri_pchar_spec | '"' | "<" | ">" | "\\" | "^" | "`" | "{" | "}" ;
+	uri_utf8        = ( 0xC0..0xDF 0x80..0xBF )
+	                | ( 0xE0       0xA0..0xBF 0x80..0xBF )
+	                | ( 0xE1..0xEF 0x80..0xBF 0x80..0xBF )
+	                | ( 0xF0       0x90..0xBF 0x80..0xBF 0x80..0xBF )
+	                | ( 0xF1..0xF3 0x80..0xBF 0x80..0xBF 0x80..0xBF )
+	                | ( 0xF4       0x80..0x8F 0x80..0xBF 0x80..0xBF )
+	                ;
+
+	uri_pchar_spec  = uri_unreserved | uri_pct_enc | uri_sub_delims
+	                | ":" | "@" | "|" ;
+	uri_pchar_ext   = uri_pchar_spec | uri_utf8
+	                | '"' | "<" | ">" | "\\" | "^" | "`" | "{" | "}" ;
 	uri_pchar       = uri_pchar_ext ;
 	uri_qchar       = uri_pchar | "[" | "]" | "/" | "?" ;
 	uri_fchar       = uri_qchar | "#" ;
