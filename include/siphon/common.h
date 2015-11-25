@@ -13,6 +13,13 @@
 #define SP_EXPORT extern __attribute__ ((visibility ("default")))
 #define SP_LOCAL  __attribute__ ((visibility ("hidden")))
 
+#define sp_sym_concat(x, y) x ## y
+#define sp_sym_make(x, y) sp_sym_concat(x, y)
+#define sp_sym(n) sp_sym_make(sym__##n##_, __LINE__)
+
+#define sp_likely(x) __builtin_expect(!!(x), 1)
+#define sp_unlikely(x) __builtin_expect(!!(x), 0)
+
 #define sp_power_of_2(n) __extension__ ({ \
 	__typeof (n) x = (n);                 \
 	if (x > 0) {                          \
@@ -34,8 +41,10 @@
 	x;                                    \
 })
 
-#define sp_next_quantum(n, quant) \
-	(((((n) - 1) / (quant)) + 1) * (quant))
+#define sp_next_quantum(n, quant) __extension__ ({ \
+	__typeof (n) x = (quant);                      \
+	(((((n) - 1) / x) + 1) * x);                   \
+})
 
 #define sp_container_of(ptr, type, member) __extension__ ({ \
 	const __typeof( ((type *)0)->member ) *__mptr = (ptr);  \
@@ -44,13 +53,6 @@
 
 #define sp_len(a) \
 	(sizeof (a) / sizeof ((a)[0]))
-
-#define sp_sym_concat(x, y) x ## y
-#define sp_sym_make(x, y) sp_sym_concat(x, y)
-#define sp_sym(n) sp_sym_make(sym__##n##_, __LINE__)
-
-#define sp_likely(x) __builtin_expect(!!(x), 1)
-#define sp_unlikely(x) __builtin_expect(!!(x), 0)
 
 SP_EXPORT void
 sp_print_ptr (const void *val, FILE *out);
