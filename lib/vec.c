@@ -47,14 +47,13 @@ static SpVec NIL = { 0, 0 };
 static inline SpVec *
 resize (SpVec *v, void **vec, size_t size, size_t cap, size_t count)
 {
-	if (cap & ~(size_t)15) {
-		cap = sp_power_of_2 (cap);
-	}
-	else {
-		cap = 16;
-	}
+	size_t total = sizeof *v + size*cap;
+	total = total < 16276 ?
+		sp_power_of_2 (total) :
+		sp_next_quantum (total, 4096);
+	cap = (total - sizeof *v) / size;
 
-	v = sp_malloc (sizeof *v + size*cap);
+	v = sp_malloc (total);
 	if (v == NULL) { return NULL; }
 
 	memcpy (HEAD (v), *vec, size*count);
