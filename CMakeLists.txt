@@ -183,7 +183,7 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 
 	add_test(NAME error COMMAND test-error)
 	add_executable(test-error test/error.c)
-	target_link_libraries(test-error siphon-static m)
+	target_link_libraries(test-error siphon-static m pthread)
 
 	add_test(NAME clock COMMAND test-clock)
 	add_executable(test-clock test/clock.c)

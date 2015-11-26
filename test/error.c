@@ -1,6 +1,8 @@
 #include "../include/siphon/error.h"
 #include "mu/mu.h"
 
+#include <pthread.h>
+
 static void
 test_add (void)
 {
@@ -77,6 +79,57 @@ test_iter (void)
 	}
 }
 
+static void *
+add1 (void *val)
+{
+	(void)val;
+	const SpError *e = sp_error_add (3001, "test", "ADD1", "thing 1");
+	mu_assert_ptr_ne (e, NULL);
+	return NULL;
+}
+
+static void *
+add2 (void *val)
+{
+	(void)val;
+	const SpError *e = sp_error_add (3002, "test", "ADD2", "thing 2");
+	mu_assert_ptr_ne (e, NULL);
+	return NULL;
+}
+
+static void *
+add3 (void *val)
+{
+	(void)val;
+	const SpError *e = sp_error_add (3003, "test", "ADD3", "thing 3");
+	mu_assert_ptr_ne (e, NULL);
+	return NULL;
+}
+
+static void
+test_threads (void)
+{
+	pthread_t t[3];
+	pthread_create (&t[0], NULL, add1, NULL);
+	pthread_create (&t[1], NULL, add2, NULL);
+	pthread_create (&t[2], NULL, add3, NULL);
+
+	pthread_join (t[0], NULL);
+	pthread_join (t[1], NULL);
+	pthread_join (t[2], NULL);
+
+	const SpError *e;
+
+	e = sp_error (3001);
+	mu_assert_str_eq (e->msg, "thing 1");
+
+	e = sp_error (3002);
+	mu_assert_str_eq (e->msg, "thing 2");
+
+	e = sp_error (3003);
+	mu_assert_str_eq (e->msg, "thing 3");
+}
+
 int
 main (void)
 {
@@ -86,5 +139,6 @@ main (void)
 	test_get ();
 	test_missing ();
 	test_iter ();
+	test_threads ();
 }
 
