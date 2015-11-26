@@ -8,9 +8,9 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-static size_t pagesize;
+static size_t pagesize = 4096;
 
-static void __attribute__((constructor))
+static void __attribute__((constructor(103)))
 init (void)
 {
 	pagesize = getpagesize ();
