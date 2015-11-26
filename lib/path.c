@@ -1,8 +1,11 @@
 #include "../include/siphon/path.h"
 #include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -488,5 +491,134 @@ sp_path_env (const char *name, char *buf, size_t buflen)
 	}
 
 	return SP_PATH_ENOTFOUND;
+}
+
+int
+sp_dir_open (SpDir *self, const char *path, uint8_t depth)
+{
+	uint16_t len = strnlen (path, sizeof self->path);
+	if (len == sizeof self->path) {
+		return SP_PATH_EBUFS;
+	}
+
+	if (depth == 0) {
+		return SP_PATH_EBUFS;
+	}
+
+	DIR *d = opendir (path);
+	if (d == NULL) {
+		return -errno;
+	}
+
+	self->stack = sp_calloc (depth, sizeof *self->stack);
+	if (self->stack == NULL) {
+		int rc = -errno;
+		closedir (d);
+		return rc;
+	}
+
+	self->stack[0] = d;
+	self->dirlen = len;
+	self->pathlen = 0;
+	self->idx = 0;
+	self->type = SP_PATH_UNKNOWN;
+	self->max = depth;
+	self->skip = 0;
+	memcpy (self->path, path, len);
+	return 0;
+}
+
+void
+sp_dir_close (SpDir *self)
+{
+	assert (self != NULL);
+
+	for (int8_t i = 0; i < self->idx; i++) {
+		closedir (self->stack[i]);
+	}
+	sp_free (self->stack, self->max * sizeof *self->stack);
+	self->stack = NULL;
+	self->idx = -1;
+}
+
+static bool
+is_rel_dir (struct dirent *ent)
+{
+	return ent->d_name[0] == '.' && (ent->d_name[1] == '\0'
+				|| (ent->d_name[1] == '.' && ent->d_name[2] == '\0'));
+
+}
+
+static int
+walk (SpDir *self)
+{
+	struct dirent *ent;
+	DIR *dir;
+	int rc = 0, popn = 2;
+	size_t len;
+
+again:
+
+	dir = self->stack[self->idx];
+	do {
+		errno = 0;
+		ent = readdir (dir);
+		if (ent == NULL) {
+			rc = -errno;
+			if (rc < 0) { return rc;}
+
+			closedir (dir);
+			self->stack[self->idx] = NULL;
+			self->idx--;
+			if (self->idx < 0) { return 0; }
+
+			SpRange16 pop = { 0, self->pathlen };
+			sp_path_pop (self->path, &pop, popn);
+			popn = 1;
+			self->dirlen = self->pathlen = pop.len;
+			goto again;
+		}
+	} while (is_rel_dir (ent));
+
+	len = self->dirlen + ent->d_namlen + 1;
+	if (len >= sizeof self->path) {
+		return SP_PATH_EBUFS;
+	}
+
+	self->pathlen = (uint16_t)len;
+	self->type = ent->d_type;
+	self->path[self->dirlen] = '/';
+	memcpy (self->path+self->dirlen+1, ent->d_name, ent->d_namlen);
+	self->path[len] = '\0';
+
+	return 1;
+}
+
+int
+sp_dir_next (SpDir *self)
+{
+	assert (self != NULL);
+
+	if (self->idx < 0) {
+		return SP_PATH_ECLOSED;
+	}
+
+	if (self->type == DT_DIR && self->idx < self->max-1 && !self->skip) {
+		DIR *dir = opendir (self->path);
+		if (dir == NULL) { return -errno; }
+		self->dirlen = self->pathlen;
+		self->stack[++self->idx] = dir;
+	}
+	self->skip = 0;
+
+	return walk (self);
+}
+
+void
+sp_dir_skip (SpDir *self)
+{
+	assert (self != NULL);
+
+	self->skip = 1;
 }
 

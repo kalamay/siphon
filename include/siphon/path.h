@@ -4,6 +4,14 @@
 #include "common.h"
 #include "range.h"
 
+#ifndef SP_PATH_MAX
+# define SP_PATH_MAX 4096
+#endif
+
+#ifndef SP_PATH_ITER_DEPTH
+# define SP_PATH_ITER_DEPTH 32
+#endif
+
 typedef enum {
 	SP_PATH_TRAIL_SLASH = 1 << 0,  // keep trailing slash
 	SP_PATH_ALLOW_EMPTY = 1 << 1,  // allow empty paths instead of '.'
@@ -11,9 +19,24 @@ typedef enum {
 	SP_PATH_URI = SP_PATH_TRAIL_SLASH | SP_PATH_ALLOW_EMPTY
 } SpPathMode;
 
-#ifndef SP_PATH_MAX
-# define SP_PATH_MAX 4096
-#endif
+typedef enum {
+	SP_PATH_UNKNOWN = 0,
+	SP_PATH_FIFO    = 1,
+	SP_PATH_CHR     = 2,
+	SP_PATH_DIR     = 4,
+	SP_PATH_BLK     = 6,
+	SP_PATH_REG     = 8,
+	SP_PATH_LNK     = 10,
+	SP_PATH_SOCK    = 12
+} SpPathType;
+
+typedef struct {
+	void **stack;
+	uint16_t dirlen, pathlen;
+	int8_t idx, type;
+	uint8_t max, skip;
+	char path[SP_PATH_MAX];
+} SpDir;
 
 SP_EXPORT void
 sp_path_pop (const char *path, SpRange16 *rng, int n);
@@ -41,6 +64,18 @@ sp_path_proc (char *buf, size_t buflen);
 
 SP_EXPORT int
 sp_path_env (const char *name, char *buf, size_t buflen);
+
+SP_EXPORT int
+sp_dir_open (SpDir *self, const char *path, uint8_t depth);
+
+SP_EXPORT void
+sp_dir_close (SpDir *self);
+
+SP_EXPORT int
+sp_dir_next (SpDir *self);
+
+SP_EXPORT void
+sp_dir_skip (SpDir *self);
 
 #endif
 

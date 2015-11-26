@@ -221,6 +221,43 @@ test_env (void)
 	mu_assert_int_gt (len, 0);
 }
 
+static void
+test_dir_single (void)
+{
+	const char *p = PROJECT_SOURCE_DIR "/test";
+
+	SpDir dir;
+	int rc = sp_dir_open (&dir, p, 1);
+	mu_fassert_int_eq (rc, 0);
+	int n = 0;
+
+	do {
+		rc = sp_dir_next (&dir);
+		if (rc > 0) n++;
+	} while (rc > 0);
+
+	mu_assert_int_eq (n, 28);
+}
+
+static void
+test_dir_tree (void)
+{
+	const char *p = PROJECT_SOURCE_DIR "/test";
+
+	SpDir dir;
+	int rc = sp_dir_open (&dir, p, 16);
+	mu_fassert_int_eq (rc, 0);
+	int n = 0;
+
+	do {
+		rc = sp_dir_next (&dir);
+		if (rc > 0) n++;
+	} while (rc > 0);
+
+	mu_assert_int_eq (n, 83);
+}
+
+
 int
 main (void)
 {
@@ -234,4 +271,7 @@ main (void)
 	test_match ();
 	test_proc ();
 	test_env ();
+	test_dir_single ();
+	test_dir_tree ();
 }
+

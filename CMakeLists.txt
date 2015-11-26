@@ -161,6 +161,8 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 
 	add_test(NAME path COMMAND test-path)
 	add_executable(test-path test/path.c)
+	set_source_files_properties(test/path.c PROPERTIES
+		COMPILE_DEFINITIONS PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 	target_link_libraries(test-path siphon-static m)
 
 	add_test(NAME uri COMMAND test-uri)
