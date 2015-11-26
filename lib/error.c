@@ -1,4 +1,5 @@
 #include "../include/siphon/error.h"
+#include "../include/siphon/vec.h"
 
 #include <stdlib.h>
 #include <execinfo.h>
@@ -148,8 +149,7 @@
 static const char *nil_msg = "undefined error";
 
 static const SpError **errors = NULL;
-static size_t error_len = 0;
-static size_t error_cap = 0;
+static SpRWLock lock = SP_RWLOCK_MAKE ();
 
 static int
 cmp_code (const void *key, const void *val)
@@ -166,7 +166,7 @@ cmp_err (const void *a, const void *b)
 static inline void
 sort_errors (void)
 {
-	qsort (errors, error_len, sizeof errors[0], cmp_err);
+	sp_vec_sort (errors, cmp_err);
 }
 
 static const SpError *
@@ -183,30 +183,10 @@ create_error (int code, const char *domain, const char *name, const char *msg)
 	return new;
 }
 
-static bool
-resize_errors (size_t hint)
-{
-	if (hint < error_cap) {
-		return true;
-	}
-
-	hint = sp_power_of_2 (hint);
-
-	const SpError **new = realloc (errors, sizeof *new * hint);
-	if (new == NULL) {
-		return false;
-	}
-
-	errors = new;
-	error_cap = hint;
-
-	return true;
-}
-
 static const SpError *
 get_error (int code)
 {
-	const SpError **pos = bsearch (&code, errors, error_len, sizeof errors[0], cmp_code);
+	const SpError **pos = bsearch (&code, errors, sp_vec_count (errors), sizeof errors[0], cmp_code);
 	return pos ? *pos : NULL;
 }
 
@@ -220,22 +200,18 @@ push_error (int code, const char *domain, const char *name, const char *msg)
 		return NULL;
 	}
 
-	if (error_len == error_cap) {
-		if (!resize_errors (error_len + 1)) {
-			free ((void *)err);
-			return false;
-		}
+	if (sp_vec_push (errors, err) < 0) {
+		free ((void *)err);
+		return NULL;
 	}
-
-	errors[error_len++] = err;
 	return err;
 }
 
-static void __attribute__((constructor))
+static void __attribute__((constructor(103)))
 init (void)
 {
 #define COUNT(sym, msg) +1
-	resize_errors (2 * (0
+	sp_vec_ensure (errors, 2 * (0
 		SP_SYSTEM_ERRORS(COUNT)
 		SP_EAI_ERRORS(COUNT)
 		SP_UTF8_ERRORS(COUNT)
@@ -369,12 +345,11 @@ sp_error (int code)
 {
 	FIX_CODE (code);
 
-	static SpLock lock = SP_LOCK_MAKE ();
 	const SpError *err = NULL;
 
-	SP_LOCK (lock);
+	SP_RLOCK (lock);
 	err = get_error (code);
-	SP_UNLOCK (lock);
+	SP_RUNLOCK (lock);
 
 	return err;
 }
@@ -390,15 +365,15 @@ sp_error_next (const SpError *err)
 		return errors[0];
 	}
 
-	static SpLock lock = SP_LOCK_MAKE ();
 	const SpError **pos, *val = NULL;
 
-	SP_LOCK (lock);
-	pos = bsearch (&err->code, errors, error_len, sizeof errors[0], cmp_code);
-	if (pos && pos < errors+error_len) {
+	SP_RLOCK (lock);
+	size_t len = sp_vec_count (errors);
+	pos = bsearch (&err->code, errors, len, sizeof errors[0], cmp_code);
+	if (pos && pos < errors+len) {
 		val = pos[1];
 	}
-	SP_UNLOCK (lock);
+	SP_RUNLOCK (lock);
 
 	return val;
 }
@@ -412,17 +387,16 @@ sp_error_add (int code, const char *domain, const char *name, const char *msg)
 		return NULL;
 	}
 
-	static SpLock lock = SP_LOCK_MAKE ();
 	const SpError *err = NULL;
 
-	SP_LOCK (lock);
+	SP_WLOCK (lock);
 	if (get_error (code) == NULL) {
 		err = push_error (code, domain, name, msg);
 		if (err != NULL) {
 			sort_errors ();
 		}
 	}
-	SP_UNLOCK (lock);
+	SP_WUNLOCK (lock);
 
 	return err;
 }
@@ -436,10 +410,9 @@ sp_error_checkset (int code, const char *domain, const char *name, const char *m
 		return NULL;
 	}
 
-	static SpLock lock = SP_LOCK_MAKE ();
 	const SpError *err = NULL;
 
-	SP_LOCK (lock);
+	SP_WLOCK (lock);
 	err = get_error (code);
 	if (err == NULL) {
 		err = push_error (code, domain, name, msg);
@@ -447,7 +420,7 @@ sp_error_checkset (int code, const char *domain, const char *name, const char *m
 			sort_errors ();
 		}
 	}
-	SP_UNLOCK (lock);
+	SP_WUNLOCK (lock);
 
 	return err;
 }
