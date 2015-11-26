@@ -25,7 +25,7 @@ typedef union {
 	} s;
 } SpRWLock;
 
-#define SP_RWLOCK_MAKE() ((SpRWLock){ .u = 0 })
+#define SP_RWLOCK_MAKE() { .u = 0 }
 
 #define SP_WLOCK(l) do {                                          \
 	uint64_t me = __sync_fetch_and_add (&l.u, (uint64_t)1 << 32); \
