@@ -71,6 +71,11 @@
 	qsort (sp_sym(tmp), sp_vec_count (sp_sym(tmp)), sizeof *(v), (cmp)); \
 } while (0)
 
+#define sp_vec_bsearch(v, val, cmp) __extension__ ({                  \
+	__typeof (v) sp_sym(tmp) = (v);                                   \
+	bsearch (val, sp_sym(tmp), sp_vec_count (sp_sym(tmp)), sizeof *(v), cmp); \
+})
+
 #define sp_vec_each(v, i)                                                 \
 	for (size_t sp_sym(n)=((i)=0, sp_vec_count(v)); (i)<sp_sym(n); (i)++) \
 
