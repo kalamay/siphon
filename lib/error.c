@@ -133,6 +133,7 @@
 #define SP_PATH_ERRORS(XX) \
 	XX(EBUFS,              "not enough buffer space available") \
 	XX(ENOTFOUND,          "executable not found") \
+	XX(ECLOSED,            "path is closed") \
 
 #define SP_URI_ERRORS(XX) \
 	XX(ESYNTAX,            "invalid syntax") \

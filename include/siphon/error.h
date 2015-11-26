@@ -45,6 +45,7 @@
 
 #define SP_PATH_EBUFS       (-1051)
 #define SP_PATH_ENOTFOUND   (-1052)
+#define SP_PATH_ECLOSED     (-1053)
 
 #define SP_URI_ESYNTAX      (-1060)
 #define SP_URI_EBUFS        (-1061)
