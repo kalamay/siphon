@@ -1,30 +1,57 @@
-#if defined(SP_NO_THREADS)
+#include <unistd.h>
 
-# define LOCK()
-# define UNLOCK()
+// based on: http://locklessinc.com/articles/locks/
 
-#elif defined(SP_PTHREAD)
-
-# include <pthread.h>
-
-typedef pthread_mutex_t SpLock;
-# define SP_LOCK_MAKE() PTHREAD_MUTEX_INITIALIZER
-# define SP_LOCK(l) pthread_mutex_lock (&l)
-# define SP_UNLOCK(l) pthread_mutex_unlock (&l)
-
-#elif defined(__GCC_ATOMIC_TEST_AND_SET_TRUEVAL)
+#define SP_PAUSE() __asm__ __volatile__("pause\n": : :"memory")
+#define SP_BARRIER() __asm__ __volatile__("": : :"memory")
 
 typedef volatile int SpLock;
-# define SP_LOCK_MAKE() 0
-# define SP_LOCK(l) do {} while (__sync_lock_test_and_set (&l, 1))
-# define SP_UNLOCK(l) __sync_lock_release(&l)
+#define SP_LOCK_MAKE() 0
+#define SP_LOCK(l) do {                       \
+	while (__sync_lock_test_and_set(&l, 1)) { \
+		while (l) { SP_PAUSE (); }            \
+	}                                         \
+} while (0)
+#define SP_UNLOCK(l) __sync_lock_release(&l)
 
-#elif defined(_MSC_VER)
+typedef union {
+	uint64_t u;
+	uint32_t us;
+	struct {
+		uint16_t writers;
+		uint16_t readers;
+		uint16_t users;
+		uint16_t pad;
+	} s;
+} SpRWLock;
 
-typedef volatile long SpLock;
-# define SP_LOCK_MAKE() 0
-# define SP_LOCK(l) do {} while (InterlockedExchange (&l, 1))
-# define SP_UNLOCK(l) do { _ReadWriteBarrier (); l = 0; } while (0)
+#define SP_RWLOCK_MAKE() ((SpRWLock){ .u = 0 })
 
-#endif
+#define SP_WLOCK(l) do {                                          \
+	uint64_t me = __sync_fetch_and_add (&l.u, (uint64_t)1 << 32); \
+	uint16_t val = (uint16_t)(me >> 32);                          \
+	while (val != l.s.writers) { SP_PAUSE (); }                   \
+} while (0)
+
+#define SP_WUNLOCK(l) do { \
+	SpRWLock t = l;        \
+	SP_BARRIER ();         \
+	t.s.writers++;         \
+	t.s.readers++;         \
+	l.us = t.us;           \
+} while (0)
+
+#define SP_RLOCK(l) do {                                          \
+	uint64_t me = __sync_fetch_and_add (&l.u, (uint64_t)1 << 32); \
+	uint16_t val = (uint16_t)(me >> 32);                          \
+	for (int n = 0; val != l.s.readers; n++) {                    \
+		if (n < 1000) { SP_PAUSE (); }                            \
+		else { usleep (10); }                                     \
+	}                                                             \
+	++l.s.readers;                                                \
+} while (0)
+
+#define SP_RUNLOCK(l) do {                  \
+	__sync_add_and_fetch (&l.s.writers, 1); \
+} while (0)
 
