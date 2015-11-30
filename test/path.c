@@ -222,6 +222,25 @@ test_env (void)
 }
 
 static void
+test_dir_zero (void)
+{
+	const char *p = PROJECT_SOURCE_DIR "/test";
+
+	SpDir dir;
+	int rc = sp_dir_open (&dir, p, 0);
+	mu_fassert_int_eq (rc, 0);
+	int n = 0;
+
+	do {
+		rc = sp_dir_next (&dir);
+		if (rc > 0) { n++; }
+	} while (rc > 0);
+
+	mu_assert_int_eq (n, 0);
+	sp_dir_close (&dir);
+}
+
+static void
 test_dir_single (void)
 {
 	const char *p = PROJECT_SOURCE_DIR "/test";
@@ -233,10 +252,16 @@ test_dir_single (void)
 
 	do {
 		rc = sp_dir_next (&dir);
-		if (rc > 0) n++;
+		if (rc > 0) {
+			mu_assert_uint_eq (strlen (dir.path), dir.pathlen);
+			if (dir.pathlen < 9 || memcmp (dir.path+dir.pathlen-9, ".DS_Store", 9)) {
+				n++;
+			}
+		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 28);
+	mu_assert_int_eq (n, 27);
+	sp_dir_close (&dir);
 }
 
 static void
@@ -251,10 +276,17 @@ test_dir_tree (void)
 
 	do {
 		rc = sp_dir_next (&dir);
-		if (rc > 0) n++;
+		if (rc > 0) {
+			mu_assert_uint_eq (strlen (dir.path), dir.pathlen);
+			if (dir.pathlen < 9 || memcmp (dir.path+dir.pathlen-9, ".DS_Store", 9)) {
+				n++;
+			}
+		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 83);
+	mu_assert_int_eq (n, 82);
+
+	sp_dir_close (&dir);
 }
 
 
@@ -271,6 +303,7 @@ main (void)
 	test_match ();
 	test_proc ();
 	test_env ();
+	test_dir_zero ();
 	test_dir_single ();
 	test_dir_tree ();
 }
