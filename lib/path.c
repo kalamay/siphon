@@ -2,6 +2,8 @@
 #include "../include/siphon/error.h"
 #include "../include/siphon/alloc.h"
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -702,9 +704,18 @@ sp_stat (const char *path, SpStat *sbuf, bool follow)
 	sbuf->gid = s.st_gid;
 	sbuf->rdev = s.st_rdev;
 	sbuf->size = s.st_size;
+#if SP_STAT_CLOCK
 	sbuf->atime = s.st_atimespec;
 	sbuf->mtime = s.st_mtimespec;
 	sbuf->ctime = s.st_ctimespec;
+#else
+	sbuf->atime.tv_sec = s.st_atime;
+	sbuf->atime.tv_nsec = 0;
+	sbuf->mtime.tv_sec = s.st_mtime;
+	sbuf->mtime.tv_nsec = 0;
+	sbuf->ctime.tv_sec = s.st_ctime;
+	sbuf->ctime.tv_nsec = 0;
+#endif
 	return 0;
 }
 

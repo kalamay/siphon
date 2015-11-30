@@ -8,6 +8,7 @@
 #endif
 
 #if defined(BSD)
+# define SP_STAT_CLOCK 1
 # define SP_POSIX_CLOCK 1
 # ifdef CLOCK_REALTIME_FAST
 #  define SP_CLOCK_REALIME CLOCK_REALTIME_FAST
@@ -34,6 +35,7 @@
 # endif
 
 #elif defined(__APPLE__)
+# define SP_STAT_CLOCK 1
 # define SP_MACH_CLOCK 1
 # include <mach/clock.h>
 # include <mach/mach_host.h>

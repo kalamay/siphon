@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "range.h"
+#include "clock.h"
 
 #include <time.h>
 
@@ -34,16 +35,16 @@ typedef enum {
 } SpPathType;
 
 typedef struct {
-	unsigned long long device;
-	unsigned int       mode;
-	unsigned int       nlink;
-	unsigned int       uid;
-	unsigned int       gid;
-	unsigned long long rdev;
-	long long          size;
-	struct timespec    atime;
-	struct timespec    mtime;
-	struct timespec    ctime;
+	unsigned long device;
+	unsigned int  mode;
+	unsigned int  nlink;
+	unsigned int  uid;
+	unsigned int  gid;
+	unsigned long rdev;
+	long          size;
+	SpClock       atime;
+	SpClock       mtime;
+	SpClock       ctime;
 } SpStat;
 
 typedef struct {
