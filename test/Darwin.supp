@@ -1,16 +1,16 @@
 {
 	push_error
 	Memcheck:Leak
-	fun:calloc
-	fun:create_error
+	...
 	fun:push_error
 	...
 }
 {
-	resize_errors
+	init_resize
 	Memcheck:Leak
-	fun:malloc
-	fun:resize_errors
+	...
+	fun:sp_vecp_ensure
+	fun:init
 	...
 }
 {
