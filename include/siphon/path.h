@@ -4,6 +4,8 @@
 #include "common.h"
 #include "range.h"
 
+#include <time.h>
+
 #ifndef SP_PATH_MAX
 # define SP_PATH_MAX 4096
 #endif
@@ -27,14 +29,28 @@ typedef enum {
 	SP_PATH_BLK     = 6,
 	SP_PATH_REG     = 8,
 	SP_PATH_LNK     = 10,
-	SP_PATH_SOCK    = 12
+	SP_PATH_SOCK    = 12,
+	SP_PATH_WHT     = 14,
 } SpPathType;
 
 typedef struct {
+	unsigned long long device;
+	unsigned int       mode;
+	unsigned int       nlink;
+	unsigned int       uid;
+	unsigned int       gid;
+	unsigned long long rdev;
+	long long          size;
+	struct timespec    atime;
+	struct timespec    mtime;
+	struct timespec    ctime;
+} SpStat;
+
+typedef struct {
 	void **stack;
-	uint16_t dirlen, pathlen;
-	int8_t idx, type;
-	uint8_t max, skip;
+	uint16_t flags, dirlen, pathlen;
+	uint8_t cur, max;
+	SpStat stat;
 	char path[SP_PATH_MAX];
 } SpDir;
 
@@ -65,6 +81,8 @@ sp_path_proc (char *buf, size_t buflen);
 SP_EXPORT int
 sp_path_env (const char *name, char *buf, size_t buflen);
 
+
+
 SP_EXPORT int
 sp_dir_open (SpDir *self, const char *path, uint8_t depth);
 
@@ -76,6 +94,20 @@ sp_dir_next (SpDir *self);
 
 SP_EXPORT void
 sp_dir_skip (SpDir *self);
+
+SP_EXPORT int
+sp_dir_follow (SpDir *self);
+
+SP_EXPORT SpPathType
+sp_dir_type (SpDir *self);
+
+SP_EXPORT const SpStat *
+sp_dir_stat (SpDir *self);
+
+
+
+SP_EXPORT int
+sp_stat (const char *path, SpStat *sbuf, bool follow);
 
 #endif
 

@@ -9,6 +9,10 @@
 #include <errno.h>
 #include <assert.h>
 
+#define F_OPEN 1
+#define F_SKIP 2
+#define F_STAT 4
+
 #ifdef __APPLE__
 
 #include <mach-o/dyld.h>
@@ -501,30 +505,29 @@ sp_dir_open (SpDir *self, const char *path, uint8_t depth)
 		return SP_PATH_EBUFS;
 	}
 
-	if (depth == 0) {
-		return SP_PATH_EBUFS;
-	}
-
-	DIR *d = opendir (path);
-	if (d == NULL) {
+	if (sp_stat (path, &self->stat, true) < 0) {
 		return -errno;
 	}
 
-	self->stack = sp_calloc (depth, sizeof *self->stack);
-	if (self->stack == NULL) {
-		int rc = -errno;
-		closedir (d);
-		return rc;
+	if (!S_ISDIR (self->stat.mode)) {
+		return -ENOTDIR;
 	}
 
-	self->stack[0] = d;
+	self->stack = NULL;
+	if (depth) {
+		self->stack = sp_calloc (depth, sizeof *self->stack);
+		if (self->stack == NULL) {
+			return -errno;
+		}
+	}
+
+	self->flags = (depth ? F_OPEN : 0) | F_STAT;
 	self->dirlen = len;
-	self->pathlen = 0;
-	self->idx = 0;
-	self->type = SP_PATH_UNKNOWN;
+	self->pathlen = len;
+	self->cur = 0;
 	self->max = depth;
-	self->skip = 0;
 	memcpy (self->path, path, len);
+	self->path[len] = '\0';
 	return 0;
 }
 
@@ -533,12 +536,16 @@ sp_dir_close (SpDir *self)
 {
 	assert (self != NULL);
 
-	for (int8_t i = 0; i < self->idx; i++) {
+	self->flags &= ~F_OPEN;
+	for (int8_t i = 0; i < self->cur; i++) {
 		closedir (self->stack[i]);
 	}
-	sp_free (self->stack, self->max * sizeof *self->stack);
-	self->stack = NULL;
-	self->idx = -1;
+	if (self->max > 0) {
+		sp_free (self->stack, self->max * sizeof *self->stack);
+		self->stack = NULL;
+	}
+	self->cur = 0;
+	self->max = 0;
 }
 
 static bool
@@ -559,7 +566,7 @@ walk (SpDir *self)
 
 again:
 
-	dir = self->stack[self->idx];
+	dir = self->stack[self->cur-1];
 	do {
 		errno = 0;
 		ent = readdir (dir);
@@ -568,9 +575,11 @@ again:
 			if (rc < 0) { return rc;}
 
 			closedir (dir);
-			self->stack[self->idx] = NULL;
-			self->idx--;
-			if (self->idx < 0) { return 0; }
+			self->stack[--self->cur] = NULL;
+			if (self->cur == 0) {
+				self->flags &= ~F_OPEN;
+				return 0;
+			}
 
 			SpRange16 pop = { 0, self->pathlen };
 			sp_path_pop (self->path, &pop, popn);
@@ -580,16 +589,30 @@ again:
 		}
 	} while (is_rel_dir (ent));
 
-	len = self->dirlen + ent->d_namlen + 1;
+#ifdef _DIRENT_HAVE_D_RECLEN
+	size_t namlen = strnlen (ent->d_name, sizeof ent->d_name);
+#else
+	size_t namlen = ent->d_namlen;
+#endif
+
+	len = self->dirlen + namlen + 1;
 	if (len >= sizeof self->path) {
 		return SP_PATH_EBUFS;
 	}
 
 	self->pathlen = (uint16_t)len;
-	self->type = ent->d_type;
 	self->path[self->dirlen] = '/';
-	memcpy (self->path+self->dirlen+1, ent->d_name, ent->d_namlen);
+	memcpy (self->path+self->dirlen+1, ent->d_name, namlen);
 	self->path[len] = '\0';
+
+	if (ent->d_type == DT_UNKNOWN) {
+		int rc = sp_stat (self->path, &self->stat, false);
+		if (rc < 0) { return rc; }
+		self->flags |= F_STAT;
+	}
+	else {
+		self->stat.mode = DTTOIF (ent->d_type);
+	}
 
 	return 1;
 }
@@ -599,17 +622,19 @@ sp_dir_next (SpDir *self)
 {
 	assert (self != NULL);
 
-	if (self->idx < 0) {
+	if (!(self->flags & F_OPEN)) {
 		return SP_PATH_ECLOSED;
 	}
 
-	if (self->type == DT_DIR && self->idx < self->max-1 && !self->skip) {
+	if (self->cur < self->max &&
+			!(self->flags & F_SKIP) &&
+			sp_dir_type (self) == SP_PATH_DIR) {
 		DIR *dir = opendir (self->path);
 		if (dir == NULL) { return -errno; }
 		self->dirlen = self->pathlen;
-		self->stack[++self->idx] = dir;
+		self->stack[self->cur++] = dir;
 	}
-	self->skip = 0;
+	self->flags = F_OPEN;
 
 	return walk (self);
 }
@@ -619,6 +644,67 @@ sp_dir_skip (SpDir *self)
 {
 	assert (self != NULL);
 
-	self->skip = 1;
+	self->flags |= F_SKIP;
+}
+
+int
+sp_dir_follow (SpDir *self)
+{
+	assert (self != NULL);
+
+	if (sp_dir_type (self) == SP_PATH_LNK) {
+		int rc = sp_stat (self->path, &self->stat, true);
+		if (rc < 0) {
+			return -errno;
+		}
+		self->flags |= F_STAT;
+	}
+	return sp_dir_type (self) == SP_PATH_DIR ? 0 : -ENOTDIR;
+}
+
+SpPathType
+sp_dir_type (SpDir *self)
+{
+	assert (self != NULL);
+
+	return IFTODT (self->stat.mode);
+}
+
+const SpStat *
+sp_dir_stat (SpDir *self)
+{
+	assert (self != NULL);
+
+	if (!(self->flags & F_STAT)) {
+		int rc = sp_stat (self->path, &self->stat, false);
+		if (rc < 0) {
+			errno = -rc;
+			return NULL;
+		}
+		self->flags |= F_STAT;
+	}
+	return &self->stat;
+}
+
+int
+sp_stat (const char *path, SpStat *sbuf, bool follow)
+{
+	struct stat s;
+	int rc = follow ? lstat (path, &s) : stat (path, &s);
+	if (rc < 0) {
+		return -errno;
+	}
+
+	sbuf->device = s.st_dev;
+	sbuf->mode = s.st_mode;
+	sbuf->nlink = s.st_nlink;
+	sbuf->uid = s.st_uid;
+	sbuf->gid = s.st_gid;
+	sbuf->rdev = s.st_rdev;
+	sbuf->size = s.st_size;
+	sbuf->atime = s.st_atimespec;
+	sbuf->mtime = s.st_mtimespec;
+	sbuf->ctime = s.st_ctimespec;
+	return 0;
 }
 
