@@ -54,6 +54,11 @@
 #define sp_len(a) \
 	(sizeof (a) / sizeof ((a)[0]))
 
+typedef enum {
+	SP_DESCENDING,
+	SP_ASCENDING
+} SpOrder;
+
 SP_EXPORT void
 sp_print_ptr (const void *val, FILE *out);
 
