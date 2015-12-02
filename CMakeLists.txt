@@ -210,5 +210,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 	add_test(NAME ring COMMAND test-ring)
 	add_executable(test-ring test/ring.c)
 	target_link_libraries(test-ring siphon-static m)
+
+	add_test(NAME list COMMAND test-list)
+	add_executable(test-list test/list.c)
+	target_link_libraries(test-list siphon-static m)
 endif()
 
