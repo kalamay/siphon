@@ -6,6 +6,10 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
+if (NOT CMAKE_INSTALL_NAME_DIR)
+	set(CMAKE_INSTALL_NAME_DIR "/usr/local")
+endif()
+
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden")
 set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
