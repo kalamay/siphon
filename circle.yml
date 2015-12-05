@@ -1,0 +1,10 @@
+checkout:
+  post:
+    - git submodule sync
+    - git submodule update --init
+    - cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Debug
+test:
+  override:
+    - cmake --build build
+    - cd build
+    - ctest .
