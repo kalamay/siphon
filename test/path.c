@@ -243,7 +243,7 @@ test_dir_zero (void)
 static void
 test_dir_single (void)
 {
-	const char *p = PROJECT_SOURCE_DIR "/test";
+	const char *p = PROJECT_SOURCE_DIR "/test/dir";
 
 	SpDir dir;
 	int rc = sp_dir_open (&dir, p, 1);
@@ -260,14 +260,14 @@ test_dir_single (void)
 		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 27);
+	mu_assert_int_eq (n, 2);
 	sp_dir_close (&dir);
 }
 
 static void
 test_dir_tree (void)
 {
-	const char *p = PROJECT_SOURCE_DIR "/test";
+	const char *p = PROJECT_SOURCE_DIR "/test/dir";
 
 	SpDir dir;
 	int rc = sp_dir_open (&dir, p, 16);
@@ -284,7 +284,7 @@ test_dir_tree (void)
 		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 82);
+	mu_assert_int_eq (n, 12);
 
 	sp_dir_close (&dir);
 }
