@@ -1,5 +1,7 @@
 # About
 
+[![Circle CI](https://circleci.com/gh/imgix/siphon.svg?style=svg&circle-token=14d342b1aceb7cb78b456cc5ef6d75762a2243da)](https://circleci.com/gh/imgix/siphon)
+
 Siphon is a library of highly optimized parsers for common protocol and data
 formats. The design goal is to give as much control as possible to the
 caller while maintaining a minimal interface. Additionally, it should provide
