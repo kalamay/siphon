@@ -71,6 +71,25 @@ static const uint8_t sip_vectors[64][8] = {
 	{ 0x72, 0x45, 0x06, 0xeb, 0x4c, 0x32, 0x8a, 0x95, }
 };
 
+static const uint64_t xx64_vectors[64] = {
+	0xf6e21e93442c06eb, 0x15b0bc23c6c631d5, 0xf56652a5bca27821, 0x543035237b13acd0,
+	0xf2ed85bffbe88262, 0x6e1f7a8529627a3b, 0xbc749625f0061635, 0x7a99215b2e5aecc6,
+	0xf50cb48908fc93d8, 0x8537622d94e90907, 0xf185012a11473238, 0xb7652fc64e8d913b,
+	0x3ed289036ab94556, 0xb6adef33d29c64cb, 0x76a672373d6948e3, 0x5d24396ad1098b98,
+	0xc953118d5ede9eed, 0x053199575e7df135, 0xf0df4dd87ff82429, 0xba067451dea25511,
+	0x674a592be9e79f6f, 0xd241d9b4fece6aa8, 0x673a1ffd2bb634dd, 0x4d359aa1d458e385,
+	0x83b63d6fa38ed56a, 0xb5e2041b65106238, 0x0e4f250db3c49bfd, 0x7e8cfb7d10a271a9,
+	0x825ee1972909d0a3, 0x0a71ac283de2a941, 0x2ca12b792235f3a1, 0xb7d66086a3541b71,
+	0x637f030da0cfad35, 0x0be79827d61ea96e, 0x65ef3a88be97669d, 0xb960acb73f11fc2e,
+	0x70bc3aa8979b93a0, 0xd34c8030cb86833e, 0xe63ed0fe0e2d1b04, 0xd0679007d4e48f7e,
+	0x174fcaa726046763, 0x1e1469904dda801a, 0x82dc134e1e26df21, 0x83b6ec3c58f97f4c,
+	0x2aebf4d15b594f0d, 0x0d3199fd65700d13, 0x2d9b33e8fdec6be5, 0x8a5ebb0e396151ee,
+	0x7f15cd0792ac9e3e, 0x9bbe7cb17ea90e19, 0x9935abf435b7f4fe, 0xabe757bdcd05f1dc,
+	0x124a06a66f16cbe1, 0x667093a71c06a2e2, 0x8d913165b8f7c8d6, 0xc9c226d131ca832c,
+	0x1da54234fa0faf22, 0x4b876cef4bf829cc, 0xd597a9953619e1f3, 0x2f543d947c7f7d3b,
+	0x14b7818f92c4a477, 0x7b00cdf7c4d36437, 0x31f2acec6d85d06f, 0xa1de1074e300a95c
+};
+
 static void
 test_metrohash (void)
 {
@@ -118,6 +137,20 @@ test_siphash_case (void)
 			sp_siphash_case ("LongerValue", 11, SP_SEED_DEFAULT));
 }
 
+static void
+test_xx64 (void)
+{
+	SpSeed seed = { .u128 = { 506097522914230528, 1084818905618843912 } };
+	uint8_t in[sp_len (xx64_vectors)] = { 0 };
+	unsigned i;
+
+	for (i = 0; i < sp_len (xx64_vectors); ++i) {
+		in[i] = i;
+		uint64_t out = sp_xxhash64 (in, i, &seed);
+		mu_assert_uint_eq (xx64_vectors[i], out);
+	}
+}
+
 int
 main (void)
 {
@@ -126,6 +159,7 @@ main (void)
 	test_metrohash ();
 	test_siphash ();
 	test_siphash_case ();
+	test_xx64 ();
 
 	mu_assert (sp_alloc_summary ());
 }

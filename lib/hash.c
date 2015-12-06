@@ -64,19 +64,25 @@ rotl (uint64_t v, unsigned k)
 inline static uint64_t
 read_u64 (const void *const ptr)
 {
-	return *(const uint64_t *)ptr;
+    uint64_t val;
+    memcpy (&val, ptr, sizeof val);
+    return val;
 }
 
 inline static uint64_t
 read_u32 (const void *const ptr)
 {
-	return (uint64_t)*(const uint32_t *)ptr;
+    uint32_t val;
+    memcpy (&val, ptr, sizeof val);
+    return val;
 }
 
 inline static uint64_t
 read_u16 (const void * const ptr)
 {
-	return (uint64_t)*(const uint16_t *)ptr;
+    uint16_t val;
+    memcpy (&val, ptr, sizeof val);
+    return val;
 }
 
 inline static uint64_t
@@ -263,5 +269,111 @@ sp_siphash_case (const void *restrict s, size_t len, const SpSeed *restrict seed
 	v2 ^= 0xff;
 	SIPROUND (4, v0, v1, v2, v3);
 	return v0 ^ v1 ^ v2  ^ v3;
+}
+
+
+// xxHash Copyright (c) 2012-2015, Yann Collet
+// https://github.com/Cyan4973/xxHash
+
+#define XX64_PRIME_1 11400714785074694791ULL
+#define XX64_PRIME_2 14029467366897019727ULL
+#define XX64_PRIME_3  1609587929392839161ULL
+#define XX64_PRIME_4  9650029242287828579ULL
+#define XX64_PRIME_5  2870177450012600261ULL
+
+uint64_t
+sp_xxhash64 (const void *restrict input, size_t len, const SpSeed *restrict seed)
+{
+	const uint8_t *restrict p = input;
+	const uint8_t *restrict pe = p + len;
+	uint64_t h;
+
+	if (len >= 32) {
+		const uint8_t *restrict limit = pe - 32;
+		uint64_t v1 = seed->u64 + XX64_PRIME_1 + XX64_PRIME_2;
+		uint64_t v2 = seed->u64 + XX64_PRIME_2;
+		uint64_t v3 = seed->u64 + 0;
+		uint64_t v4 = seed->u64 - XX64_PRIME_1;
+
+		do {
+			v1 += sp_le64toh (read_u64 (p)) * XX64_PRIME_2;
+			p+=8;
+			v1 = rotl (v1, 31);
+			v1 *= XX64_PRIME_1;
+			v2 += sp_le64toh (read_u64 (p)) * XX64_PRIME_2;
+			p+=8;
+			v2 = rotl (v2, 31);
+			v2 *= XX64_PRIME_1;
+			v3 += sp_le64toh (read_u64 (p)) * XX64_PRIME_2;
+			p+=8;
+			v3 = rotl (v3, 31);
+			v3 *= XX64_PRIME_1;
+			v4 += sp_le64toh (read_u64 (p)) * XX64_PRIME_2;
+			p+=8;
+			v4 = rotl (v4, 31);
+			v4 *= XX64_PRIME_1;
+		} while (p <= limit);
+
+		h = rotl (v1, 1) + rotl (v2, 7) + rotl (v3, 12) + rotl (v4, 18);
+
+		v1 *= XX64_PRIME_2;
+		v1 = rotl (v1, 31);
+		v1 *= XX64_PRIME_1;
+		h ^= v1;
+		h = h * XX64_PRIME_1 + XX64_PRIME_4;
+
+		v2 *= XX64_PRIME_2;
+		v2 = rotl (v2, 31);
+		v2 *= XX64_PRIME_1;
+		h ^= v2;
+		h = h * XX64_PRIME_1 + XX64_PRIME_4;
+
+		v3 *= XX64_PRIME_2;
+		v3 = rotl (v3, 31);
+		v3 *= XX64_PRIME_1;
+		h ^= v3;
+		h = h * XX64_PRIME_1 + XX64_PRIME_4;
+
+		v4 *= XX64_PRIME_2;
+		v4 = rotl (v4, 31);
+		v4 *= XX64_PRIME_1;
+		h ^= v4;
+		h = h * XX64_PRIME_1 + XX64_PRIME_4;
+	}
+	else {
+		h = seed->u64 + XX64_PRIME_5;
+	}
+
+	h += (uint64_t)len;
+
+	while (p+8 <= pe) {
+		uint64_t k1 = sp_le64toh (read_u64 (p));
+		k1 *= XX64_PRIME_2;
+		k1 = rotl (k1,31);
+		k1 *= XX64_PRIME_1;
+		h ^= k1;
+		h = rotl (h,27) * XX64_PRIME_1 + XX64_PRIME_4;
+		p+=8;
+	}
+
+	if (p+4 <= pe) {
+		h ^= sp_le64toh (read_u32 (p)) * XX64_PRIME_1;
+		h = rotl (h, 23) * XX64_PRIME_2 + XX64_PRIME_3;
+		p+=4;
+	}
+
+	while (p < pe) {
+		h ^= (*p) * XX64_PRIME_5;
+		h = rotl (h, 11) * XX64_PRIME_1;
+		p++;
+	}
+
+	h ^= h >> 33;
+	h *= XX64_PRIME_2;
+	h ^= h >> 29;
+	h *= XX64_PRIME_3;
+	h ^= h >> 32;
+
+	return h;
 }
 

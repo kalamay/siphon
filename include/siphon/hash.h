@@ -25,5 +25,8 @@ sp_siphash (const void *restrict s, size_t len, const SpSeed *restrict seed);
 SP_EXPORT uint64_t
 sp_siphash_case (const void *restrict s, size_t len, const SpSeed *restrict seed);
 
+SP_EXPORT uint64_t
+sp_xxhash64 (const void *input, size_t len, const SpSeed *restrict seed);
+
 #endif
 
