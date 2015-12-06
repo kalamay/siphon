@@ -29,4 +29,6 @@ test:
     - rm -rf build
     - $HOME/dep/cmake-3.4.1/bin/cmake -H. -Bbuild -DCMAKE_C_COMPILER=$(which gcc-4.9) -DCMAKE_BUILD_TYPE=Debug -DRAGEL_COMMAND=$HOME/dep/ragel-6.9/ragel/ragel
     - $HOME/dep/cmake-3.4.1/bin/cmake --build build
-    - cd build && $HOME/dep/cmake-3.4.1/bin/ctest .
+    - cd build
+    - $HOME/dep/cmake-3.4.1/bin/ctest -T test . || /usr/bin/true
+    - xsltproc ../test/CTest2JUnit.xsl Testing/$(head -n 1 < Testing/TAG)/Test.xml > $CIRCLE_TEST_REPORTS/siphon.xml
