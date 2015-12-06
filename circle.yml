@@ -30,4 +30,4 @@ test:
     - $HOME/dep/cmake-3.4.1/bin/cmake -H. -Bbuild -DCMAKE_C_COMPILER=$(which gcc-4.9) -DCMAKE_BUILD_TYPE=Debug -DRAGEL_COMMAND=$HOME/dep/ragel-6.9/ragel/ragel
     - $HOME/dep/cmake-3.4.1/bin/cmake --build build
     - cd build && $HOME/dep/cmake-3.4.1/bin/ctest -T test --output-on-failure . || /usr/bin/true
-    - pwd && xsltproc test/CTest2JUnit.xsl Testing/$(head -n 1 < Testing/TAG)/Test.xml > $CIRCLE_TEST_REPORTS/siphon.xml
+    - xsltproc test/CTest2JUnit.xsl build/Testing/$(head -n 1 < build/Testing/TAG)/Test.xml > $CIRCLE_TEST_REPORTS/siphon.xml
