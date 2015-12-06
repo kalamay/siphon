@@ -1,4 +1,5 @@
 #include "../include/siphon/error.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #include <pthread.h>
@@ -140,5 +141,7 @@ main (void)
 	test_missing ();
 	test_iter ();
 	test_threads ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

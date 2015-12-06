@@ -1,4 +1,5 @@
 #include "../include/siphon/line.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #include <stdlib.h>
@@ -108,5 +109,7 @@ main (void)
 
 	test_parse (2);
 	test_parse (11);
+
+	sp_alloc_summary ();
 }
 

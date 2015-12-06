@@ -1,4 +1,5 @@
 #include "../include/siphon/trie.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 static const SpType type = {
@@ -691,5 +692,7 @@ main (void)
 	test_each_prefix_leaf ();
 	test_prefix ();
 	test_match ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

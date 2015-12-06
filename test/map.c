@@ -1,4 +1,5 @@
 #include "../include/siphon/map.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 /*
@@ -413,5 +414,7 @@ main (void)
 	test_copy_free ();
 	test_each ();
 	test_bloom ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

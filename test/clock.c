@@ -1,4 +1,5 @@
 #include "../include/siphon/clock.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 static void
@@ -178,5 +179,7 @@ main (void)
 	test_rel ();
 	test_add ();
 	test_sub ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

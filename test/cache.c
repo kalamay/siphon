@@ -1,4 +1,5 @@
 #include "../include/siphon/cache.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 static void
@@ -191,5 +192,7 @@ main (void)
 	test_private ();
 	test_no_cache ();
 	test_all ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

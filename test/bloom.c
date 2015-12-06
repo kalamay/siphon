@@ -1,4 +1,5 @@
 #include "../include/siphon/bloom.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 static void
@@ -48,5 +49,7 @@ main (void)
 
 	test_basic ();
 	test_large ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

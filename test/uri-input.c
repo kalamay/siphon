@@ -43,7 +43,6 @@ main (void)
 	}
 	sp_uri_print (&uri, str, stdout);
 	sp_free (str, len);
-
-	return 0;
+	return sp_alloc_summary () ? 0 : 1;
 }
 

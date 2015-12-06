@@ -1,4 +1,5 @@
 #include "../include/siphon/http.h"
+#include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
 #include "mu/mu.h"
 
@@ -506,5 +507,7 @@ main (void)
 	test_exceed_name_size ();
 	test_limit_value_size ();
 	test_exceed_value_size ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

@@ -89,6 +89,6 @@ main (int argc, char **argv)
 		}
 	}
 	sp_free (val, freelen);
-	return 0;
+	return sp_alloc_summary () ? 0 : 1;
 }
 

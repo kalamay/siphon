@@ -1,4 +1,5 @@
 #include "../include/siphon/path.h"
+#include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
 #include "mu/mu.h"
 
@@ -306,5 +307,7 @@ main (void)
 	test_dir_zero ();
 	test_dir_single ();
 	test_dir_tree ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

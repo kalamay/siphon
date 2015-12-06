@@ -1,4 +1,5 @@
 #include "../include/siphon/ring.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #define FIND(r, s) sp_ring_find ((r), (s), sizeof (s) - 1)
@@ -168,6 +169,8 @@ main (void)
 	test_restore ();
 	test_next ();
 	test_del ();
+
+	mu_assert (sp_alloc_summary ());
 
 	return 0;
 }

@@ -1,4 +1,5 @@
 #include "../include/siphon/hash.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 static const char * metro_key_63 = "012345678901234567890123456789012345678901234567890123456789012";
@@ -125,5 +126,7 @@ main (void)
 	test_metrohash ();
 	test_siphash ();
 	test_siphash_case ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

@@ -1,4 +1,5 @@
 #include "../include/siphon/json.h"
+#include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
 #include "mu/mu.h"
 
@@ -369,5 +370,7 @@ main (void)
 	mu_assert_int_eq (1, parse_file ("pass6.json", 20));
 	mu_assert_int_eq (1, parse_file ("pass7.json", 20));
 	mu_assert_int_eq (1, parse_file ("pass8.json", 20));
+
+	mu_assert (sp_alloc_summary ());
 }
 

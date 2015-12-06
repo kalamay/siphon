@@ -1,4 +1,5 @@
 #include "../include/siphon/msgpack.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #define count(a) (sizeof (a) / sizeof ((a)[0]))
@@ -547,5 +548,7 @@ main (void)
 	test_encode_array ();
 	test_encode_map ();
 	test_encode_ext ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

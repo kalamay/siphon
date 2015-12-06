@@ -1,4 +1,5 @@
 #include "../include/siphon/utf8.h"
+#include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
 #include "mu/mu.h"
 
@@ -299,5 +300,7 @@ main (void)
 	test_invalid_codepoints ();
 
 	test_unescape ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

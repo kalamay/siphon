@@ -1,4 +1,5 @@
 #include "../include/siphon/crc.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 /* CRC32C test vectors, adapted from linux crypto/testmgr.h and leveldb crc32c_test */
@@ -1083,5 +1084,7 @@ main (void)
 
 	test_crc32 ();
 	test_crc32c ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

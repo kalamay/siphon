@@ -1,4 +1,5 @@
 #include "../include/siphon/list.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 typedef struct {
@@ -513,5 +514,7 @@ main (void)
 	test_splice_desc ();
 	test_splice_inner_asc ();
 	test_splice_inner_desc ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

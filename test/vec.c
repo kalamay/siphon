@@ -1,4 +1,5 @@
 #include "../include/siphon/vec.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #include <errno.h>
@@ -348,5 +349,7 @@ main (void)
 	test_splice_remove_end ();
 	test_splice_after ();
 	test_reverse ();
+
+	mu_assert (sp_alloc_summary ());
 }
 

@@ -120,7 +120,7 @@ main (int argc, char **argv)
 	}
 
 	sp_free (buf, freelen);
-
+	sp_alloc_summary ();
 	return 0;
 
 error:

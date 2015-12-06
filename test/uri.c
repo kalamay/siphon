@@ -1,4 +1,5 @@
 #include "../include/siphon/uri.h"
+#include "../include/siphon/alloc.h"
 #include "mu/mu.h"
 
 #define assert_uri(u, s) do {                                                \
@@ -1452,5 +1453,7 @@ main (void)
 	test_range_fragment_rel ();
 	test_join ();
 	test_ipv6 ();
+
+	mu_assert (sp_alloc_summary ());
 }
 
