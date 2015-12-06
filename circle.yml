@@ -28,7 +28,6 @@ dependencies:
 test:
   override:
     - rm -rf build
-    - export CC=$(which gcc-4.9)
-    - $HOME/dep/cmake-3.4.1/bin/cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Debug -DRAGEL_COMMAND=$HOME/dep/ragel-6.9/ragel/ragel
+    - $HOME/dep/cmake-3.4.1/bin/cmake -H. -Bbuild -DCMAKE_C_COMPILER=$(which gcc-4.9) -DCMAKE_BUILD_TYPE=Debug -DRAGEL_COMMAND=$HOME/dep/ragel-6.9/ragel/ragel
     - $HOME/dep/cmake-3.4.1/bin/cmake --build build
     - cd build && $HOME/dep/cmake-3.4.1/bin/ctest .
