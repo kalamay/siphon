@@ -1,16 +1,18 @@
 #include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
+#include "../include/siphon/list.h"
 #include "lock.h"
 #include "config.h"
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <sys/mman.h>
 #include <errno.h>
 
-static size_t pagesize = 4096;
+static size_t pagesize = 0;
 
-static void __attribute__((constructor(103)))
+static void __attribute__((constructor(110)))
 init (void)
 {
 	pagesize = getpagesize ();
@@ -19,13 +21,14 @@ init (void)
 // TODO: select proper alignment requirements for platform
 #define DBG_ALIGN 1
 
-#define DBG_PREAMBLE_SIZE 384
+#define DBG_PREAMBLE_SIZE 512
 
 struct dbg_preamble {
 	uint64_t magic;
+	SpList entry;
 	void *ptr;
 	uintptr_t size, cap;
-	char stack[DBG_PREAMBLE_SIZE - 8 - (3 * sizeof (uintptr_t))];
+	char stack[DBG_PREAMBLE_SIZE - 8 - sizeof (SpList) - (3 * sizeof (uintptr_t))];
 };
 
 static const uint64_t dbg_magic = 0xf0231f251949aa2ULL;
@@ -88,6 +91,9 @@ dbg_available (struct dbg_preamble *pre)
 }
 #endif
 
+static SpList dbg_active;
+static SpLock dbg_lock;
+
 static int
 dbg_protect (struct dbg_preamble *pre, int flags)
 {
@@ -96,11 +102,26 @@ dbg_protect (struct dbg_preamble *pre, int flags)
 	return mprotect ((char *)pre->ptr + dbg_size (pre->size), pagesize, flags);
 }
 
+static void
+dbg_free (struct dbg_preamble *pre)
+{
+	dbg_protect (pre, PROT_READ | PROT_WRITE);
+	pre->magic = 0;
+	SP_LOCK (dbg_lock);
+	sp_list_del (&pre->entry);
+	SP_UNLOCK (dbg_lock);
+	munmap (pre->ptr, pre->cap);
+}
+
 void *
 sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 {
+	if (
+			sp_unlikely (pagesize == 0)
 #if SP_VALGRIND
-	if (RUNNING_ON_VALGRIND) {
+			|| RUNNING_ON_VALGRIND
+#endif
+	) {
 		if (newsz == 0) {
 			free (ptr);
 			return NULL;
@@ -113,9 +134,6 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 			return ptr;
 		}
 	}
-#else
-	(void)zero;
-#endif
 
 	void *ret = NULL;
 
@@ -149,6 +167,13 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 			abort ();
 		}
 
+		SP_LOCK (dbg_lock);
+		if (sp_unlikely (dbg_active.link[0] == NULL)) {
+			sp_list_init (&dbg_active);
+		}
+		sp_list_add (&dbg_active, &pre->entry, SP_ASCENDING);
+		SP_UNLOCK (dbg_lock);
+
 		pre->magic = dbg_magic;
 		pre->ptr = p;
 		pre->size = newsz;
@@ -166,11 +191,34 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 		if (ret != NULL) {
 			memcpy (ret, ptr, newsz > pre->size ? pre->size : newsz);
 		}
-		dbg_protect (pre, PROT_READ | PROT_WRITE);
-		pre->magic = 0;
-		munmap (pre->ptr, pre->cap);
+		dbg_free (pre);
 	}
 
 	return ret;
+}
+
+bool
+sp_alloc_summary (void)
+{
+	size_t leak = 0;
+	SpList leaks, *entry;
+	sp_list_init (&leaks);
+
+	SP_LOCK (dbg_lock);
+	if (dbg_active.link[0] != NULL) {
+		sp_list_splice (&leaks, &dbg_active, SP_ASCENDING);
+	}
+	SP_UNLOCK (dbg_lock);
+
+	sp_list_each (&leaks, entry, SP_ASCENDING) {
+		struct dbg_preamble *pre = sp_container_of (entry, struct dbg_preamble, entry);
+		fprintf (stderr,
+			"*** leak of size %" PRIuPTR "\n%s",
+			pre->size,
+			pre->stack);
+		leak += pre->size;
+	}
+
+	return leak == 0;
 }
 

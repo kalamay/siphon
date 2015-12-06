@@ -46,5 +46,8 @@
 SP_EXPORT void *
 sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero);
 
+SP_EXPORT bool
+sp_alloc_summary (void);
+
 #endif
 
