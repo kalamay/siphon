@@ -196,6 +196,10 @@ sp_ring_next (const SpRing *self, const SpRingReplica *rep)
 
 	const SpRingReplica *end = self->replicas + sp_vec_count (self->replicas);
 	assert (rep >= self->replicas && rep < end);
+	if (sp_unlikely (rep < self->replicas || rep >= end)) {
+		errno = ERANGE;
+		return NULL;
+	}
 
 	rep = rep + 1;
 	if (rep == end) {
