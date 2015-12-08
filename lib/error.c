@@ -153,15 +153,15 @@ static const SpError **errors = NULL;
 static SpRWLock lock = SP_RWLOCK_MAKE ();
 
 static int
-cmp_code (const void *key, const void *val)
+cmp_code (int code, const SpError **val)
 {
-	return (*(const SpError **)val)->code - *(const int *)key;
+	return (*val)->code - code;
 }
 
 static int
 cmp_err (const void *a, const void *b)
 {
-	return cmp_code (&(*(const SpError **)a)->code, b);
+	return cmp_code ((*(const SpError **)a)->code, (const SpError **)b);
 }
 
 static inline void
@@ -187,7 +187,7 @@ create_error (int code, const char *domain, const char *name, const char *msg)
 static const SpError *
 get_error (int code)
 {
-	const SpError **pos = bsearch (&code, errors, sp_vec_count (errors), sizeof errors[0], cmp_code);
+	const SpError **pos = sp_vec_bsearch (errors, code, cmp_code);
 	return pos ? *pos : NULL;
 }
 
@@ -370,7 +370,7 @@ sp_error_next (const SpError *err)
 
 	SP_RLOCK (lock);
 	size_t len = sp_vec_count (errors);
-	pos = bsearch (&err->code, errors, len, sizeof errors[0], cmp_code);
+	pos = sp_vec_bsearch (errors, err->code, cmp_code);
 	if (pos && pos < errors+len) {
 		val = pos[1];
 	}
