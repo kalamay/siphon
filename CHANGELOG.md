@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1-alpha
+## 0.2.1
 
 * add inlined bsearch and search so that comparison functions can be typed
 * fix hash ring error when finding on an empty ring
