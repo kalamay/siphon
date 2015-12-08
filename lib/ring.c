@@ -142,11 +142,10 @@ sp_ring_del (SpRing *self, const void *restrict key, size_t len)
 	SpRingNode *node = sp_map_steal (&self->nodes, key, len);
 	if (node == NULL) return false;
 
-	size_t n = sp_vec_count (self->replicas);
-	for (size_t i = 0; i < n; i++) {
-		if (self->replicas[i].node == node) {
-			sp_vec_remove (self->replicas, i, i+1);
-			n--;
+	ssize_t n = (ssize_t)sp_vec_count (self->replicas) - 1;
+	for (; n >= 0; n--) {
+		if (self->replicas[n].node == node) {
+			sp_vec_remove (self->replicas, n, n+1);
 		}
 	}
 
@@ -159,6 +158,10 @@ sp_ring_find (const SpRing *self, const void *restrict val, size_t len)
 {
 	assert (self != NULL);
 	assert (val != NULL);
+
+	if (sp_unlikely (self->nodes.count == 0)) {
+		return NULL;
+	}
 
 	uint64_t hash = self->hash (val, len, SP_SEED_DEFAULT);
 	size_t n = sp_vec_count (self->replicas);

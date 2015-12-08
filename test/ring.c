@@ -150,11 +150,68 @@ test_del (void)
 	sp_ring_put (&ring, "test3", 5, 3, 2);
 
 	mu_assert_int_eq (sp_vec_count (ring.replicas), 9);
+	mu_assert_int_eq (ring.nodes.count, 3);
+
 	mu_assert (sp_ring_del (&ring, "test2", 5));
 	mu_assert_int_eq (sp_vec_count (ring.replicas), 6);
+	mu_assert_int_eq (ring.nodes.count, 2);
 	mu_assert_ptr_ne (sp_ring_get (&ring, "test1", 5), NULL);
 	mu_assert_ptr_eq (sp_ring_get (&ring, "test2", 5), NULL);
 	mu_assert_ptr_ne (sp_ring_get (&ring, "test3", 5), NULL);
+
+	mu_assert (sp_ring_del (&ring, "test3", 5));
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 3);
+	mu_assert_int_eq (ring.nodes.count, 1);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test1", 5), NULL);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test2", 5), NULL);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test3", 5), NULL);
+
+	mu_assert (sp_ring_del (&ring, "test1", 5));
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 0);
+	mu_assert_int_eq (ring.nodes.count, 0);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test1", 5), NULL);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test2", 5), NULL);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test3", 5), NULL);
+
+	sp_ring_final (&ring);
+}
+
+static void
+test_empty (void)
+{
+	SpRing ring;
+	sp_ring_init (&ring, sp_siphash);
+
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 0);
+	mu_assert_int_eq (ring.nodes.count, 0);
+
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test", 4), NULL);
+	mu_assert_ptr_eq (sp_ring_find (&ring, "test", 4), NULL);
+
+	sp_ring_final (&ring);
+}
+
+static void
+test_exhausted (void)
+{
+	SpRing ring;
+	sp_ring_init (&ring, sp_siphash);
+
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
+
+	for (int i = 0; i < 6; i++) {
+		char buf[16];
+		int len = snprintf (buf, sizeof buf, "value %d\n", i);
+		const SpRingReplica *rep = sp_ring_find (&ring, buf, len);
+		const SpRingNode *node = sp_ring_reserve (&ring, rep);
+		mu_assert_ptr_ne (node, NULL);
+	}
+
+	const SpRingReplica *rep = sp_ring_find (&ring, "value 6", 8);
+	const SpRingNode *node = sp_ring_reserve (&ring, rep);
+	mu_assert_ptr_eq (node, NULL);
 
 	sp_ring_final (&ring);
 }
@@ -169,6 +226,8 @@ main (void)
 	test_restore ();
 	test_next ();
 	test_del ();
+	test_empty ();
+	test_exhausted ();
 
 	mu_assert (sp_alloc_summary ());
 
