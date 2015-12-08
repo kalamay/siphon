@@ -1,3 +1,0 @@
-[submodule "lib/pcmp"]
-	path = lib/pcmp
-	url = git@github.com:kalamay/pcmp.git
