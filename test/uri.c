@@ -1,6 +1,6 @@
 #include "../include/siphon/uri.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #define assert_uri(u, s) do {                                                \
 	ssize_t rc = sp_uri_parse (u, s, strlen (s));                            \

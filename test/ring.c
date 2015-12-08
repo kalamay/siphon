@@ -1,6 +1,6 @@
 #include "../include/siphon/ring.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #define FIND(r, s) sp_ring_find ((r), (s), sizeof (s) - 1)
 #define RESERVE(r, s) sp_ring_reserve ((r), FIND (r, s))

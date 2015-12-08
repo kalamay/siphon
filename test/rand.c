@@ -1,6 +1,6 @@
 #include "../include/siphon/rand.h"
 #include "../include/siphon/seed.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 static void
 test_seed (void)

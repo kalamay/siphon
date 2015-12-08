@@ -1,6 +1,6 @@
 #include "../include/siphon/vec.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #include <errno.h>
 

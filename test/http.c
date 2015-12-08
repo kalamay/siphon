@@ -1,7 +1,7 @@
 #include "../include/siphon/http.h"
 #include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #include <stdlib.h>
 #include <ctype.h>

@@ -1,6 +1,6 @@
 #include "../include/siphon/trie.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 static const SpType type = {
 	.print = sp_print_str

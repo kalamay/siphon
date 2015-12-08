@@ -1,6 +1,6 @@
 #include "../include/siphon/list.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 typedef struct {
 	int value;

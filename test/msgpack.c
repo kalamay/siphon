@@ -1,6 +1,6 @@
 #include "../include/siphon/msgpack.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #define count(a) (sizeof (a) / sizeof ((a)[0]))
 

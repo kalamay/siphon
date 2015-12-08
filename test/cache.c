@@ -1,6 +1,6 @@
 #include "../include/siphon/cache.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 static void
 test_max_stale (void)

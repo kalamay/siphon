@@ -1,6 +1,6 @@
 #include "../include/siphon/line.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 #include <stdlib.h>
 #include <ctype.h>

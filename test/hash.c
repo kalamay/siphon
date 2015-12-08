@@ -1,6 +1,6 @@
 #include "../include/siphon/hash.h"
 #include "../include/siphon/alloc.h"
-#include "mu/mu.h"
+#include "mu.h"
 
 static const char * metro_key_63 = "012345678901234567890123456789012345678901234567890123456789012";
 
