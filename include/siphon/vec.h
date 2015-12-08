@@ -71,9 +71,42 @@
 	qsort (sp_sym(tmp), sp_vec_count (sp_sym(tmp)), sizeof *(v), (cmp)); \
 } while (0)
 
-#define sp_vec_bsearch(v, val, cmp) __extension__ ({                  \
-	__typeof (v) sp_sym(tmp) = (v);                                   \
-	bsearch (val, sp_sym(tmp), sp_vec_count (sp_sym(tmp)), sizeof *(v), cmp); \
+#define sp_vec_search(v, key, cmp) __extension__ ({        \
+	__typeof (v) tv=(v), te=tv+sp_vec_count (tv), rv=NULL; \
+	__typeof (key) tkey = (key);                           \
+	for (; tv < te; tv++) {                                \
+		if (cmp (tkey, tv) == 0) {                         \
+			rv = tv;                                       \
+			break;                                         \
+		}                                                  \
+	}                                                      \
+	rv;                                                    \
+})
+
+#define sp_vec_bsearch(v, key, cmp) __extension__ ({ \
+	__typeof (v) base=(v), el, rv=NULL;              \
+	__typeof (key) tkey = (key);                     \
+	size_t n = sp_vec_count (base);                  \
+	int sign;                                        \
+	while (n > 0) {                                  \
+		el = base + n/2;                             \
+		sign = cmp (tkey, el);                       \
+		if (sign == 0) {                             \
+			rv = el;                                 \
+			break;                                   \
+		}                                            \
+		else if (n == 1) {                           \
+			break;                                   \
+		}                                            \
+		else if (sign < 0) {                         \
+			n /= 2;                                  \
+		}                                            \
+		else {                                       \
+			base = el;                               \
+			n -= n/2;                                \
+		}                                            \
+	}                                                \
+	rv;                                              \
 })
 
 #define sp_vec_each(v, i)                                                 \

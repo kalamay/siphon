@@ -329,6 +329,86 @@ test_reverse (void)
 	sp_vec_free (vec);
 }
 
+static int
+cmp (const int *key, const int *val)
+{
+	return *key - *val;
+}
+
+static void
+test_bsearch (void)
+{
+	int *vec = NULL;
+
+	sp_vec_reverse (vec);
+	mu_assert_uint_eq (sp_vec_count (vec), 0);
+
+	int vals[] = { 1, 2, 3, 4, 5 };
+	sp_vec_pushn (vec, vals, sp_len (vals));
+	mu_assert_uint_eq (sp_vec_count (vec), 5);
+
+	int find, *match;
+
+	find = 1;
+	match = sp_vec_bsearch (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec);
+
+	find = 3;
+	match = sp_vec_bsearch (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec + 2);
+
+	find = 5;
+	match = sp_vec_bsearch (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec + 4);
+
+	find = 0;
+	match = sp_vec_bsearch (vec, &find, cmp);
+	mu_assert_ptr_eq (match, NULL);
+
+	find = 6;
+	match = sp_vec_bsearch (vec, &find, cmp);
+	mu_assert_ptr_eq (match, NULL);
+
+	sp_vec_free (vec);
+}
+
+static void
+test_search (void)
+{
+	int *vec = NULL;
+
+	sp_vec_reverse (vec);
+	mu_assert_uint_eq (sp_vec_count (vec), 0);
+
+	int vals[] = { 2, 5, 1, 4, 3 };
+	sp_vec_pushn (vec, vals, sp_len (vals));
+	mu_assert_uint_eq (sp_vec_count (vec), 5);
+
+	int find, *match;
+
+	find = 1;
+	match = sp_vec_search (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec + 2);
+
+	find = 3;
+	match = sp_vec_search (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec + 4);
+
+	find = 5;
+	match = sp_vec_search (vec, &find, cmp);
+	mu_assert_ptr_eq (match, vec + 1);
+
+	find = 0;
+	match = sp_vec_search (vec, &find, cmp);
+	mu_assert_ptr_eq (match, NULL);
+
+	find = 6;
+	match = sp_vec_search (vec, &find, cmp);
+	mu_assert_ptr_eq (match, NULL);
+
+	sp_vec_free (vec);
+}
+
 int
 main (void)
 {
@@ -349,6 +429,8 @@ main (void)
 	test_splice_remove_end ();
 	test_splice_after ();
 	test_reverse ();
+	test_bsearch ();
+	test_search ();
 
 	mu_assert (sp_alloc_summary ());
 }
