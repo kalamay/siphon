@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+* change behavior when using `sp_map_reserve`
+
 ## 0.2.1
 
 * add inlined bsearch and search so that comparison functions can be typed

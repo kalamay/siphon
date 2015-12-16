@@ -115,12 +115,10 @@ sp_ring_put (SpRing *self,
 
 	SpRingNode *node = create_node (self, key, len, avail);
 	if (node == NULL) {
-		int rc = -errno;
-		sp_map_del (&self->nodes, key, len);
-		return rc;
+		return -errno;
 	}
 
-	*pos = node;
+	sp_map_assign (&self->nodes, pos, node);
 
 	replicate (self, node, key, len, replicas);
 

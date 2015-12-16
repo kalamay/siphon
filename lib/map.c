@@ -203,7 +203,7 @@ sp_map_resize (SpMap *self, size_t hint)
 	}
 
 	for (size_t i = 0; i < capacity; i++) {
-		if (entries[i].hash == 0) {
+		if (entries[i].value == NULL) {
 			continue;
 		}
 		SpMapEntry entry = entries[i];
@@ -211,7 +211,7 @@ sp_map_resize (SpMap *self, size_t hint)
 		size_t dist, next;
 
 		for (dist = 0; true; dist++, idx = start (self, idx+1)) {
-			if (self->entries[idx].hash == 0) {
+			if (self->entries[idx].value == NULL) {
 				self->entries[idx] = entry;
 				break;
 			}
@@ -285,7 +285,8 @@ get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
 			return NULL;
 		}
 		if (h == hash_tmp) {
-			if (sp_likely (self->type->iskey (self->entries[idx].value, key, len))) {
+			void *value = self->entries[idx].value;
+			if (sp_likely (value && self->type->iskey (value, key, len))) {
 				return &self->entries[idx];
 			}
 		}
@@ -331,7 +332,7 @@ sp_map_put (SpMap *self, const void *restrict key, size_t len, void *val)
 	if (!new && self->type->free) {
 		self->type->free (*pos);
 	}
-	*pos = self->type->copy ? self->type->copy (val) : val;
+	sp_map_assign (self, pos, self->type->copy ? self->type->copy (val) : val);
 	return !new;
 }
 
@@ -369,13 +370,12 @@ sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
 
 	for (dist = 0; true; dist++, idx = start (self, idx+1)) {
 		SpMapEntry tmp = self->entries[idx];
-		if (tmp.hash == 0) {
+		if (tmp.value == NULL) {
 			self->entries[idx] = entry;
 			if (!result) {
 				result = &self->entries[idx].value;
 			}
 			*isnew = true;
-			self->count++;
 			break;
 		}
 		if (entry.hash == tmp.hash) {
@@ -404,6 +404,22 @@ sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
 	return result;
 }
 
+void
+sp_map_assign (SpMap *self, void **reserve, void *val)
+{
+	assert (self != NULL);
+	assert (reserve != NULL);
+
+	if (*reserve == NULL) {
+		if (val != NULL) { self->count++; }
+	}
+	else {
+		if (val == NULL) { self->count--; }
+	}
+	*reserve = val;
+
+}
+
 void *
 sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 {
@@ -424,7 +440,7 @@ sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 
 	for (dist = 0; true; dist++, idx = start (self, idx+1)) {
 		SpMapEntry tmp = self->entries[idx];
-		if (tmp.hash == 0) {
+		if (tmp.value == NULL) {
 			break;
 		}
 		if (shift) {

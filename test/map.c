@@ -396,6 +396,38 @@ test_bloom (void)
 	sp_map_final (&map);
 }
 
+static void
+test_reserve (void)
+{
+	SpMap map = SP_MAP_MAKE (&good_type);
+	bool new;
+	void **ref;
+
+	ref = sp_map_reserve (&map, "test", 4, &new);
+	mu_assert_ptr_ne (ref, NULL);
+	mu_assert_ptr_eq (*ref, NULL);
+	mu_assert (new);
+	mu_assert_int_eq (sp_map_count (&map), 0);
+	mu_assert (!sp_map_has_key (&map, "test", 4));
+	mu_assert_ptr_eq (sp_map_get (&map, "test", 4), NULL);
+	mu_assert (!sp_map_del (&map, "test", 4));
+	mu_assert_int_eq (sp_map_count (&map), 0);
+
+	ref = sp_map_reserve (&map, "test", 4, &new);
+	mu_assert_ptr_ne (ref, NULL);
+	mu_assert_ptr_eq (*ref, NULL);
+	mu_assert (new);
+	mu_assert_int_eq (sp_map_count (&map), 0);
+	sp_map_assign (&map, ref, "test");
+	mu_assert_int_eq (sp_map_count (&map), 1);
+	mu_assert (sp_map_has_key (&map, "test", 4));
+	mu_assert_ptr_ne (sp_map_get (&map, "test", 4), NULL);
+	mu_assert (sp_map_del (&map, "test", 4));
+	mu_assert_int_eq (sp_map_count (&map), 0);
+
+	sp_map_final (&map);
+}
+
 int
 main (void)
 {
@@ -414,6 +446,7 @@ main (void)
 	test_copy_free ();
 	test_each ();
 	test_bloom ();
+	test_reserve ();
 
 	mu_assert (sp_alloc_summary ());
 }

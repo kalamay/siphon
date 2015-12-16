@@ -81,6 +81,9 @@ sp_map_del (SpMap *self, const void *restrict key, size_t len);
 SP_EXPORT void **
 sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew);
 
+SP_EXPORT void
+sp_map_assign (SpMap *self, void **reserve, void *val);
+
 SP_EXPORT void *
 sp_map_steal (SpMap *self, const void *restrict key, size_t len);
 
