@@ -563,7 +563,6 @@ main (void)
 	mu_init ("msgpack");
 
 	test_parse (-1);
-	if (false) {
 	test_parse (1);
 
 	test_parse (2);
@@ -581,7 +580,6 @@ main (void)
 	test_encode_array ();
 	test_encode_map ();
 	test_encode_ext ();
-	}
 
 	mu_assert (sp_alloc_summary ());
 }
