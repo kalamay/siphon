@@ -214,13 +214,26 @@
 
 #define PUSH_COUNT(p, n) do { p->counts[p->depth-1] = (n); } while (0)
 
-#define STACK_PUSH_ARR(p, n) do {           \
-	STACK_PUSH_FALSE(p, SP_MSGPACK_ESTACK); \
-	PUSH_COUNT(p, n);                       \
+#define STACK_PUSH_ARR(p) do {                  \
+	if (p->tag.count == 0) {                    \
+		p->cs = SP_MSGPACK_ARRAY_END;           \
+		p->key = IS_AT_KEY (p);                 \
+	}                                           \
+	else {                                      \
+		STACK_PUSH_FALSE(p, SP_MSGPACK_ESTACK); \
+		PUSH_COUNT(p, p->tag.count);            \
+	}                                           \
 } while (0)
-#define STACK_PUSH_MAP(p, n) do {           \
-	STACK_PUSH_TRUE(p, SP_MSGPACK_ESTACK);  \
-	PUSH_COUNT(p, n);                       \
+#define STACK_PUSH_MAP(p) do {                  \
+	if (p->tag.count == 0) {                    \
+		p->cs = SP_MSGPACK_MAP_END;             \
+		p->key = IS_AT_KEY (p);                 \
+	}                                           \
+	else {                                      \
+		p->key = true;                          \
+		STACK_PUSH_TRUE(p, SP_MSGPACK_ESTACK);  \
+		PUSH_COUNT(p, p->tag.count);            \
+	}                                           \
 } while (0)
 
 #define STACK_IN_ARR(p) (STACK_TOP(p) == STACK_ARR)
@@ -269,15 +282,14 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 	if (B_IS_FMAP (c)) {
 		p->type = SP_MSGPACK_MAP;
 		p->tag.count = B_FMAP_LEN (c);
-		p->key = true;
-		STACK_PUSH_MAP (p, p->tag.count);
+		STACK_PUSH_MAP (p);
 		return 1;
 	}
 
 	if (B_IS_FARR (c)) {
 		p->type = SP_MSGPACK_ARRAY;
 		p->tag.count = B_FARR_LEN (c);
-		STACK_PUSH_ARR (p, p->tag.count);
+		STACK_PUSH_ARR (p);
 		return 1;
 	}
 
@@ -384,7 +396,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_ARRAY;
-		STACK_PUSH_ARR (p, p->tag.count);
+		STACK_PUSH_ARR (p);
 		return blen + 1;
 
 	case B_MAP16:
@@ -393,7 +405,7 @@ next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 		EXPECT_SIZE (blen + 1, len, eof);
 		READ_DINT (p->tag.count, buf+1, blen);
 		p->type = SP_MSGPACK_MAP;
-		STACK_PUSH_MAP (p, p->tag.count);
+		STACK_PUSH_MAP (p);
 		return blen + 1;
 
 	}

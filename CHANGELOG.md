@@ -3,6 +3,7 @@
 ## 0.2.2
 
 * change behavior when using `sp_map_reserve`
+* fix empty msgpack array/map end state
 
 ## 0.2.1
 
