@@ -107,6 +107,17 @@ install(DIRECTORY man/
 	FILES_MATCHING PATTERN "*.3")
 
 
+add_executable(test-http-input test/http-input.c)
+target_link_libraries(test-http-input siphon-static m)
+
+add_executable(test-json-input test/json-input.c)
+target_link_libraries(test-json-input siphon-static m)
+
+add_executable(test-msgpack-input test/msgpack-input.c)
+target_link_libraries(test-msgpack-input siphon-static m)
+
+add_executable(test-uri-input test/uri-input.c)
+target_link_libraries(test-uri-input siphon-static m)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 
@@ -148,20 +159,14 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 	add_test(NAME http COMMAND test-http)
 	add_executable(test-http test/http.c)
 	target_link_libraries(test-http siphon-static m)
-	add_executable(test-http-input test/http-input.c)
-	target_link_libraries(test-http-input siphon-static m)
 
 	add_test(NAME json COMMAND test-json)
 	add_executable(test-json test/json.c)
 	target_link_libraries(test-json siphon-static m)
-	add_executable(test-json-input test/json-input.c)
-	target_link_libraries(test-json-input siphon-static m)
 
 	add_test(NAME msgpack COMMAND test-msgpack)
 	add_executable(test-msgpack test/msgpack.c)
 	target_link_libraries(test-msgpack siphon-static m)
-	add_executable(test-msgpack-input test/msgpack-input.c)
-	target_link_libraries(test-msgpack-input siphon-static m)
 
 	add_test(NAME path COMMAND test-path)
 	add_executable(test-path test/path.c)
@@ -172,8 +177,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 	add_test(NAME uri COMMAND test-uri)
 	add_executable(test-uri test/uri.c)
 	target_link_libraries(test-uri siphon-static m)
-	add_executable(test-uri-input test/uri-input.c)
-	target_link_libraries(test-uri-input siphon-static m)
 
 	add_test(NAME bloom COMMAND test-bloom)
 	add_executable(test-bloom test/bloom.c)
