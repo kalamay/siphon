@@ -1,5 +1,6 @@
 #include "../include/siphon/json.h"
 #include "../include/siphon/alloc.h"
+#include "../include/siphon/fmt.h"
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -19,7 +20,6 @@ readin (const char *path, size_t *outlen)
 		}
 	}
 
-	char buffer[8192];
 	size_t len = fread (buffer, 1, sizeof buffer, in);
 	if (len == 0) {
 		err (EXIT_FAILURE, "fread");
@@ -37,6 +37,17 @@ readin (const char *path, size_t *outlen)
 	return copy;
 }
 
+static void
+indent (size_t n)
+{
+	static const char spaces[] = 
+		"                                                                "
+		"                                                                "
+		"                                                                "
+		"                                                                ";
+	fwrite (spaces, 1, n*4, stdout);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -44,6 +55,8 @@ main (int argc, char **argv)
 	uint8_t *val = readin (argc > 1 ? argv[1] : NULL, &len);
 	uint8_t *buf = val;
 	size_t freelen = len;
+	bool first = true;
+	bool key = false;
 
 	SpJson p;
 	sp_json_init (&p);
@@ -58,39 +71,71 @@ main (int argc, char **argv)
 		buf += rc;
 		len -= rc;
 
+		if (p.type == SP_JSON_ARRAY || p.type == SP_JSON_OBJECT) {
+			if (key) {
+				printf (": ");
+			}
+			else if (!first) {
+				printf (", ");
+			}
+			first = true;
+		}
+		else if (p.type == SP_JSON_ARRAY_END || p.type == SP_JSON_OBJECT_END) {
+			first = false;
+			printf ("\n");
+			indent (p.depth);
+		}
+		else if (key) {
+			printf (": ");
+			first = false;
+		}
+		else if (first) {
+			first = false;
+			printf ("\n");
+			indent (p.depth);
+		}
+		else {
+			printf (",\n");
+			indent (p.depth);
+		}
+
 		switch (p.type) {
 		case SP_JSON_NONE:
 			break;
 		case SP_JSON_OBJECT:
-			printf ("object\n");
+			printf ("{");
 			break;
 		case SP_JSON_ARRAY:
-			printf ("array\n");
+			printf ("[");
 			break;
 		case SP_JSON_OBJECT_END:
-			printf ("end object\n");
+			printf ("}");
 			break;
 		case SP_JSON_ARRAY_END:
-			printf ("end array\n");
+			printf ("]");
 			break;
 		case SP_JSON_NULL:
-			printf ("null\n");
+			printf ("null");
 			break;
 		case SP_JSON_TRUE:
-			printf ("true\n");
+			printf ("true");
 			break;
 		case SP_JSON_FALSE:
-			printf ("false\n");
+			printf ("false");
 			break;
 		case SP_JSON_NUMBER:
-			printf ("number: %f\n", p.number);
+			printf ("%f", p.number);
 			break;
 		case SP_JSON_STRING:
-			printf ("string: %.*s\n", (int)p.utf8.len, p.utf8.buf);
+			sp_fmt_str (stdout, p.utf8.buf, p.utf8.len, true);
 			break;
 		}
+
+		key = sp_json_is_key (&p);
 	}
+	printf ("\n");
 	sp_free (val, freelen);
+	sp_json_final (&p);
 	return sp_alloc_summary () ? 0 : 1;
 }
 
