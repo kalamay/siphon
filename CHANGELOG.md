@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3-alpha
+
+* add functions to query json and msgpack parser state
+
 ## 0.2.2
 
 * change behavior when using `sp_map_reserve`

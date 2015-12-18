@@ -405,6 +405,30 @@ sp_json_is_done (const SpJson *p)
 	return IS_DONE (p->cs);
 }
 
+bool
+sp_json_in_object (const SpJson *p)
+{
+	assert (p != NULL);
+
+	return p->depth > 0 && STACK_IN_OBJ (p);
+}
+
+bool
+sp_json_is_key (const SpJson *p)
+{
+	assert (p != NULL);
+
+	return p->cs == OBJECT_SEP;
+}
+
+bool
+sp_json_in_array (const SpJson *p)
+{
+	assert (p != NULL);
+
+	return p->depth > 0 && STACK_IN_ARR (p);
+}
+
 uint8_t *
 sp_json_steal_string (SpJson *p, size_t *len, size_t *cap)
 {

@@ -58,6 +58,15 @@ SP_EXPORT ssize_t
 sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof);
 
 SP_EXPORT bool
+sp_msgpack_in_map (const SpMsgpack *p);
+
+SP_EXPORT bool
+sp_msgpack_is_key (const SpMsgpack *p);
+
+SP_EXPORT bool
+sp_msgpack_in_array (const SpMsgpack *p);
+
+SP_EXPORT bool
 sp_msgpack_is_done (const SpMsgpack *p);
 
 SP_EXPORT size_t

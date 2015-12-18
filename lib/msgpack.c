@@ -453,6 +453,30 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof)
 }
 
 bool
+sp_msgpack_in_map (const SpMsgpack *p)
+{
+	assert (p != NULL);
+
+	return p->depth > 0 && STACK_IN_MAP (p);
+}
+
+bool
+sp_msgpack_is_key (const SpMsgpack *p)
+{
+	assert (p != NULL);
+
+	return IS_AT_KEY (p);
+}
+
+bool
+sp_msgpack_in_array (const SpMsgpack *p)
+{
+	assert (p != NULL);
+
+	return p->depth > 0 && STACK_IN_ARR (p);
+}
+
+bool
 sp_msgpack_is_done (const SpMsgpack *p)
 {
 	assert (p != NULL);

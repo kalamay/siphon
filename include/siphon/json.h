@@ -45,6 +45,15 @@ sp_json_next (SpJson *p, const void *restrict buf, size_t len, bool eof);
 SP_EXPORT bool
 sp_json_is_done (const SpJson *p);
 
+SP_EXPORT bool
+sp_json_in_object (const SpJson *p);
+
+SP_EXPORT bool
+sp_json_is_key (const SpJson *p);
+
+SP_EXPORT bool
+sp_json_in_array (const SpJson *p);
+
 SP_EXPORT uint8_t *
 sp_json_steal_string (SpJson *p, size_t *len, size_t *cap);
 
