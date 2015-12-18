@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <err.h>
 
+static char buffer[1024*1024];
+
 static uint8_t *
 readin (const char *path, size_t *outlen)
 {
@@ -17,7 +19,6 @@ readin (const char *path, size_t *outlen)
 		}
 	}
 
-	char buffer[8192];
 	size_t len = fread (buffer, 1, sizeof buffer, in);
 	if (len == 0) {
 		err (EXIT_FAILURE, "fread");

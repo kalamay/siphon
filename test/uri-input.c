@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <err.h>
 
+static char buffer[64*1024];
+
 static char *
 readin (size_t *outlen)
 {
-	char buffer[8192];
-
 	if (fgets (buffer, sizeof buffer, stdin) == NULL) {
 		err (EXIT_FAILURE, "fgets");
 	}

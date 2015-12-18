@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <err.h>
 
+static char buffer[1024*1024];
+
 static uint8_t *
 readin (const char *path, size_t *outlen)
 {

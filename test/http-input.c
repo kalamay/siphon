@@ -9,6 +9,8 @@
 
 #include <ctype.h>
 
+static char buffer[1024*1024];
+
 static void
 print_string (FILE *out, const void *val, size_t len)
 {
@@ -71,7 +73,6 @@ readin (const char *path, size_t *outlen)
 		}
 	}
 
-	char buffer[8192];
 	size_t len = fread (buffer, 1, sizeof buffer, in);
 	if (len == 0) {
 		err (EXIT_FAILURE, "fread");
