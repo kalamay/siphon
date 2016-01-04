@@ -3,6 +3,8 @@
 ## 0.2.3-alpha
 
 * add functions to query json and msgpack parser state
+* add configurable limits to the http parser
+* move quote termination checks into the utf8 json function
 
 ## 0.2.2
 

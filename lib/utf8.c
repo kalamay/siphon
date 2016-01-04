@@ -260,6 +260,9 @@ sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len)
 
 		sp_utf8_add_raw (u, p, m-p);
 		p = m;
+		if (*p == '"') {
+			return u->len - start;
+		}
 
 		ssize_t n = sp_utf8_json_decode_next (u, p, pe-p);
 		if (n < 0) {

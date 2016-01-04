@@ -87,7 +87,7 @@ parse_string (SpJson *restrict p, const uint8_t *restrict m, size_t len, bool eo
 {
 	// matches escape sequences, ASCII control, quote, or start of UTF-8 sequence
 #ifdef SP_JSON_STRICT
-	static const uint8_t rng_check[] = SP_UTF8_JSON_RANGE "\"\"";
+	static const uint8_t rng_check[] = SP_UTF8_JSON_RANGE;
 #else
 	static const uint8_t rng_check[] = "\\\\\x00\x1F\"\"\x7F\x7F";
 #endif

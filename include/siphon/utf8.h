@@ -15,7 +15,7 @@ typedef struct {
 
 #define SP_UTF8_MAKE() ((SpUtf8){ NULL, 0, 0 })
 
-#define SP_UTF8_JSON_RANGE "\\\\\x00\x1F\x7F\xFF"
+#define SP_UTF8_JSON_RANGE "\\\\\x00\x1F\"\"\x7F\xFF"
 
 SP_EXPORT void
 sp_utf8_init (SpUtf8 *u);
