@@ -83,14 +83,14 @@ parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->as.request.method.off = (uint8_t)p->off;
 
 	case REQ_METH:
-		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', SP_HTTP_MAX_METHOD, false,
+		EXPECT_RANGE_THEN_CHAR (method_sep, ' ', p->max_method, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.request.method.len = (uint8_t)(p->off - 1);
 		p->cs = REQ_URI;
 		p->as.request.uri.off = p->off;
 
 	case REQ_URI:
-		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', SP_HTTP_MAX_URI, false,
+		EXPECT_RANGE_THEN_CHAR (uri_sep, ' ', p->max_uri, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.request.uri.len = (uint16_t)(p->off - 1 - p->as.request.uri.off);
 		p->cs = REQ_VER;
@@ -159,7 +159,7 @@ parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->cs = RES_MSG;
 
 	case RES_MSG:
-		EXPECT_CRLF (SP_HTTP_MAX_REASON + p->as.response.reason.off, false,
+		EXPECT_CRLF (p->max_reason + p->as.response.reason.off, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.response.reason.len = (uint16_t)(p->off - p->as.response.reason.off - (sizeof crlf - 1));
 		YIELD (SP_HTTP_RESPONSE, FLD);
@@ -199,19 +199,19 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		p->as.field.name.off = 0;
 
 	case FLD_KEY:
-		EXPECT_RANGE_THEN_CHAR (field_sep, ':', SP_HTTP_MAX_FIELD, false,
+		EXPECT_RANGE_THEN_CHAR (field_sep, ':', p->max_field, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.name.len = (uint16_t)(p->off - 1);
 		p->cs = FLD_LWS;
 
 	case FLD_LWS:
-		EXPECT_RANGE (field_lws, SP_HTTP_MAX_VALUE + p->as.field.value.off, false,
+		EXPECT_RANGE (field_lws, p->max_value + p->as.field.value.off, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.value.off = (uint16_t)p->off;
 		p->cs = FLD_VAL;
 
 	case FLD_VAL:
-		EXPECT_CRLF (SP_HTTP_MAX_VALUE + p->as.field.value.off, false,
+		EXPECT_CRLF (p->max_value + p->as.field.value.off, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.value.len = (uint16_t)(p->off - p->as.field.value.off - (sizeof crlf - 1));
 		if (!p->trailers) {
@@ -280,12 +280,23 @@ again:
 	}
 }
 
+static void
+init_sizes (SpHttp *p)
+{
+	p->max_method = SP_HTTP_MAX_METHOD;
+	p->max_uri = SP_HTTP_MAX_URI;
+	p->max_reason = SP_HTTP_MAX_REASON;
+	p->max_field = SP_HTTP_MAX_FIELD;
+	p->max_value = SP_HTTP_MAX_VALUE;
+}
+
 void
 sp_http_init_request (SpHttp *p)
 {
 	assert (p != NULL);
 
 	memset (p, 0, sizeof *p);
+	init_sizes (p);
 	p->cs = REQ;
 }
 
@@ -295,6 +306,7 @@ sp_http_init_response (SpHttp *p)
 	assert (p != NULL);
 
 	memset (p, 0, sizeof *p);
+	init_sizes (p);
 	p->cs = RES;
 	p->response = true;
 }
@@ -304,12 +316,24 @@ sp_http_reset (SpHttp *p)
 {
 	assert (p != NULL);
 
+	uint16_t max_method = p->max_method;
+	uint16_t max_uri = p->max_uri;
+	uint16_t max_reason = p->max_reason;
+	uint16_t max_field = p->max_field;
+	uint16_t max_value = p->max_value;
+
 	if (p->response) {
 		sp_http_init_response (p);
 	}
 	else {
 		sp_http_init_request (p);
 	}
+
+	p->max_method = max_method;
+	p->max_uri = max_uri;
+	p->max_reason = max_reason;
+	p->max_field = max_field;
+	p->max_value = max_value;
 }
 
 ssize_t
