@@ -508,7 +508,7 @@ sp_dir_open (SpDir *self, const char *path, uint8_t depth)
 	}
 
 	if (sp_stat (path, &self->stat, true) < 0) {
-		return -errno;
+		return SP_ESYSTEM (errno);
 	}
 
 	if (!S_ISDIR (self->stat.mode)) {
@@ -519,7 +519,7 @@ sp_dir_open (SpDir *self, const char *path, uint8_t depth)
 	if (depth) {
 		self->stack = sp_calloc (depth, sizeof *self->stack);
 		if (self->stack == NULL) {
-			return -errno;
+			return SP_ESYSTEM (errno);
 		}
 	}
 
@@ -573,8 +573,8 @@ again:
 		errno = 0;
 		ent = readdir (dir);
 		if (ent == NULL) {
-			rc = -errno;
-			if (rc < 0) { return rc;}
+			rc = SP_ESYSTEM (errno);
+			if (rc < 0) { return rc; }
 
 			closedir (dir);
 			self->stack[--self->cur] = NULL;
@@ -632,7 +632,7 @@ sp_dir_next (SpDir *self)
 			!(self->flags & F_SKIP) &&
 			sp_dir_type (self) == SP_PATH_DIR) {
 		DIR *dir = opendir (self->path);
-		if (dir == NULL) { return -errno; }
+		if (dir == NULL) { return SP_ESYSTEM (errno); }
 		self->dirlen = self->pathlen;
 		self->stack[self->cur++] = dir;
 	}
@@ -657,7 +657,7 @@ sp_dir_follow (SpDir *self)
 	if (sp_dir_type (self) == SP_PATH_LNK) {
 		int rc = sp_stat (self->path, &self->stat, true);
 		if (rc < 0) {
-			return -errno;
+			return SP_ESYSTEM (errno);
 		}
 		self->flags |= F_STAT;
 	}
@@ -694,7 +694,7 @@ sp_stat (const char *path, SpStat *sbuf, bool follow)
 	struct stat s;
 	int rc = follow ? lstat (path, &s) : stat (path, &s);
 	if (rc < 0) {
-		return -errno;
+		return SP_ESYSTEM (errno);
 	}
 
 	sbuf->device = s.st_dev;
