@@ -563,7 +563,7 @@ walk (SpDir *self)
 {
 	struct dirent *ent;
 	DIR *dir;
-	int rc = 0, popn = 2;
+	int rc = 0, popn = self->empty ? 1 : 2;
 	size_t len;
 
 again:
@@ -606,6 +606,7 @@ again:
 	self->path[self->dirlen] = '/';
 	memcpy (self->path+self->dirlen+1, ent->d_name, namlen);
 	self->path[len] = '\0';
+	self->empty = false;
 
 	if (ent->d_type == DT_UNKNOWN) {
 		int rc = sp_stat (self->path, &self->stat, false);
@@ -635,6 +636,7 @@ sp_dir_next (SpDir *self)
 		if (dir == NULL) { return SP_ESYSTEM (errno); }
 		self->dirlen = self->pathlen;
 		self->stack[self->cur++] = dir;
+		self->empty = true;
 	}
 	self->flags = F_OPEN;
 

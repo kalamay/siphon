@@ -52,6 +52,7 @@ typedef struct {
 	uint16_t flags, dirlen, pathlen;
 	uint8_t cur, max;
 	SpStat stat;
+	bool empty;
 	char path[SP_PATH_MAX];
 } SpDir;
 
