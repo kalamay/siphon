@@ -265,8 +265,12 @@ test_large (void)
 	SpType type = good_type;
 	type.copy = (SpCopy)strdup;
 	type.free = free;
+	type.print = sp_print_str;
 
 	SpMap map = SP_MAP_MAKE (&type);
+
+	mu_assert_ptr_eq (sp_map_get (&map, "item 20000", 10), NULL);
+	mu_assert_ptr_eq (sp_map_get (&map, "item 40000", 10), NULL);
 
 	for (int i = 0; i < 1 << 16; i++) {
 		char buf[32];
@@ -275,12 +279,38 @@ test_large (void)
 		mu_assert_int_eq (rc, 0);
 	}
 
+	mu_assert_ptr_ne (sp_map_get (&map, "item 20000", 10), NULL);
+	mu_assert_ptr_ne (sp_map_get (&map, "item 40000", 10), NULL);
+
+	for (int i = 0; i < 1 << 15; i++) {
+		char buf[32];
+		int len = snprintf (buf, sizeof buf, "item %d", i);
+		bool rc = sp_map_del (&map, buf, len);
+		mu_assert_int_eq (rc, true);
+	}
+
+	mu_assert_ptr_eq (sp_map_get (&map, "item 20000", 10), NULL);
+	mu_assert_ptr_ne (sp_map_get (&map, "item 40000", 10), NULL);
+
+	for (int i = 0; i < 1 << 15; i++) {
+		char buf[32];
+		int len = snprintf (buf, sizeof buf, "item %d", i);
+		int rc = sp_map_put (&map, buf, len, buf);
+		mu_assert_int_eq (rc, 0);
+	}
+
+	mu_assert_ptr_ne (sp_map_get (&map, "item 20000", 10), NULL);
+	mu_assert_ptr_ne (sp_map_get (&map, "item 40000", 10), NULL);
+
 	for (int i = 0; i < 1 << 16; i++) {
 		char buf[32];
 		int len = snprintf (buf, sizeof buf, "item %d", i);
 		bool rc = sp_map_del (&map, buf, len);
 		mu_assert_int_eq (rc, true);
 	}
+
+	mu_assert_ptr_eq (sp_map_get (&map, "item 20000", 10), NULL);
+	mu_assert_ptr_eq (sp_map_get (&map, "item 40000", 10), NULL);
 
 	sp_map_final (&map);
 }

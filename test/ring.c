@@ -177,6 +177,37 @@ test_del (void)
 }
 
 static void
+test_del_add (void)
+{
+	SpRing ring;
+	sp_ring_init (&ring, sp_siphash);
+
+	sp_ring_put (&ring, "test1", 5, 3, 2);
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+	sp_ring_put (&ring, "test3", 5, 3, 2);
+
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 9);
+	mu_assert_int_eq (ring.nodes.count, 3);
+
+	mu_assert (sp_ring_del (&ring, "test2", 5));
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 6);
+	mu_assert_int_eq (ring.nodes.count, 2);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test1", 5), NULL);
+	mu_assert_ptr_eq (sp_ring_get (&ring, "test2", 5), NULL);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test3", 5), NULL);
+
+	sp_ring_put (&ring, "test2", 5, 3, 2);
+
+	mu_assert_int_eq (sp_vec_count (ring.replicas), 9);
+	mu_assert_int_eq (ring.nodes.count, 3);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test1", 5), NULL);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test2", 5), NULL);
+	mu_assert_ptr_ne (sp_ring_get (&ring, "test3", 5), NULL);
+
+	sp_ring_final (&ring);
+}
+
+static void
 test_empty (void)
 {
 	SpRing ring;
@@ -226,6 +257,7 @@ main (void)
 	test_restore ();
 	test_next ();
 	test_del ();
+	test_del_add ();
 	test_empty ();
 	test_exhausted ();
 

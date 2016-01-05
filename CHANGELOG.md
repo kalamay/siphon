@@ -5,7 +5,9 @@
 * add functions to query json and msgpack parser state
 * add configurable limits to the http parser
 * move quote termination checks into the utf8 json function
+* remove support for NULL entries in map
 * fix path walking when hitting an empty directory
+* fix entry identity in hash ring
 
 ## 0.2.2
 

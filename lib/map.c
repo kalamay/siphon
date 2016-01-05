@@ -448,13 +448,13 @@ sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 				break;
 			}
 			self->entries[prev] = tmp;
-			self->entries[idx].hash = 0;
+			self->entries[idx] = ((SpMapEntry){ 0, NULL });
 			prev = idx;
 		}
 		else if (entry.hash == tmp.hash) {
 			if (sp_likely (self->type->iskey (tmp.value, key, len))) {
 				value = tmp.value;
-				self->entries[idx].hash = 0;
+				self->entries[idx] = ((SpMapEntry){ 0, NULL });
 				shift = true;
 				prev = idx;
 				self->count--;
