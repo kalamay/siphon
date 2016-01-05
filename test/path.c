@@ -283,6 +283,9 @@ test_dir_tree (void)
 				n++;
 			}
 		}
+		else if (rc < 0) {
+			sp_error_print (rc, stdout);
+		}
 	} while (rc > 0);
 
 	mu_assert_int_eq (n, 12);
