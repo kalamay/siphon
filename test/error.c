@@ -72,12 +72,17 @@ test_missing (void)
 static void
 test_iter (void)
 {
-	int last = 0;
 	const SpError *e = NULL;
+	e = sp_error_add (10000, "test", "BAD", "some bad thing");
+	mu_assert_ptr_ne (e, NULL);
+
+	int last = 0;
+	e = NULL;
 	while ((e = sp_error_next (e)) != NULL) {
 		mu_assert_int_lt (e->code, last);
 		last = e->code;
 	}
+	mu_assert_int_eq (last, -10000);
 }
 
 static void *

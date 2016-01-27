@@ -371,7 +371,7 @@ sp_error_next (const SpError *err)
 	SP_RLOCK (lock);
 	size_t len = sp_vec_count (errors);
 	pos = sp_vec_bsearch (errors, err->code, cmp_code);
-	if (pos && pos < errors+len) {
+	if (pos && pos < errors+len-1) {
 		val = pos[1];
 	}
 	SP_RUNLOCK (lock);
