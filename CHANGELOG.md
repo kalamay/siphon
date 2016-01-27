@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4-alpha
+
+* fix error iterator overrun
+
 ## 0.2.3
 
 * add functions to query json and msgpack parser state
