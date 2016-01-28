@@ -146,6 +146,30 @@ test_group (void)
 }
 
 static void
+test_group_semi (void)
+{
+	SpCacheControl cc;
+	ssize_t n;
+
+	const char buf[] = "max-age=0; no-cache; no-store";
+	n = sp_cache_control_parse (&cc, buf, (sizeof buf) - 1);
+	mu_assert_int_eq (n, (sizeof buf) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf + (-1 - n));
+		return;
+	}
+
+	mu_assert_int_eq (cc.type & SP_CACHE_MAX_AGE, SP_CACHE_MAX_AGE);
+	mu_assert_int_eq (cc.max_age, 0);
+
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_STORE, SP_CACHE_NO_STORE);
+
+	mu_assert_int_eq (cc.type, SP_CACHE_MAX_AGE | SP_CACHE_NO_CACHE | SP_CACHE_NO_STORE);
+}
+
+static void
 test_all (void)
 {
 	const char buf[] =
@@ -207,6 +231,68 @@ test_all (void)
 	mu_assert_str_eq (val, "thing");
 }
 
+static void
+test_all_semi (void)
+{
+	const char buf[] =
+		"public;"
+		"private;"
+		"private=\"stuff\";"
+		"no-cache;"
+		"no-cache=\"thing\","
+		"no-store;"
+		"max-age=12;"
+		"s-maxage=34;"
+		"max-stale;"
+		"max-stale=56;"
+		"min-fresh=78;"
+		"no-transform;"
+		"only-if-cached;"
+		"must-revalidate;"
+		"proxy-revalidate;"
+		"ext1;"
+		"ext2=something;"
+		"ext3=\"other\""
+		;
+
+	SpCacheControl cc;
+	ssize_t n = sp_cache_control_parse (&cc, buf, (sizeof buf) - 1);
+	mu_assert_int_eq (n, (sizeof buf) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf + (-1 - n));
+		return;
+	}
+
+	mu_assert_int_eq (cc.type & SP_CACHE_PUBLIC, SP_CACHE_PUBLIC);
+	mu_assert_int_eq (cc.type & SP_CACHE_PRIVATE, SP_CACHE_PRIVATE);
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_STORE, SP_CACHE_NO_STORE);
+	mu_assert_int_eq (cc.type & SP_CACHE_MAX_AGE, SP_CACHE_MAX_AGE);
+	mu_assert_int_eq (cc.type & SP_CACHE_S_MAXAGE, SP_CACHE_S_MAXAGE);
+	mu_assert_int_eq (cc.type & SP_CACHE_MAX_STALE, SP_CACHE_MAX_STALE);
+	mu_assert_int_eq (cc.type & SP_CACHE_MAX_STALE_TIME, SP_CACHE_MAX_STALE_TIME);
+	mu_assert_int_eq (cc.type & SP_CACHE_MIN_FRESH, SP_CACHE_MIN_FRESH);
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_TRANSFORM, SP_CACHE_NO_TRANSFORM);
+	mu_assert_int_eq (cc.type & SP_CACHE_ONLY_IF_CACHED, SP_CACHE_ONLY_IF_CACHED);
+	mu_assert_int_eq (cc.type & SP_CACHE_MUST_REVALIDATE, SP_CACHE_MUST_REVALIDATE);
+	mu_assert_int_eq (cc.type & SP_CACHE_PROXY_REVALIDATE, SP_CACHE_PROXY_REVALIDATE);
+
+	mu_assert_int_eq (cc.max_age, 12);
+	mu_assert_int_eq (cc.s_maxage, 34);
+	mu_assert_int_eq (cc.max_stale, 56);
+	mu_assert_int_eq (cc.min_fresh, 78);
+
+	char val[64];
+
+	memcpy (val, buf+cc.private.off, cc.private.len);
+	val[cc.private.len] = '\0';
+	mu_assert_str_eq (val, "stuff");
+
+	memcpy (val, buf+cc.no_cache.off, cc.no_cache.len);
+	val[cc.no_cache.len] = '\0';
+	mu_assert_str_eq (val, "thing");
+}
+
 int
 main (void)
 {
@@ -216,7 +302,9 @@ main (void)
 	test_private ();
 	test_no_cache ();
 	test_group ();
+	test_group_semi ();
 	test_all ();
+	test_all_semi ();
 
 	mu_assert (sp_alloc_summary ());
 }

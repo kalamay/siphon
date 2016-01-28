@@ -2,6 +2,7 @@
 
 ## 0.2.4-alpha
 
+* allow `;` a cache control directive delimiter (improper, but used in the wild)
 * fix error iterator overrun
 
 ## 0.2.3
