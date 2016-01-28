@@ -122,6 +122,28 @@ test_no_cache (void)
 }
 
 static void
+test_group (void)
+{
+	SpCacheControl cc;
+	ssize_t n;
+
+	const char buf[] = "max-age=0, no-cache, no-store";
+	n = sp_cache_control_parse (&cc, buf, (sizeof buf) - 1);
+	mu_assert_int_eq (n, (sizeof buf) - 1);
+	if (n < 0) {
+		printf ("ERROR: %s\n", buf + (-1 - n));
+		return;
+	}
+
+	mu_assert_int_eq (cc.type & SP_CACHE_MAX_AGE, SP_CACHE_MAX_AGE);
+	mu_assert_int_eq (cc.max_age, 0);
+
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
+
+	mu_assert_int_eq (cc.type & SP_CACHE_NO_STORE, SP_CACHE_NO_STORE);
+}
+
+static void
 test_all (void)
 {
 	const char buf[] =
@@ -191,6 +213,7 @@ main (void)
 	test_max_stale ();
 	test_private ();
 	test_no_cache ();
+	test_group ();
 	test_all ();
 
 	mu_assert (sp_alloc_summary ());
