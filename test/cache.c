@@ -141,6 +141,8 @@ test_group (void)
 	mu_assert_int_eq (cc.type & SP_CACHE_NO_CACHE, SP_CACHE_NO_CACHE);
 
 	mu_assert_int_eq (cc.type & SP_CACHE_NO_STORE, SP_CACHE_NO_STORE);
+
+	mu_assert_int_eq (cc.type, SP_CACHE_MAX_AGE | SP_CACHE_NO_CACHE | SP_CACHE_NO_STORE);
 }
 
 static void
