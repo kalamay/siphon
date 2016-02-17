@@ -65,8 +65,10 @@ sp_utf8_final (SpUtf8 *u)
 {
 	assert (u != NULL);
 
-	sp_free (u->buf, u->cap);
-	sp_utf8_init (u);
+	if (!u->fixed) {
+		sp_free (u->buf, u->cap);
+	}
+	*u = SP_UTF8_MAKE ();
 }
 
 uint8_t *
