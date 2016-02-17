@@ -270,6 +270,19 @@ test_unescape (void)
 	sp_utf8_final (&u);
 }
 
+static void
+test_form_decode (void)
+{
+	char in[] = "drop+the+%22bass%22%0A%F0%9D%84%A2";
+	char cmp[] = "drop the \"bass\"\n\xF0\x9D\x84\xA2";
+
+	SpUtf8 u = SP_UTF8_MAKE ();
+	ssize_t n = sp_utf8_form_decode (&u, in, sizeof (in) - 1);
+	mu_assert_int_eq (n, (ssize_t)(sizeof (cmp) - 1));
+	mu_assert_str_eq (u.buf, cmp);
+	sp_utf8_final (&u);
+}
+
 int
 main (void)
 {
@@ -300,6 +313,7 @@ main (void)
 	test_invalid_codepoints ();
 
 	test_unescape ();
+	test_form_decode ();
 
 	mu_assert (sp_alloc_summary ());
 }

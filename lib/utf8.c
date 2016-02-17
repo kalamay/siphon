@@ -33,6 +33,181 @@ static const uint8_t byte_counts[] = {
 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0
 };
 
+static bool
+is_cont (uint8_t b)
+{
+	return 0x80 <= b && b <= 0xBF;
+}
+
+static inline bool
+is_surrogate (int cp)
+{
+	return 0xD800 <= cp && cp <= 0xDFFF;
+}
+
+static inline int
+combine_surrogate (int hi, int lo)
+{
+	return (hi - 0xD800) * 0x400 + (lo - 0xDC00) + 0x10000;
+}
+
+static inline bool
+is_valid_json_byte (const uint8_t *src)
+{
+	return *src >= 0x1F && *src != 0x7F;
+}
+
+static inline uint8_t
+hex1 (const uint8_t *p)
+{
+	static const uint8_t map[128] = {
+		['0'] = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+		['A'] = 10, 11, 12, 13, 14, 15,
+		['a'] = 10, 11, 12, 13, 14, 15
+	};
+	return map[*p];
+}
+
+static inline uint8_t
+hex2 (const uint8_t *p)
+{
+	return (hex1 (p) << 4) | hex1 (p+1);
+}
+
+static inline uint16_t
+hex4 (const uint8_t *p)
+{
+	return (hex1 (p) << 12) | (hex1 (p+1) << 8) | (hex1 (p+2) << 4) | hex1 (p+3);
+}
+
+static inline bool
+is_hex2 (const uint8_t *p)
+{
+	return isxdigit (p[0]) && isxdigit (p[1]);
+}
+
+static inline bool
+is_hex4 (const uint8_t *p)
+{
+	return is_hex2 (p) && is_hex2 (p+2);
+}
+
+static ssize_t
+unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
+{
+	if (rem < 2) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	int cp;
+	size_t scan = 0;
+
+	switch (src[1]) {
+	case 'b':  scan = 2; cp = '\b'; break;
+	case 'f':  scan = 2; cp = '\f'; break;
+	case 'n':  scan = 2; cp = '\n'; break;
+	case 'r':  scan = 2; cp = '\r'; break;
+	case 't':  scan = 2; cp = '\t'; break;
+	case '"':  scan = 2; cp = '"';  break;
+	case '/':  scan = 2; cp = '/';  break;
+	case '\\': scan = 2; cp = '\\'; break;
+	case 'u':
+		if (rem < 6) return SP_UTF8_ETOOSHORT;
+		if (!is_hex4 (src+2)) return SP_UTF8_EESCAPE;
+
+		cp = hex4 (src + 2);
+		if (is_surrogate (cp)) {
+			if ((rem > 6 && src[6] != '\\') || (rem > 7 && src[7] != 'u')) {
+				return SP_UTF8_ESURROGATE;
+			}
+			if (rem < 12) return SP_UTF8_ETOOSHORT;
+			if (!is_hex4 (src+8)) return SP_UTF8_EESCAPE;
+			cp = combine_surrogate (cp, hex4 (src+8));
+			scan = 12;
+		}
+		else {
+			scan = 6;
+		}
+
+		break;
+	default:
+		return SP_UTF8_EESCAPE;
+	}
+
+	ssize_t rc = sp_utf8_add_codepoint (u, cp);
+	return rc < 0 ? rc : (ssize_t)scan;
+}
+
+static inline ssize_t
+add_escape (SpUtf8 *u, const void *esc)
+{
+	ssize_t rc = sp_utf8_add_raw (u, esc, 2);
+	return rc < 0 ? rc : 1;
+}
+
+static ssize_t
+pct_decode (SpUtf8 *u, const uint8_t *src, ssize_t rem)
+{
+	assert (*src == '%');
+
+	uint8_t in[4];
+	in[0] = hex2 (src+1);
+
+	uint8_t inlen = byte_counts[in[0]];
+	if (rem < 3*inlen) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	switch (inlen) {
+	case 0: return SP_UTF8_EENCODING;
+	case 4: in[3] = hex2 (src+10);
+	case 3: in[2] = hex2 (src+7);
+	case 2: in[1] = hex2 (src+4);
+	}
+
+	ssize_t rc;
+
+	rc = sp_utf8_codepoint (in, inlen);
+	if (rc < 0) {
+		return rc;
+	}
+
+	rc = sp_utf8_add_raw (u, in, inlen);
+	if (rc < 0) {
+		return rc;
+	}
+
+	return 3*inlen;
+}
+
+static inline ssize_t
+codec (SpUtf8 *u,
+		const uint8_t *p, const uint8_t *pe,
+		const uint8_t *rng, size_t rnglen,
+		ssize_t (*next) (SpUtf8 *u, const void *src, size_t len))
+{
+	ssize_t start = u->len;
+
+	while (p < pe) {
+		const uint8_t *m = pcmp_range16 (p, pe - p, rng, rnglen);
+		if (m == NULL) {
+			break;
+		}
+
+		sp_utf8_add_raw (u, p, m-p);
+		p = m;
+
+		ssize_t n = next (u, p, pe-p);
+		if (n < 0) {
+			return n;
+		}
+		p += n;
+	}
+
+	sp_utf8_add_raw (u, p, pe-p);
+	return u->len - start;
+}
+
 void
 sp_utf8_init (SpUtf8 *u)
 {
@@ -194,12 +369,6 @@ sp_utf8_add_codepoint (SpUtf8 *u, int cp)
 	return sp_utf8_add_raw (u, buf, len);
 }
 
-static bool
-is_cont (uint8_t b)
-{
-	return 0x80 <= b && b <= 0xBF;
-}
-
 ssize_t
 sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 {
@@ -260,114 +429,12 @@ sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
-	const uint8_t *p = (const uint8_t *)src;
-	const uint8_t *pe = p + len;
-	ssize_t start = u->len;
+	static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
 
-	while (p < pe) {
-		static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
-		const uint8_t *m = pcmp_range16 (p, pe - p, rng, sizeof rng - 1);
-		if (m == NULL) {
-			break;
-		}
-
-		sp_utf8_add_raw (u, p, m-p);
-		p = m;
-		if (*p == '"') {
-			return u->len - start;
-		}
-
-		ssize_t n = sp_utf8_json_decode_next (u, p, pe-p);
-		if (n < 0) {
-			return n;
-		}
-		p += n;
-	}
-
-	sp_utf8_add_raw (u, p, pe-p);
-	return u->len - start;
-}
-
-static inline bool
-is_surrogate (int cp)
-{
-	return 0xD800 <= cp && cp <= 0xDFFF;
-}
-
-static inline int
-combine_surrogate (int hi, int lo)
-{
-	return (hi - 0xD800) * 0x400 + (lo - 0xDC00) + 0x10000;
-}
-
-static inline unsigned
-hex4 (const uint8_t *p)
-{
-	static const long map[128] = {
-		['0'] = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-		['A'] = 10, 11, 12, 13, 14, 15,
-		['a'] = 10, 11, 12, 13, 14, 15
-	};
-	return (map[p[0]] << 12) | (map[p[1]] << 8) | (map[p[2]] << 4) | map[p[3]];
-}
-
-static inline bool
-is_hex4 (const uint8_t *p)
-{
-	return isxdigit (p[0]) && isxdigit (p[1]) &&
-	       isxdigit (p[2]) && isxdigit (p[3]);
-}
-
-static ssize_t
-unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
-{
-	if (rem < 2) {
-		return SP_UTF8_ETOOSHORT;
-	}
-
-	int cp;
-	size_t scan = 0;
-
-	switch (src[1]) {
-	case 'b':  scan = 2; cp = '\b'; break;
-	case 'f':  scan = 2; cp = '\f'; break;
-	case 'n':  scan = 2; cp = '\n'; break;
-	case 'r':  scan = 2; cp = '\r'; break;
-	case 't':  scan = 2; cp = '\t'; break;
-	case '"':  scan = 2; cp = '"';  break;
-	case '/':  scan = 2; cp = '/';  break;
-	case '\\': scan = 2; cp = '\\'; break;
-	case 'u':
-		if (rem < 6) return SP_UTF8_ETOOSHORT;
-		if (!is_hex4 (src+2)) return SP_UTF8_EESCAPE;
-
-		cp = hex4 (src + 2);
-		if (is_surrogate (cp)) {
-			if ((rem > 6 && src[6] != '\\') || (rem > 7 && src[7] != 'u')) {
-				return SP_UTF8_ESURROGATE;
-			}
-			if (rem < 12) return SP_UTF8_ETOOSHORT;
-			if (!is_hex4 (src+8)) return SP_UTF8_EESCAPE;
-			cp = combine_surrogate (cp, hex4 (src+8));
-			scan = 12;
-		}
-		else {
-			scan = 6;
-		}
-
-		break;
-	default:
-		return SP_UTF8_EESCAPE;
-	}
-
-	ssize_t rc = sp_utf8_add_codepoint (u, cp);
-	return rc < 0 ? rc : (ssize_t)scan;
-}
-
-static inline bool
-is_valid_json_byte (const uint8_t *src)
-{
-	return *src >= 0x1F && *src != 0x7F;
+	return codec (u,
+			src, (const uint8_t *)src + len,
+			rng, sizeof rng - 1,
+			sp_utf8_json_decode_next);
 }
 
 ssize_t
@@ -395,36 +462,12 @@ sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
-	const uint8_t *p = (const uint8_t *)src;
-	const uint8_t *pe = p + len;
-	ssize_t start = u->len;
+	static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
 
-	while (p < pe) {
-		static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
-		const uint8_t *m = pcmp_range16 (p, pe - p, rng, sizeof rng - 1);
-		if (m == NULL) {
-			break;
-		}
-
-		sp_utf8_add_raw (u, p, m-p);
-		p = m;
-
-		ssize_t n = sp_utf8_json_encode_next (u, p, pe-p);
-		if (n < 0) {
-			return n;
-		}
-		p += n;
-	}
-
-	sp_utf8_add_raw (u, p, pe-p);
-	return u->len - start;
-}
-
-static inline ssize_t
-add_escape (SpUtf8 *u, const void *esc)
-{
-	ssize_t rc = sp_utf8_add_raw (u, esc, 2);
-	return rc < 0 ? rc : 1;
+	return codec (u,
+			src, (const uint8_t *)src + len,
+			rng, sizeof rng - 1,
+			sp_utf8_json_encode_next);
 }
 
 ssize_t
@@ -452,6 +495,36 @@ sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
 	}
 
 	return sp_utf8_add_char (u, src, len);
+}
+
+ssize_t
+sp_utf8_form_decode (SpUtf8 *u, const void *src, size_t len)
+{
+	assert (u != NULL);
+
+	static const uint8_t rng[] = "%+";
+
+	return codec (u,
+			src, (const uint8_t *)src + len,
+			rng, sizeof rng - 1,
+			sp_utf8_form_decode_next);
+}
+
+ssize_t
+sp_utf8_form_decode_next (SpUtf8 *u, const void *src, size_t len)
+{
+	assert (u != NULL);
+	assert (src != NULL);
+
+	if (len == 0) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	switch (*(const uint8_t *)src) {
+	case '%': return pct_decode (u, src, len);
+	case '+': return sp_utf8_add_char (u, " ", 1);
+	default:  return sp_utf8_add_char (u, src, len);
+	}
 }
 
 int

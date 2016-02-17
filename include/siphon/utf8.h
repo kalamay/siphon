@@ -58,6 +58,12 @@ sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len);
 SP_EXPORT ssize_t
 sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len);
 
+SP_EXPORT ssize_t
+sp_utf8_form_decode (SpUtf8 *u, const void *src, size_t len);
+
+SP_EXPORT ssize_t
+sp_utf8_form_decode_next (SpUtf8 *u, const void *src, size_t len);
+
 SP_EXPORT int
 sp_utf8_codepoint (const void *src, size_t len);
 
