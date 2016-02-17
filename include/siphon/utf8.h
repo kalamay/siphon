@@ -3,10 +3,6 @@
 
 #include "common.h"
 
-typedef enum {
-	SP_UTF8_JSON
-} SpUtf8Type;
-
 typedef struct {
 	uint8_t *buf;
     size_t len;
