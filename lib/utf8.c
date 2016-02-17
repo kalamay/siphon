@@ -38,9 +38,15 @@ sp_utf8_init (SpUtf8 *u)
 {
 	assert (u != NULL);
 
-	u->buf = NULL;
-	u->cap = 0;
-	u->len = 0;
+	*u = SP_UTF8_MAKE ();
+}
+
+void
+sp_utf8_init_fixed (SpUtf8 *u, void *buf, size_t len)
+{
+	assert (u != NULL);
+
+	*u = SP_UTF8_MAKE_FIXED (buf, len);
 }
 
 void
@@ -104,6 +110,11 @@ sp_utf8_ensure (SpUtf8 *u, size_t len)
 	// check if we already have enough space
 	if (cap <= u->cap) {
 		return 0;
+	}
+
+	// check if we have a fixed buffer
+	if (u->fixed) {
+		return SP_UTF8_EBUFS;
 	}
 
 	// round up required capacity

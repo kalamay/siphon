@@ -11,14 +11,20 @@ typedef struct {
 	uint8_t *buf;
     size_t len;
     size_t cap;
+	bool fixed;
 } SpUtf8;
 
-#define SP_UTF8_MAKE() ((SpUtf8){ NULL, 0, 0 })
+#define SP_UTF8_MAKE() ((SpUtf8){ NULL, 0, 0, false })
+
+#define SP_UTF8_MAKE_FIXED(buf, len) ((SpUtf8){ buf, len, 0, true })
 
 #define SP_UTF8_JSON_RANGE "\\\\\x00\x1F\"\"\x7F\xFF"
 
 SP_EXPORT void
 sp_utf8_init (SpUtf8 *u);
+
+SP_EXPORT void
+sp_utf8_init_fixed (SpUtf8 *u, void *buf, size_t len);
 
 SP_EXPORT void
 sp_utf8_reset (SpUtf8 *u);
