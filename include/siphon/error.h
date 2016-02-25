@@ -24,6 +24,7 @@
 #define SP_UTF8_EENCODING   (-1004)
 #define SP_UTF8_ESURROGATE  (-1005)
 #define SP_UTF8_ETOOSHORT   (-1006)
+#define SP_UTF8_EBUFS       (-1007)
 
 #define SP_HTTP_ESYNTAX     (-1010)
 #define SP_HTTP_ESIZE       (-1011)

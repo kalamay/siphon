@@ -107,6 +107,7 @@
 	XX(EENCODING,          "invalid encoding") \
 	XX(ESURROGATE,         "invalid surrogate pair") \
 	XX(ETOOSHORT ,         "sequence is too short") \
+	XX(EBUFS,              "not enough buffer space available") \
 
 #define SP_HTTP_ERRORS(XX) \
 	XX(ESYNTAX,            "invalid syntax") \
