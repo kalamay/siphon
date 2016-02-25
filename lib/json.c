@@ -118,7 +118,7 @@ again:
 		YIELD (SP_JSON_STRING, p->cs == KIND_KEY ? OBJECT_SEP : YIELD_CS (p));
 	}
 
-	n = sp_utf8_json_decode_next (&p->utf8, end, len - p->off);
+	n = sp_utf8_json_decode (&p->utf8, end, len - p->off, 0);
 	if (n == SP_UTF8_ETOOSHORT) {
 		if (!eof) {
 			n = (ssize_t)p->off;

@@ -92,6 +92,14 @@ is_hex4 (const uint8_t *p)
 	return is_hex2 (p) && is_hex2 (p+2);
 }
 
+static inline void
+to_hex (uint8_t ch, char out[static 2])
+{
+	static const char enc[16] = "0123456789ABCDEF";
+	out[0] = enc[ch >> 4];
+	out[1] = enc[ch & 0xf];
+}
+
 static ssize_t
 unescape (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 {
@@ -165,14 +173,7 @@ pct_decode (SpUtf8 *u, const uint8_t *src, ssize_t rem)
 	case 2: in[1] = hex2 (src+4);
 	}
 
-	ssize_t rc;
-
-	rc = sp_utf8_codepoint (in, inlen);
-	if (rc < 0) {
-		return rc;
-	}
-
-	rc = sp_utf8_add_raw (u, in, inlen);
+	ssize_t rc = sp_utf8_add_char (u, in, inlen);
 	if (rc < 0) {
 		return rc;
 	}
@@ -189,7 +190,7 @@ codec (SpUtf8 *u,
 	ssize_t start = u->len;
 
 	while (p < pe) {
-		const uint8_t *m = pcmp_range16 (p, pe - p, rng, rnglen);
+		const uint8_t *m = pcmp_range (p, pe - p, rng, rnglen);
 		if (m == NULL) {
 			break;
 		}
@@ -254,7 +255,7 @@ sp_utf8_steal (SpUtf8 *u, size_t *len, size_t *cap)
 	uint8_t *buf = u->buf;
 	if (len) *len = u->len;
 	if (cap) *cap = u->cap;
-	sp_utf8_init (u);
+	*u = SP_UTF8_MAKE ();
 	return buf;
 }
 
@@ -374,112 +375,26 @@ sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
-	if (len == 0) {
-		return 0;
-	}
-
-	const uint8_t *in = src;
-	size_t charlen;
-
-	if (!(*in & 0x80)) {
-		return sp_utf8_add_raw (u, src, 1);
-	}
-
-	switch (in[0]) {
-
-	case 0xE0:
-		if (len < 3) return SP_UTF8_ETOOSHORT;
-		if (in[1] < 0xA0 || 0xBF < in[1]) {
-			return SP_UTF8_EENCODING;
-		}
-		if (!is_cont (in[2])) {
-			return SP_UTF8_EENCODING;
-		}
-		charlen = 3;
-		break;
-
-	case 0xF0:
-		if (len < 4) return SP_UTF8_ETOOSHORT;
-		if (in[1] < 0x90 || 0xBF < in[1]) {
-			return SP_UTF8_EENCODING;
-		}
-		if (!is_cont (in[2]) || !is_cont (in[3])) {
-			return SP_UTF8_EENCODING;
-		}
-		charlen = 4;
-		break;
-
-	default:
-		charlen = byte_counts[in[0]];
-		if (charlen == 0) return SP_UTF8_EENCODING;
-		if (len < charlen) return SP_UTF8_ETOOSHORT;
-		switch (charlen) {
-		case 0: return SP_UTF8_EENCODING;
-		case 4: if (!is_cont (in[3])) return SP_UTF8_EENCODING;
-		case 3: if (!is_cont (in[2])) return SP_UTF8_EENCODING;
-		case 2: if (!is_cont (in[1])) return SP_UTF8_EENCODING;
-		}
+	ssize_t charlen = sp_utf8_charlen (src, len);
+	if (charlen <= 0) {
+		return charlen;
 	}
 
 	return sp_utf8_add_raw (u, src, charlen);
 }
 
-ssize_t
-sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len)
+static const uint8_t rng_json[] = "\0\x1f\"\"\\\\\x7f\xff";
+
+// generated from test-utf8-encode tool
+static const uint8_t rng_enc_uri[] = "\0 \"\"%%<<>>[^``{}\x7f\xff";
+static const uint8_t rng_enc_uri_comp[] = "\0 \"&+,//:@[^``{}\x7f\xff";
+
+static const uint8_t rng_dec_uri[] = "%%\x80\xff";
+static const uint8_t rng_dec_uri_space[] = "%%++\x80\xff";
+
+static inline ssize_t
+json_encode (SpUtf8 *u, const void *src, size_t len)
 {
-	assert (u != NULL);
-
-	static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
-
-	return codec (u,
-			src, (const uint8_t *)src + len,
-			rng, sizeof rng - 1,
-			sp_utf8_json_decode_next);
-}
-
-ssize_t
-sp_utf8_json_decode_next (SpUtf8 *u, const void *src, size_t len)
-{
-	assert (u != NULL);
-	assert (src != NULL);
-
-	if (len == 0) {
-		return SP_UTF8_ETOOSHORT;
-	}
-
-	// check for control characters
-	if (!is_valid_json_byte (src)) {
-		return SP_JSON_EBYTE;
-	}
-
-	return *(const uint8_t *)src == '\\' ?
-		unescape (u, src, len) :
-		sp_utf8_add_char (u, src, len);
-}
-
-ssize_t
-sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len)
-{
-	assert (u != NULL);
-
-	static const uint8_t rng[] = SP_UTF8_JSON_RANGE;
-
-	return codec (u,
-			src, (const uint8_t *)src + len,
-			rng, sizeof rng - 1,
-			sp_utf8_json_encode_next);
-}
-
-ssize_t
-sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
-{
-	assert (u != NULL);
-	assert (src != NULL);
-
-	if (len == 0) {
-		return SP_UTF8_ETOOSHORT;
-	}
-
 	switch (*(const uint8_t *)src) {
 	case '"':  return add_escape (u, "\\\"");
 	case '\\': return add_escape (u, "\\\\");
@@ -497,21 +412,166 @@ sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len)
 	return sp_utf8_add_char (u, src, len);
 }
 
-ssize_t
-sp_utf8_form_decode (SpUtf8 *u, const void *src, size_t len)
+static inline ssize_t
+json_decode (SpUtf8 *u, const void *src, size_t len)
 {
-	assert (u != NULL);
+	// check for control characters
+	if (!is_valid_json_byte (src)) {
+		return SP_JSON_EBYTE;
+	}
 
-	static const uint8_t rng[] = "%+";
+	return *(const uint8_t *)src == '\\' ?
+		unescape (u, src, len) :
+		sp_utf8_add_char (u, src, len);
+}
 
-	return codec (u,
-			src, (const uint8_t *)src + len,
-			rng, sizeof rng - 1,
-			sp_utf8_form_decode_next);
+static inline ssize_t
+uri_encode (SpUtf8 *u, const void *src, size_t len)
+{
+	ssize_t charlen = sp_utf8_charlen (src, len);
+	if (charlen <= 0) {
+		return charlen;
+	}
+
+	char buf[12];
+	for (ssize_t i = 0; i < charlen; i++) {
+		buf[i*3] = '%';
+		to_hex (((const uint8_t *)src)[i], &buf[i*3+1]);
+	}
+
+	ssize_t rc = sp_utf8_add_raw (u, buf, charlen*3);
+	if (rc < 0) {
+		return rc;
+	}
+
+	return charlen;
+}
+
+static inline ssize_t
+uri_encode_space (SpUtf8 *u, const void *src, size_t len)
+{
+	if (*(const uint8_t *)src == ' ') {
+		return sp_utf8_add_raw (u, "+", 1);
+	}
+	return uri_encode (u, src, len);
+}
+
+static inline ssize_t
+uri_decode (SpUtf8 *u, const void *src, size_t len)
+{
+	if (*(const uint8_t *)src == '%') {
+		return pct_decode (u, src, len);
+	}
+	return sp_utf8_add_char (u, src, len);
+}
+
+static inline ssize_t
+uri_decode_space (SpUtf8 *u, const void *src, size_t len)
+{
+	switch (*(const uint8_t *)src) {
+	case '%':
+		return pct_decode (u, src, len);
+	case '+':
+		return sp_utf8_add_char (u, " ", 1);
+	default:
+		return sp_utf8_add_char (u, src, len);
+	}
 }
 
 ssize_t
-sp_utf8_form_decode_next (SpUtf8 *u, const void *src, size_t len)
+sp_utf8_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
+{
+	assert (u != NULL);
+
+	const uint8_t *rng;
+	size_t rnglen;
+	ssize_t (*next) (SpUtf8 *u, const void *src, size_t len);
+
+	if (f & SP_UTF8_JSON) {
+		rng = rng_json;
+		rnglen = sizeof rng_json - 1;
+		next = json_encode;
+	}
+	else {
+		if (f & SP_UTF8_URI_COMPONENT) {
+			rng = rng_enc_uri_comp;
+			rnglen = sizeof rng_enc_uri_comp - 1;
+		}
+		else {
+			rng = rng_enc_uri;
+			rnglen = sizeof rng_enc_uri - 1;
+		}
+		if (f & SP_UTF8_SPACE_PLUS) {
+			next = uri_encode_space;
+		}
+		else {
+			next = uri_encode;
+		}
+	}
+
+	return codec (u, src, (const uint8_t *)src + len, rng, rnglen, next);
+}
+
+ssize_t
+sp_utf8_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
+{
+	assert (u != NULL);
+
+	const uint8_t *rng;
+	size_t rnglen;
+	ssize_t (*next) (SpUtf8 *u, const void *src, size_t len);
+
+	if (f & SP_UTF8_JSON) {
+		rng = rng_json;
+		rnglen = sizeof rng_json - 1;
+		next = json_decode;
+	}
+	else if (f & SP_UTF8_SPACE_PLUS) {
+		rng = rng_dec_uri_space;
+		rnglen = sizeof rng_dec_uri_space - 1;
+		next = uri_decode_space;
+	}
+	else {
+		rng = rng_dec_uri;
+		rnglen = sizeof rng_dec_uri - 1;
+		next = uri_decode;
+	}
+
+	return codec (u, src, (const uint8_t *)src + len, rng, rnglen, next);
+}
+
+ssize_t
+sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
+{
+	(void)f;
+
+	assert (u != NULL);
+	assert (src != NULL);
+
+	if (len == 0) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	return json_encode (u, src, len);
+}
+
+ssize_t
+sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
+{
+	(void)f;
+
+	assert (u != NULL);
+	assert (src != NULL);
+
+	if (len == 0) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	return json_decode (u, src, len);
+}
+
+ssize_t
+sp_utf8_uri_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
 {
 	assert (u != NULL);
 	assert (src != NULL);
@@ -520,11 +580,35 @@ sp_utf8_form_decode_next (SpUtf8 *u, const void *src, size_t len)
 		return SP_UTF8_ETOOSHORT;
 	}
 
-	switch (*(const uint8_t *)src) {
-	case '%': return pct_decode (u, src, len);
-	case '+': return sp_utf8_add_char (u, " ", 1);
-	default:  return sp_utf8_add_char (u, src, len);
+	if (f & SP_UTF8_SPACE_PLUS) {
+		return uri_decode_space (u, src, len);
 	}
+	return uri_decode (u, src, len);
+}
+
+ssize_t
+sp_utf8_uri_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f)
+{
+	assert (u != NULL);
+	assert (src != NULL);
+
+	if (len == 0) {
+		return SP_UTF8_ETOOSHORT;
+	}
+
+	uint8_t ch = *(const uint8_t *)src;
+
+	if ((f & SP_UTF8_URI_COMPONENT) ? 
+			memchr (rng_enc_uri_comp, ch, sizeof rng_enc_uri_comp - 1) :
+			memchr (rng_enc_uri, ch, sizeof rng_enc_uri - 1))
+	{
+		if (f & SP_UTF8_SPACE_PLUS) {
+			return uri_encode_space (u, src, len);
+		}
+		return uri_encode (u, src, len);
+	}
+	
+	return sp_utf8_add_raw (u, src, 1);
 }
 
 int
@@ -591,5 +675,55 @@ sp_utf8_codepoint (const void *src, size_t len)
 	else {
 		return SP_UTF8_EENCODING;
 	}
+}
+
+ssize_t
+sp_utf8_charlen (const void *src, size_t len)
+{
+	if (len == 0) {
+		return 0;
+	}
+
+	const uint8_t *in = src;
+
+	if (!(*in & 0x80)) {
+		return 1;
+	}
+
+	switch (in[0]) {
+
+	case 0xE0:
+		if (len < 3) return SP_UTF8_ETOOSHORT;
+		if (in[1] < 0xA0 || 0xBF < in[1]) {
+			return SP_UTF8_EENCODING;
+		}
+		if (!is_cont (in[2])) {
+			return SP_UTF8_EENCODING;
+		}
+		return 3;
+
+	case 0xF0:
+		if (len < 4) return SP_UTF8_ETOOSHORT;
+		if (in[1] < 0x90 || 0xBF < in[1]) {
+			return SP_UTF8_EENCODING;
+		}
+		if (!is_cont (in[2]) || !is_cont (in[3])) {
+			return SP_UTF8_EENCODING;
+		}
+		return 4;
+
+	}
+
+	size_t charlen = byte_counts[in[0]];
+	if (len < charlen) return SP_UTF8_ETOOSHORT;
+
+	switch (charlen) {
+	case 0: return SP_UTF8_EENCODING;
+	case 4: if (!is_cont (in[3])) return SP_UTF8_EENCODING;
+	case 3: if (!is_cont (in[2])) return SP_UTF8_EENCODING;
+	case 2: if (!is_cont (in[1])) return SP_UTF8_EENCODING;
+	}
+
+	return charlen;
 }
 

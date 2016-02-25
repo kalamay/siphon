@@ -10,11 +10,17 @@ typedef struct {
 	bool fixed;
 } SpUtf8;
 
+typedef enum {
+	SP_UTF8_NONE          = 0,      // no encoding
+	SP_UTF8_JSON          = 1 << 0, // json string scheme
+	SP_UTF8_URI           = 1 << 1, // percent scheme
+	SP_UTF8_URI_COMPONENT = 1 << 2, // percent scheme for uri components
+	SP_UTF8_SPACE_PLUS    = 1 << 3, // treat plus as a space character
+} SpUtf8Flags;
+
 #define SP_UTF8_MAKE() ((SpUtf8){ NULL, 0, 0, false })
 
 #define SP_UTF8_MAKE_FIXED(buf, len) ((SpUtf8){ buf, len, 0, true })
-
-#define SP_UTF8_JSON_RANGE "\\\\\x00\x1F\"\"\x7F\xFF"
 
 SP_EXPORT void
 sp_utf8_init (SpUtf8 *u);
@@ -46,26 +52,31 @@ sp_utf8_add_codepoint (SpUtf8 *u, int cp);
 SP_EXPORT ssize_t
 sp_utf8_add_char (SpUtf8 *u, const void *src, size_t len);
 
-SP_EXPORT ssize_t
-sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len);
 
 SP_EXPORT ssize_t
-sp_utf8_json_decode_next (SpUtf8 *u, const void *src, size_t len);
+sp_utf8_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
 
 SP_EXPORT ssize_t
-sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len);
+sp_utf8_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
 
 SP_EXPORT ssize_t
-sp_utf8_json_encode_next (SpUtf8 *u, const void *src, size_t len);
+sp_utf8_json_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
 
 SP_EXPORT ssize_t
-sp_utf8_form_decode (SpUtf8 *u, const void *src, size_t len);
+sp_utf8_json_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
 
 SP_EXPORT ssize_t
-sp_utf8_form_decode_next (SpUtf8 *u, const void *src, size_t len);
+sp_utf8_uri_encode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
+
+SP_EXPORT ssize_t
+sp_utf8_uri_decode (SpUtf8 *u, const void *src, size_t len, SpUtf8Flags f);
+
 
 SP_EXPORT int
 sp_utf8_codepoint (const void *src, size_t len);
+
+SP_EXPORT ssize_t
+sp_utf8_charlen (const void *src, size_t len);
 
 #endif
 
