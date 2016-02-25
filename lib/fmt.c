@@ -32,7 +32,7 @@ sp_fmt_str (FILE *out, const void *restrict str, size_t len, bool quote)
 			case '\r': WRITE ("\\r", 2); break;
 			case '\t': WRITE ("\\t", 2); break;
 			case '\v': WRITE ("\\v", 2); break;
-			case '\\': WRITE ("\\", 1);  break;
+			case '\\': WRITE ("\\\\", quote ? 2 : 1); break;
 			case '"':
 				if (quote) {
 					WRITE ("\\\"", 2); break;
