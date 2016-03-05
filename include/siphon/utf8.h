@@ -20,7 +20,7 @@ typedef enum {
 
 #define SP_UTF8_MAKE() ((SpUtf8){ NULL, 0, 0, false })
 
-#define SP_UTF8_MAKE_FIXED(buf, len) ((SpUtf8){ buf, len, 0, true })
+#define SP_UTF8_MAKE_FIXED(buf, len) ((SpUtf8){ buf, 0, len, true })
 
 SP_EXPORT void
 sp_utf8_init (SpUtf8 *u);
