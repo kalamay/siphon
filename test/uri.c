@@ -1,5 +1,6 @@
 #include "../include/siphon/uri.h"
 #include "../include/siphon/alloc.h"
+#include "../include/siphon/error.h"
 #include "mu.h"
 
 #define assert_uri(u, s) do {                                                \
@@ -1431,6 +1432,180 @@ test_ipv6 (void)
 	TEST_IPv4_MAP_INVALID ("fe80:0000:0000:0000:0204:61ff:254.157.241.086");
 }
 
+static void
+test_query_single_key (void)
+{
+	const char input[] = "http://test.com/some/path?x";
+	SpUri uri;
+
+	ssize_t rc = sp_uri_parse (&uri, input, sizeof input - 1);
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", input);
+
+	const char *cmp[][2] = {
+		{ "x", ""         },
+	};
+
+	const char *p = input + uri.seg[SP_URI_QUERY].off;
+	ssize_t len = uri.seg[SP_URI_QUERY].len;
+	size_t i = 0;
+	while (len > 0) {
+		char key[64], val[64];
+		size_t klen = sizeof key;
+		size_t vlen = sizeof val;
+		ssize_t rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+
+		mu_fassert_int_gt (rc, -1);
+		mu_fassert_int_le (rc, len);
+
+		if (klen > 0) {
+			mu_assert_str_eq (key, cmp[i][0]);
+			mu_assert_str_eq (val, cmp[i][1]);
+			i++;
+		}
+
+		p += rc;
+		len -= rc;
+	}
+}
+
+static void
+test_query_single_value (void)
+{
+	const char input[] = "http://test.com/some/path?x=123";
+	SpUri uri;
+
+	ssize_t rc = sp_uri_parse (&uri, input, sizeof input - 1);
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", input);
+
+	const char *cmp[][2] = {
+		{ "x", "123"         },
+	};
+
+	const char *p = input + uri.seg[SP_URI_QUERY].off;
+	ssize_t len = uri.seg[SP_URI_QUERY].len;
+	size_t i = 0;
+	while (len > 0) {
+		char key[64], val[64];
+		size_t klen = sizeof key;
+		size_t vlen = sizeof val;
+		ssize_t rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+
+		mu_fassert_int_gt (rc, -1);
+		mu_fassert_int_le (rc, len);
+
+		if (klen > 0) {
+			mu_assert_str_eq (key, cmp[i][0]);
+			mu_assert_str_eq (val, cmp[i][1]);
+			i++;
+		}
+
+		p += rc;
+		len -= rc;
+	}
+}
+
+static void
+test_query_utf8 (void)
+{
+	const char input[] = "http://test.com/some/path?x=123&text=drop+the+%22bass%22%0A%F0%9D%84%A2";
+	SpUri uri;
+
+	ssize_t rc = sp_uri_parse (&uri, input, sizeof input - 1);
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", input);
+
+	const char *cmp[][2] = {
+		{ "x",    "123"                                 },
+		{ "text", "drop the \"bass\"\n\xF0\x9D\x84\xA2" }
+	};
+
+	const char *p = input + uri.seg[SP_URI_QUERY].off;
+	ssize_t len = uri.seg[SP_URI_QUERY].len;
+	size_t i = 0;
+	while (len > 0) {
+		char key[64], val[64];
+		size_t klen = sizeof key;
+		size_t vlen = sizeof val;
+		ssize_t rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+
+		mu_fassert_int_gt (rc, -1);
+		mu_fassert_int_le (rc, len);
+
+		if (klen > 0) {
+			mu_assert_str_eq (key, cmp[i][0]);
+			mu_assert_str_eq (val, cmp[i][1]);
+			i++;
+		}
+
+		p += rc;
+		len -= rc;
+	}
+}
+
+static void
+test_query_utf8_bad (void)
+{
+	const char input[] = "http://test.com/some/path?x=123&text=drop+the+%22bass%22%0A%F0%9D%84%22";
+	SpUri uri;
+
+	ssize_t rc = sp_uri_parse (&uri, input, sizeof input - 1);
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", input);
+
+	const char *p = input + uri.seg[SP_URI_QUERY].off;
+	ssize_t len = uri.seg[SP_URI_QUERY].len;
+	char key[64], val[64];
+	size_t klen, vlen;
+
+	klen = sizeof key;
+	vlen = sizeof val;
+	rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+	mu_fassert_int_eq (rc, 6);
+
+	klen = sizeof key;
+	vlen = sizeof val;
+	rc = sp_uri_query_next (p+6, len-6, key, &klen, val, &vlen);
+	mu_fassert_int_eq (rc, SP_UTF8_EENCODING);
+}
+
+static void
+test_query_mess (void)
+{
+	const char input[] = "http://test.com/some/path?&&&&x&&&a=1&&&&test=stuff&y=1=2&z&&&&&";
+	SpUri uri;
+
+	ssize_t rc = sp_uri_parse (&uri, input, sizeof input - 1);
+	mu_fassert_msg (rc >= 0, "Failed to parse URI \"%s\"", input);
+
+	const char *cmp[][2] = {
+		{ "x", ""         },
+		{ "a", "1"        },
+		{ "test", "stuff" },
+		{ "y", "1=2"      },
+		{ "z", ""         }
+	};
+
+	const char *p = input + uri.seg[SP_URI_QUERY].off;
+	ssize_t len = uri.seg[SP_URI_QUERY].len;
+	size_t i = 0;
+	while (len > 0) {
+		char key[64], val[64];
+		size_t klen = sizeof key;
+		size_t vlen = sizeof val;
+		ssize_t rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+
+		mu_fassert_int_gt (rc, -1);
+		mu_fassert_int_le (rc, len);
+
+		if (klen > 0) {
+			mu_assert_str_eq (key, cmp[i][0]);
+			mu_assert_str_eq (val, cmp[i][1]);
+			i++;
+		}
+
+		p += rc;
+		len -= rc;
+	}
+}
+
 int
 main (void)
 {
@@ -1453,6 +1628,11 @@ main (void)
 	test_range_fragment_rel ();
 	test_join ();
 	test_ipv6 ();
+	test_query_single_key ();
+	test_query_single_value ();
+	test_query_utf8 ();
+	test_query_utf8_bad ();
+	test_query_mess ();
 
 	mu_assert (sp_alloc_summary ());
 }

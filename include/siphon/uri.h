@@ -90,5 +90,10 @@ sp_uri_segment_name (SpUriSegment seg);
 SP_EXPORT void
 sp_uri_print (const SpUri *u, const char *buf, FILE *out);
 
+SP_EXPORT ssize_t
+sp_uri_query_next (const void *restrict buf, size_t len,
+		void *restrict key, size_t *restrict klen,
+		void *restrict val, size_t *restrict vlen);
+
 #endif
 

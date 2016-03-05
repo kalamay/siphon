@@ -1,6 +1,10 @@
 #include "../include/siphon/uri.h"
 #include "../include/siphon/path.h"
+#include "../include/siphon/utf8.h"
 #include "../include/siphon/error.h"
+#include "../include/siphon/fmt.h"
+
+#include "pcmp/set16.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -353,13 +357,38 @@ print_segment (const SpUri *u, const char *buf, FILE *out, SpUriSegment seg)
 			sp_uri_segment_name (seg),
 			u->seg[seg].off, u->seg[seg].len);
 	if (buf != NULL) {
-		fprintf (out, " = \"%.*s\"\n",
+		fprintf (out, " = \"%.*s\"",
 				(int)u->seg[seg].len,
 				buf + u->seg[seg].off);
+		if (seg == SP_URI_QUERY && u->seg[SP_URI_QUERY].len > 0) {
+			char key[1024], val[1024];
+			const char *p = buf + u->seg[SP_URI_QUERY].off;
+			size_t len = u->seg[SP_URI_QUERY].len;
+			fprintf (out, " {\n");
+			while (len > 0) {
+				size_t klen = sizeof key;
+				size_t vlen = sizeof val;
+				ssize_t rc = sp_uri_query_next (p, len, key, &klen, val, &vlen);
+				if (rc < 0) {
+					sp_error_print (rc, stderr);
+					break;
+				}
+				if (klen > 0) {
+					fprintf (out, "        ");
+					sp_fmt_str (out, key, klen, true);
+					if (vlen > 0) {
+						fprintf (out, " = ");
+						sp_fmt_str (out, val, vlen, true);
+					}
+					fputc ('\n', out);
+				}
+				p += rc;
+				len -= rc;
+			}
+			fprintf (out, "    }");
+		}
 	}
-	else {
-		fputc ('\n', out);
-	}
+	fputc ('\n', out);
 }
 
 void
@@ -397,5 +426,107 @@ sp_uri_print (const SpUri *u, const char *buf, FILE *out)
 	else {
 		fprintf (out, "#<SpUri(null)>\n");
 	}
+}
+
+#define UPDATE(v) do {              \
+	ssize_t trc = (v);              \
+	if (trc < 0) {                  \
+		if (trc == SP_UTF8_EBUFS) { \
+			return SP_URI_EBUFS;    \
+		}                           \
+		return trc;                 \
+	}                               \
+	(len) -= trc;                   \
+	(p) += trc;                     \
+} while (0)
+
+ssize_t
+sp_uri_query_next (const void *restrict buf, size_t len,
+		void *restrict key, size_t *restrict klen,
+		void *restrict val, size_t *restrict vlen)
+{
+	assert (buf != NULL);
+	assert (key != NULL);
+	assert (klen != NULL);
+	assert (val != NULL);
+	assert (vlen != NULL);
+
+	static const uint8_t keyset[] = "=&+%";
+	static const uint8_t valset[] = "&+%";
+
+	const uint8_t *p = buf, *m;
+	size_t iklen = *klen;
+	size_t ivlen = *vlen;
+
+	*(char *)key = '\0';
+	*klen = 0;
+	*(char *)val = '\0';
+	*vlen = 0;
+
+	// trim any leading '&' characters
+	while (len > 0 && *p == '&') {
+		len--; p++;
+	}
+
+	// if nothing is left, return with no key
+	if (len == 0) {
+		goto done;
+	}
+
+	SpUtf8 u;
+	sp_utf8_init_fixed (&u, key, iklen);
+
+	while (1) {
+		m = pcmp_set16 (p, len, keyset, sizeof keyset - 1);
+		if (m == NULL) {
+			UPDATE (sp_utf8_add_raw (&u, p, len));
+			*klen = u.len;
+			goto done;
+		}
+
+		UPDATE (sp_utf8_add_raw (&u, p, m - p));
+
+		switch (*p) {
+		case '=':
+			len--; p++;
+			*klen = u.len;
+			goto read_val;
+		case '&':
+			len--; p++;
+			*klen = u.len;
+			goto done;
+		case '+': case '%':
+			UPDATE (sp_utf8_uri_decode (&u, p, len, SP_UTF8_SPACE_PLUS));
+			break;
+		}
+	}
+
+read_val:
+
+	sp_utf8_init_fixed (&u, val, ivlen);
+
+	while (1) {
+		m = pcmp_set16 (p, len, valset, sizeof valset - 1);
+		if (m == NULL) {
+			UPDATE (sp_utf8_add_raw (&u, p, len));
+			*vlen = u.len;
+			goto done;
+		}
+
+		UPDATE (sp_utf8_add_raw (&u, p, m - p));
+
+		switch (*p) {
+		case '&':
+			len--; p++;
+			*vlen = u.len;
+			goto done;
+		case '+': case '%':
+			UPDATE (sp_utf8_uri_decode (&u, p, len, SP_UTF8_SPACE_PLUS));
+			break;
+		}
+	}
+
+done:
+	return p - (const uint8_t *)buf;
 }
 
