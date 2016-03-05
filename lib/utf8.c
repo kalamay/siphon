@@ -322,6 +322,8 @@ sp_utf8_add_raw (SpUtf8 *u, const void *src, size_t len)
 {
 	assert (u != NULL);
 
+	if (len == 0) { return 0; }
+
 	int rc = sp_utf8_ensure (u, len);
 	if (rc < 0) { return rc; }
 
