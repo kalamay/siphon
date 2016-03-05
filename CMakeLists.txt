@@ -119,6 +119,9 @@ target_link_libraries(test-msgpack-input siphon-static m)
 add_executable(test-uri-input test/uri-input.c)
 target_link_libraries(test-uri-input siphon-static m)
 
+add_executable(test-utf8-encode test/utf8-encode.c)
+target_link_libraries(test-utf8-encode siphon-static m)
+
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 
 	find_program(VALGRIND_COMMAND valgrind)
