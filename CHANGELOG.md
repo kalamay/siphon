@@ -1,9 +1,11 @@
 # Changelog
 
-## 0.2.4-alpha
+## 0.2.4
 
 * allow `;` a cache control directive delimiter (improper, but used in the wild)
 * fix error iterator overrun
+* add UTF-8 percent encoding and decoding
+* add application/x-www-form-urlencoded parsing
 
 ## 0.2.3
 

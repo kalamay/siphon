@@ -3,6 +3,8 @@
 #include "../include/siphon/alloc.h"
 #include "parser.h"
 
+#include "pcmp/range.h"
+
 #include <limits.h>
 #include <errno.h>
 #include <ctype.h>
