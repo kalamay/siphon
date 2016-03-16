@@ -130,7 +130,7 @@ SP_EXPORT double
 sp_clock_step (SpClock *clock);
 
 SP_EXPORT void
-sp_clock_print (SpClock *clock, FILE *out);
+sp_clock_print (const SpClock *clock, FILE *out);
 
 #endif
 

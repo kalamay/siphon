@@ -90,7 +90,7 @@ sp_clock_step (SpClock *clock)
 }
 
 void
-sp_clock_print (SpClock *clock, FILE *out)
+sp_clock_print (const SpClock *clock, FILE *out)
 {
 	if (out == NULL) {
 		out = stderr;
