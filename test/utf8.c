@@ -258,6 +258,19 @@ test_invalid_codepoints (void)
 }
 
 static void
+test_escape (void)
+{
+	char in[] = "drop the \"bass\"\n\xF0\x9D\x84\xA2";
+	char cmp[] = "drop the \\\"bass\\\"\\n\xF0\x9D\x84\xA2";
+
+	SpUtf8 u = SP_UTF8_MAKE ();
+	ssize_t n = sp_utf8_encode (&u, in, sizeof (in) - 1, SP_UTF8_JSON);
+	mu_assert_int_eq (n, (ssize_t)(sizeof (cmp) - 1));
+	mu_assert_str_eq (u.buf, cmp);
+	sp_utf8_final (&u);
+}
+
+static void
 test_unescape (void)
 {
 	char in[] = "drop the \\\"bass\\\"\\n\\uD834\\uDD22";
@@ -364,6 +377,7 @@ main (void)
 
 	test_invalid_codepoints ();
 
+	test_escape ();
 	test_unescape ();
 	test_uri_decode ();
 	test_uri_encode ();

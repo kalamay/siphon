@@ -402,11 +402,11 @@ json_encode (SpUtf8 *u, const void *src, size_t len)
 	switch (*(const uint8_t *)src) {
 	case '"':  return add_escape (u, "\\\"");
 	case '\\': return add_escape (u, "\\\\");
-	case '\b': return add_escape (u, "\\\b");
-	case '\f': return add_escape (u, "\\\f");
-	case '\n': return add_escape (u, "\\\n");
-	case '\r': return add_escape (u, "\\\r");
-	case '\t': return add_escape (u, "\\\t");
+	case '\b': return add_escape (u, "\\b");
+	case '\f': return add_escape (u, "\\f");
+	case '\n': return add_escape (u, "\\n");
+	case '\r': return add_escape (u, "\\r");
+	case '\t': return add_escape (u, "\\t");
 	}
 
 	if (!is_valid_json_byte (src)) {
