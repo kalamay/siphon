@@ -255,6 +255,12 @@ sp_msgpack_init (SpMsgpack *p)
 	p->type = SP_MSGPACK_NONE;
 }
 
+void
+sp_msgpack_reset (SpMsgpack *p)
+{
+	sp_msgpack_init (p);
+}
+
 static inline ssize_t
 next (SpMsgpack *p, const uint8_t *restrict buf, size_t len, bool eof)
 {
