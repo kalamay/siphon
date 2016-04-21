@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+* fix msgpack nested decoding
+
 ## 0.2.4
 
 * allow `;` a cache control directive delimiter (improper, but used in the wild)

@@ -1,8 +1,11 @@
 #include "../include/siphon/msgpack.h"
 #include "../include/siphon/alloc.h"
+#include "../include/siphon/fmt.h"
 #include "mu.h"
 
 #define count(a) (sizeof (a) / sizeof ((a)[0]))
+
+#define DEBUG 0
 
 typedef struct {
 	struct {
@@ -14,8 +17,14 @@ typedef struct {
 } Message;
 
 static bool
-parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
+parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 {
+#if DEBUG
+	printf ("****************************************************************\n");
+#endif
+	SpMsgpack p;
+	sp_msgpack_init (&p);
+
 	memset (msg, 0, sizeof *msg);
 
 	const uint8_t *buf = in;
@@ -29,10 +38,10 @@ parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t spee
 		len = inlen;
 	}
 
-	while (!sp_msgpack_is_done (p)) {
+	while (!sp_msgpack_is_done (&p)) {
 		mu_fassert_uint_ge (len, trim);
 
-		rc = sp_msgpack_next (p, buf, len - trim, len == inlen);
+		rc = sp_msgpack_next (&p, buf, len - trim, len == inlen);
 
 		mu_fassert_int_ge (rc, 0);
 
@@ -44,31 +53,99 @@ parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t spee
 			return false;
 		}
 
-		switch (p->type) {
-			case SP_MSGPACK_STRING:
-			case SP_MSGPACK_BINARY:
-				memcpy (msg->fields[msg->field_count].str, buf, p->tag.count);
-				msg->fields[msg->field_count].str[p->tag.count] = '\0';
-				buf += p->tag.count;
-				// fallthrough
-			case SP_MSGPACK_NIL:
-			case SP_MSGPACK_TRUE:
-			case SP_MSGPACK_FALSE:
-			case SP_MSGPACK_SIGNED:
-			case SP_MSGPACK_UNSIGNED:
-			case SP_MSGPACK_FLOAT:
-			case SP_MSGPACK_DOUBLE:
-			case SP_MSGPACK_ARRAY:
-			case SP_MSGPACK_ARRAY_END:
-			case SP_MSGPACK_MAP:
-			case SP_MSGPACK_MAP_END:
-			case SP_MSGPACK_EXT:
-				msg->fields[msg->field_count].tag = p->tag;
-				msg->fields[msg->field_count].type = p->type;
-				msg->field_count++;
-				break;
+#if DEBUG
+		if (p.type > SP_MSGPACK_NONE) {
+			int depth = p.depth;
+			if (p.type == SP_MSGPACK_MAP || p.type == SP_MSGPACK_ARRAY) {
+				depth--;
+			}
+			printf ("%.*s", (int)(depth*2),
+					"                                                "
+					"                                                ");
+
+			switch (p.type) {
 			case SP_MSGPACK_NONE:
 				break;
+			case SP_MSGPACK_MAP:
+				printf ("{ # %u entries", p.tag.count);
+				break;
+			case SP_MSGPACK_ARRAY:
+				printf ("[ # %u entries", p.tag.count);
+				break;
+			case SP_MSGPACK_MAP_END:
+				printf ("}");
+				break;
+			case SP_MSGPACK_ARRAY_END:
+				printf ("]");
+				break;
+			case SP_MSGPACK_NIL:
+				printf ("nil");
+				break;
+			case SP_MSGPACK_TRUE:
+				printf ("true");
+				break;
+			case SP_MSGPACK_FALSE:
+				printf ("false");
+				break;
+			case SP_MSGPACK_SIGNED:
+				printf ("%" PRIi64, p.tag.i64);
+				break;
+			case SP_MSGPACK_UNSIGNED:
+				printf ("%" PRIu64, p.tag.u64);
+				break;
+			case SP_MSGPACK_FLOAT:
+				printf ("%f", p.tag.f32);
+				break;
+			case SP_MSGPACK_DOUBLE:
+				printf ("%f", p.tag.f64);
+				break;
+			case SP_MSGPACK_STRING:
+				sp_fmt_str (stdout, buf, p.tag.count, true);
+				break;
+			case SP_MSGPACK_BINARY:
+				printf ("<binary: length=%u>", p.tag.count);
+				break;
+			case SP_MSGPACK_EXT:
+				printf ("<ext: type=%d, length=%u>", p.tag.ext.type, p.tag.ext.len);
+				break;
+			}
+			if (p.type > SP_MSGPACK_ARRAY) {
+				if (sp_msgpack_is_key (&p)) {
+					printf (" = ");
+				}
+				else {
+					printf (",");
+				}
+			}
+			printf ("\n");
+		}
+#endif
+
+		switch (p.type) {
+		case SP_MSGPACK_STRING:
+		case SP_MSGPACK_BINARY:
+			memcpy (msg->fields[msg->field_count].str, buf, p.tag.count);
+			msg->fields[msg->field_count].str[p.tag.count] = '\0';
+			buf += p.tag.count;
+			// fallthrough
+		case SP_MSGPACK_NIL:
+		case SP_MSGPACK_TRUE:
+		case SP_MSGPACK_FALSE:
+		case SP_MSGPACK_SIGNED:
+		case SP_MSGPACK_UNSIGNED:
+		case SP_MSGPACK_FLOAT:
+		case SP_MSGPACK_DOUBLE:
+		case SP_MSGPACK_ARRAY:
+		case SP_MSGPACK_ARRAY_END:
+		case SP_MSGPACK_MAP:
+		case SP_MSGPACK_MAP_END:
+		case SP_MSGPACK_EXT:
+			msg->fields[msg->field_count].tag = p.tag;
+			msg->fields[msg->field_count].type = p.type;
+			msg->field_count++;
+			break;
+		case SP_MSGPACK_NONE:
+			break;
 		}
 
 		if (speed > 0) {
@@ -83,30 +160,35 @@ parse (SpMsgpack *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t spee
 }
 
 static void
-test_parse (ssize_t speed)
+test_decode_general (ssize_t speed)
 {
 	/*
-	 * [
-	 *   "test",
-	 *   "this is a longer string that should not pack to a fixed string",
-	 *   True, False,
-	 *   12, 123, 1234, 1234567, 123456789000,
-	 *   -12, -123, -1234, -1234567, -123456789000,
-	 *   {
-	 *     'a': 1.23,
-	 *     'b': True,
-	 *     'c': 'value',
-	 *     'd': [1,2,3],
-	 *     'e': { 'x': 'y' },
-	 *     'f': {},
-	 *     'g': []
-	 *   },
-	 *   [{}, []],
-	 *   {},
-	 *   []
-	 * ]
+	 * ["test",
+	 *  "this is a longer string that should not pack to a fixed string",
+	 *  true,
+	 *  false,
+	 *  12,
+	 *  123,
+	 *  1234,
+	 *  1234567,
+	 *  123456789000,
+	 *  -12,
+	 *  -123,
+	 *  -1234,
+	 *  -1234567,
+	 *  -123456789000,
+	 *  {"a"=>1.23,
+	 *   "b"=>true,
+	 *   "c"=>"value",
+	 *   "d"=>[1, 2, 3],
+	 *   "e"=>{"x"=>"y"},
+	 *   "f"=>{},
+	 *   "g"=>[]},
+	 *  [{}, []],
+	 *  {},
+	 *  []]
 	 */
-	static const uint8_t data[] = {
+	static const uint8_t input[] = {
 		0xdc,0x00,0x12,0xa4,0x74,0x65,0x73,0x74,0xda,0x00,0x3e,0x74,0x68,0x69,0x73,0x20,
 		0x69,0x73,0x20,0x61,0x20,0x6c,0x6f,0x6e,0x67,0x65,0x72,0x20,0x73,0x74,0x72,0x69,
 		0x6e,0x67,0x20,0x74,0x68,0x61,0x74,0x20,0x73,0x68,0x6f,0x75,0x6c,0x64,0x20,0x6e,
@@ -119,15 +201,9 @@ test_parse (ssize_t speed)
 		0x65,0x81,0xa1,0x78,0xa1,0x79,0xa1,0x66,0x80,0xa1,0x67,0x90,0x92,0x80,0x90,0x80,
 		0x90
 	};
-
-	SpMsgpack p;
-	sp_msgpack_init (&p);
-
 	Message msg;
-	mu_fassert (parse (&p, &msg, data, sizeof data - 1, speed));
-
+	mu_fassert (parse (&msg, input, sizeof input, speed));
 	mu_fassert_uint_eq (msg.field_count, 51);
-
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_ARRAY);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 18);
 	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
@@ -161,7 +237,6 @@ test_parse (ssize_t speed)
 	mu_assert_int_eq (msg.fields[16].type, SP_MSGPACK_STRING);
 	mu_assert_str_eq (msg.fields[16].str, "a");
 	mu_assert_int_eq (msg.fields[17].type, SP_MSGPACK_DOUBLE);
-	mu_assert_int_eq (round (msg.fields[17].tag.f64 * 100), 123);
 	mu_assert_int_eq (msg.fields[18].type, SP_MSGPACK_STRING);
 	mu_assert_str_eq (msg.fields[18].str, "b");
 	mu_assert_int_eq (msg.fields[19].type, SP_MSGPACK_TRUE);
@@ -172,7 +247,7 @@ test_parse (ssize_t speed)
 	mu_assert_int_eq (msg.fields[22].type, SP_MSGPACK_STRING);
 	mu_assert_str_eq (msg.fields[22].str, "d");
 	mu_assert_int_eq (msg.fields[23].type, SP_MSGPACK_ARRAY);
-	mu_assert_int_eq (msg.fields[23].tag.count, 3);
+	mu_assert_uint_eq (msg.fields[23].tag.count, 3);
 	mu_assert_int_eq (msg.fields[24].type, SP_MSGPACK_UNSIGNED);
 	mu_assert_uint_eq (msg.fields[24].tag.u64, 1);
 	mu_assert_int_eq (msg.fields[25].type, SP_MSGPACK_UNSIGNED);
@@ -194,6 +269,7 @@ test_parse (ssize_t speed)
 	mu_assert_int_eq (msg.fields[34].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[34].tag.count, 0);
 	mu_assert_int_eq (msg.fields[35].type, SP_MSGPACK_MAP_END);
+	mu_assert_int_eq (msg.fields[36].type, SP_MSGPACK_STRING);
 	mu_assert_str_eq (msg.fields[36].str, "g");
 	mu_assert_int_eq (msg.fields[37].type, SP_MSGPACK_ARRAY);
 	mu_assert_uint_eq (msg.fields[37].tag.count, 0);
@@ -215,6 +291,397 @@ test_parse (ssize_t speed)
 	mu_assert_uint_eq (msg.fields[48].tag.count, 0);
 	mu_assert_int_eq (msg.fields[49].type, SP_MSGPACK_ARRAY_END);
 	mu_assert_int_eq (msg.fields[50].type, SP_MSGPACK_ARRAY_END);
+}
+
+static void
+test_decode_nested_begin (ssize_t speed)
+{
+	/*
+	 * {"test"=>["a", "b", "c"], "stuff"=>"123", "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x73,0x74,
+		0x75,0x66,0x66,0xa3,0x31,0x32,0x33,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,0x35,
+		0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 12);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[2].tag.count, 3);
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "a");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "b");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[5].str, "c");
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "stuff");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "123");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "other");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "456");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_nested_middle (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", "stuff"=>["a", "b", "c"], "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0xa5,0x73,0x74,0x75,0x66,0x66,
+		0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,0x35,
+		0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 12);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "stuff");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[4].tag.count, 3);
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[5].str, "a");
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[6].str, "b");
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "c");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "other");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "456");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_nested_end (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", "stuff"=>"456", "other"=>["a", "b", "c"]}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0xa5,0x73,0x74,0x75,0x66,0x66,
+		0xa3,0x34,0x35,0x36,0xa5,0x6f,0x74,0x68,0x65,0x72,0x93,0xa1,0x61,0xa1,0x62,0xa1,
+		0x63
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 12);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "stuff");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "456");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[5].str, "other");
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[6].tag.count, 3);
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "a");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "b");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "c");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_array_key_begin (ssize_t speed)
+{
+	/*
+	 * {["x", "y", "z"]=>["a", "b", "c"], "stuff"=>"123", "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0x93,0xa1,0x78,0xa1,0x79,0xa1,0x7a,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,
+		0x73,0x74,0x75,0x66,0x66,0xa3,0x31,0x32,0x33,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,
+		0x34,0x35,0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 16);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[1].tag.count, 3);
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "x");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "y");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "z");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[6].tag.count, 3);
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "a");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "b");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "c");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[11].str, "stuff");
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[12].str, "123");
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[13].str, "other");
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[14].str, "456");
+	mu_assert_int_eq (msg.fields[15].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_array_key_middle (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", ["x", "y", "z"]=>["a", "b", "c"], "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0x93,0xa1,0x78,0xa1,0x79,0xa1,
+		0x7a,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,
+		0x35,0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 16);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[3].tag.count, 3);
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "x");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[5].str, "y");
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[6].str, "z");
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[8].tag.count, 3);
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "a");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "b");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[11].str, "c");
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[13].str, "other");
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[14].str, "456");
+	mu_assert_int_eq (msg.fields[15].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_array_key_end (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", "stuff"=>"456", ["x", "y", "z"]=>["a", "b", "c"]}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0xa5,0x73,0x74,0x75,0x66,0x66,
+		0xa3,0x34,0x35,0x36,0x93,0xa1,0x78,0xa1,0x79,0xa1,0x7a,0x93,0xa1,0x61,0xa1,0x62,
+		0xa1,0x63
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 16);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "stuff");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "456");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[5].tag.count, 3);
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[6].str, "x");
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "y");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "z");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[10].tag.count, 3);
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[11].str, "a");
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[12].str, "b");
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[13].str, "c");
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[15].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_map_key_begin (ssize_t speed)
+{
+	/*
+	 * {{"x"=>"y"}=>["a", "b", "c"], "stuff"=>"123", "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0x81,0xa1,0x78,0xa1,0x79,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x73,0x74,
+		0x75,0x66,0x66,0xa3,0x31,0x32,0x33,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,0x35,
+		0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 15);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[1].tag.count, 1);
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "x");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "y");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_MAP_END);
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[5].tag.count, 3);
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[6].str, "a");
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "b");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "c");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "stuff");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[11].str, "123");
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[12].str, "other");
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[13].str, "456");
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_map_key_middle (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", {"x"=>"y"}=>["a", "b", "c"], "other"=>"456"}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0x81,0xa1,0x78,0xa1,0x79,0x93,
+		0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,0x35,0x36
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 15);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[3].tag.count, 1);
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "x");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[5].str, "y");
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_MAP_END);
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[7].tag.count, 3);
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[8].str, "a");
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[9].str, "b");
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "c");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[12].str, "other");
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[13].str, "456");
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode_map_key_end (ssize_t speed)
+{
+	/*
+	 * {"test"=>"123", "stuff"=>"456", {"x"=>"y"}=>["a", "b", "c"]}
+	 */
+	static const uint8_t input[] = {
+		0x83,0xa4,0x74,0x65,0x73,0x74,0xa3,0x31,0x32,0x33,0xa5,0x73,0x74,0x75,0x66,0x66,
+		0xa3,0x34,0x35,0x36,0x81,0xa1,0x78,0xa1,0x79,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63
+	};
+	Message msg;
+	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (msg.field_count, 15);
+	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
+	mu_assert_int_eq (msg.fields[1].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[1].str, "test");
+	mu_assert_int_eq (msg.fields[2].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[2].str, "123");
+	mu_assert_int_eq (msg.fields[3].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[3].str, "stuff");
+	mu_assert_int_eq (msg.fields[4].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[4].str, "456");
+	mu_assert_int_eq (msg.fields[5].type, SP_MSGPACK_MAP);
+	mu_assert_uint_eq (msg.fields[5].tag.count, 1);
+	mu_assert_int_eq (msg.fields[6].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[6].str, "x");
+	mu_assert_int_eq (msg.fields[7].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[7].str, "y");
+	mu_assert_int_eq (msg.fields[8].type, SP_MSGPACK_MAP_END);
+	mu_assert_int_eq (msg.fields[9].type, SP_MSGPACK_ARRAY);
+	mu_assert_uint_eq (msg.fields[9].tag.count, 3);
+	mu_assert_int_eq (msg.fields[10].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[10].str, "a");
+	mu_assert_int_eq (msg.fields[11].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[11].str, "b");
+	mu_assert_int_eq (msg.fields[12].type, SP_MSGPACK_STRING);
+	mu_assert_str_eq (msg.fields[12].str, "c");
+	mu_assert_int_eq (msg.fields[13].type, SP_MSGPACK_ARRAY_END);
+	mu_assert_int_eq (msg.fields[14].type, SP_MSGPACK_MAP_END);
+}
+
+static void
+test_decode (ssize_t speed)
+{
+	test_decode_general (speed);
+	test_decode_nested_begin (speed);
+	test_decode_nested_middle (speed);
+	test_decode_nested_end (speed);
+	test_decode_array_key_begin (speed);
+	test_decode_array_key_middle (speed);
+	test_decode_array_key_end (speed);
+	test_decode_map_key_begin (speed);
+	test_decode_map_key_middle (speed);
+	test_decode_map_key_end (speed);
 }
 
 static void
@@ -562,11 +1029,10 @@ main (void)
 {
 	mu_init ("msgpack");
 
-	test_parse (-1);
-	test_parse (1);
-
-	test_parse (2);
-	test_parse (11);
+	test_decode (-1);
+	test_decode (1);
+	test_decode (2);
+	test_decode (11);
 
 	test_encode_nil ();
 	test_encode_true ();

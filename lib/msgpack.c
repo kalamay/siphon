@@ -214,26 +214,26 @@
 
 #define PUSH_COUNT(p, n) do { p->counts[p->depth-1] = (n); } while (0)
 
-#define STACK_PUSH_ARR(p) do {                  \
-	if (p->tag.count == 0) {                    \
-		p->cs = SP_MSGPACK_ARRAY_END;           \
-		p->key = IS_AT_KEY (p);                 \
-	}                                           \
-	else {                                      \
-		STACK_PUSH_FALSE(p, SP_MSGPACK_ESTACK); \
-		PUSH_COUNT(p, p->tag.count);            \
-	}                                           \
+/**
+ * Pushes an array entry count onto the stack.
+ * @p: parser pointer
+ */
+#define STACK_PUSH_ARR(p) do {              \
+	STACK_PUSH_FALSE(p, SP_MSGPACK_ESTACK); \
+	PUSH_COUNT(p, p->tag.count);            \
 } while (0)
-#define STACK_PUSH_MAP(p) do {                  \
-	if (p->tag.count == 0) {                    \
-		p->cs = SP_MSGPACK_MAP_END;             \
-		p->key = IS_AT_KEY (p);                 \
-	}                                           \
-	else {                                      \
-		p->key = true;                          \
-		STACK_PUSH_TRUE(p, SP_MSGPACK_ESTACK);  \
-		PUSH_COUNT(p, p->tag.count);            \
-	}                                           \
+
+/**
+ * Pushes a map entry count onto the stack.
+ * Non-Standard: currently limited to 31-bit counts when decoding
+ * @p: parser pointer
+ */
+#define STACK_PUSH_MAP(p) do {              \
+	if (p->tag.count > 0x7fffffffU) {       \
+		YIELD_ERROR (SP_MSGPACK_ESTACK);    \
+	}                                       \
+	STACK_PUSH_TRUE(p, SP_MSGPACK_ESTACK);  \
+	PUSH_COUNT(p, p->tag.count*2);          \
 } while (0)
 
 #define STACK_IN_ARR(p) (STACK_TOP(p) == STACK_ARR)
@@ -241,12 +241,6 @@
 
 #define STACK_POP_ARR(p) STACK_POP(p, STACK_ARR)
 #define STACK_POP_MAP(p) STACK_POP(p, STACK_MAP)
-
-#define IS_AT_KEY(p) (             \
-	p->depth > 0 &&                \
-	STACK_IN_MAP (p) &&            \
-	p->counts[p->depth-1] % 2 == 0 \
-)
 
 void
 sp_msgpack_init (SpMsgpack *p)
@@ -427,9 +421,14 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof)
 
 	ssize_t rc = 0;
 
-	if (p->cs && !IS_DONE (p->cs)) {
-		p->type = p->cs;
-		p->cs = 0;
+	if (p->depth > 0 && p->counts[p->depth-1] == 0) {
+		if (STACK_IN_ARR (p)) {
+			p->type = SP_MSGPACK_ARRAY_END;
+		}
+		else {
+			p->type = SP_MSGPACK_MAP_END;
+		}
+		p->depth--;
 		if (p->depth == 0) {
 			p->cs = DONE;
 		}
@@ -444,15 +443,8 @@ sp_msgpack_next (SpMsgpack *p, const void *restrict buf, size_t len, bool eof)
 		}
 	}
 
-	if (rc >= 0 && p->type > SP_MSGPACK_ARRAY) {
-		if (p->depth > 0 && 
-			(STACK_IN_ARR (p) || (p->key = !p->key)) &&
-			--p->counts[p->depth-1] == 0)
-		{
-			p->cs = STACK_IN_ARR (p) ? SP_MSGPACK_ARRAY_END : SP_MSGPACK_MAP_END;
-			p->depth--;
-			p->key = IS_AT_KEY (p);
-		}
+	if (rc >= 0 && p->type > SP_MSGPACK_ARRAY && p->depth > 0) {
+		p->counts[p->depth-1]--;
 	}
 
 	return rc;
@@ -471,7 +463,7 @@ sp_msgpack_is_key (const SpMsgpack *p)
 {
 	assert (p != NULL);
 
-	return IS_AT_KEY (p);
+	return sp_msgpack_in_map (p) && p->counts[p->depth-1] % 2 == 1;
 }
 
 bool
