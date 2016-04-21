@@ -16,7 +16,7 @@ typedef struct {
 	size_t field_count;
 } Message;
 
-static bool
+static ssize_t
 parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 {
 #if DEBUG
@@ -28,7 +28,7 @@ parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 	memset (msg, 0, sizeof *msg);
 
 	const uint8_t *buf = in;
-	size_t len, trim = 0;
+	size_t len, trim = 0, size = 0;
 	ssize_t rc;
 
 	if (speed > 0) {
@@ -42,15 +42,19 @@ parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 		mu_fassert_uint_ge (len, trim);
 
 		rc = sp_msgpack_next (&p, buf, len - trim, len == inlen);
+		if (rc < 0) {
+			return rc;
+		}
 
 		mu_fassert_int_ge (rc, 0);
 
 		// trim the buffer
 		buf += rc;
 		trim += rc;
+		size += rc;
 
 		if (msg->field_count == sp_len (msg->fields)) {
-			return false;
+			return -1;
 		}
 
 #if DEBUG
@@ -127,6 +131,7 @@ parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 			memcpy (msg->fields[msg->field_count].str, buf, p.tag.count);
 			msg->fields[msg->field_count].str[p.tag.count] = '\0';
 			buf += p.tag.count;
+			size += p.tag.count;
 			// fallthrough
 		case SP_MSGPACK_NIL:
 		case SP_MSGPACK_TRUE:
@@ -156,7 +161,7 @@ parse (Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 		}
 	}
 
-	return true;
+	return size;
 }
 
 static void
@@ -202,7 +207,7 @@ test_decode_general (ssize_t speed)
 		0x90
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 51);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_ARRAY);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 18);
@@ -305,7 +310,7 @@ test_decode_nested_begin (ssize_t speed)
 		0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 12);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -343,7 +348,7 @@ test_decode_nested_middle (ssize_t speed)
 		0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 12);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -381,7 +386,7 @@ test_decode_nested_end (ssize_t speed)
 		0x63
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 12);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -419,7 +424,7 @@ test_decode_array_key_begin (ssize_t speed)
 		0x34,0x35,0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 16);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -464,7 +469,7 @@ test_decode_array_key_middle (ssize_t speed)
 		0x35,0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 16);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -509,7 +514,7 @@ test_decode_array_key_end (ssize_t speed)
 		0xa1,0x63
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 16);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -554,7 +559,7 @@ test_decode_map_key_begin (ssize_t speed)
 		0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 15);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -596,7 +601,7 @@ test_decode_map_key_middle (ssize_t speed)
 		0xa1,0x61,0xa1,0x62,0xa1,0x63,0xa5,0x6f,0x74,0x68,0x65,0x72,0xa3,0x34,0x35,0x36
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 15);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);
@@ -638,7 +643,7 @@ test_decode_map_key_end (ssize_t speed)
 		0xa3,0x34,0x35,0x36,0x81,0xa1,0x78,0xa1,0x79,0x93,0xa1,0x61,0xa1,0x62,0xa1,0x63
 	};
 	Message msg;
-	mu_fassert (parse (&msg, input, sizeof input, speed));
+	mu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);
 	mu_fassert_uint_eq (msg.field_count, 15);
 	mu_assert_int_eq (msg.fields[0].type, SP_MSGPACK_MAP);
 	mu_assert_uint_eq (msg.fields[0].tag.count, 3);

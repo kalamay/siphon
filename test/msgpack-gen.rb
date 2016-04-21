@@ -75,7 +75,7 @@ def dump(name, val)
   puts rows.join(",\n")
   puts "\t};"
   puts "\tMessage msg;"
-  puts "\tmu_fassert (parse (&msg, input, sizeof input, speed));"
+  puts "\tmu_fassert_uint_eq (parse (&msg, input, sizeof input, speed), sizeof input);"
   puts "\tmu_fassert_uint_eq (msg.field_count, #{count(val)});"
   assertions(val)
   puts "}\n\n"
