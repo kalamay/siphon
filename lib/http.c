@@ -11,6 +11,7 @@
 // TODO: add support for strings and lws within header field values
 
 static const uint8_t version_start[] = "HTTP/1.";
+static const uint8_t sep[] = ": ";
 static const uint8_t crlf[] = "\r\n";
 
 #define START    0x000000
@@ -448,6 +449,8 @@ sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out)
 
 struct SpHttpMap {
 	SpMap map;
+	size_t encode_size;
+	size_t scatter_count;
 };
 
 struct SpHttpEntry {
@@ -544,6 +547,8 @@ sp_http_map_new (void)
 	SpHttpMap *m = sp_malloc (sizeof *m);
 	if (m != NULL) {
 		sp_map_init (&m->map, 0, 0.0, &map_type);
+		m->encode_size = 0;
+		m->scatter_count = 0;
 	}
 	return m;
 }
@@ -567,14 +572,16 @@ sp_http_map_put (SpHttpMap *m,
 	assert (value != NULL);
 
 	uint16_t *s = pstr_new (value, vlen);
+	bool new = false;
+	SpHttpEntry *e = NULL;
+	void **loc;
+	int err;
+
 	if (s == NULL) {
 		goto err;
 	}
 
-	bool new;
-	SpHttpEntry *e;
-	void **loc = sp_map_reserve (&m->map, name, nlen, &new);
-
+	loc = sp_map_reserve (&m->map, name, nlen, &new);
 	if (loc == NULL) {
 		goto err;
 	}
@@ -584,31 +591,58 @@ sp_http_map_put (SpHttpMap *m,
 		if (e == NULL) {
 			goto err;
 		}
-		sp_map_assign (&m->map, loc, e);
 	}
 	else {
 		e = *loc;
 	}
 
-	sp_vec_push (e->values, s);
+	if (sp_vec_push (e->values, s) < 0) {
+		goto err;
+	}
+
+	if (new) {
+		sp_map_assign (&m->map, loc, e);
+	}
+	else {
+		e = *loc;
+	}
+	m->scatter_count += 4;
+	m->encode_size += nlen + vlen + 4;
 
 	return 0;
 
 err:
+	err = errno;
+	if (new && e != NULL) {
+		entry_free (e);
+	}
 	pstr_free (s);
-	return SP_ESYSTEM (errno);
+	return SP_ESYSTEM (err);
 }
 
 bool
 sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen)
 {
-	return sp_map_del (&m->map, name, nlen);
+	SpHttpEntry *e = sp_map_steal (&m->map, name, nlen);
+	if (e == NULL) {
+		return false;
+	}
+	m->scatter_count -= sp_vec_count (e->values) * 4;
+
+	size_t i;
+	sp_vec_each (e->values, i) {
+		m->encode_size -= e->len + *e->values[i] + 4;
+	}
+	entry_free (e);
+	return true;
 }
 
 void
 sp_http_map_clear (SpHttpMap *m)
 {
 	sp_map_clear (&m->map);
+	m->scatter_count = 0;
+	m->encode_size = 0;
 }
 
 const SpHttpEntry *
@@ -617,14 +651,25 @@ sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen)
 	return sp_map_get (&m->map, name, nlen);
 }
 
+size_t
+sp_http_map_encode_size (const SpHttpMap *m)
+{
+	assert (m != NULL);
+
+	return m->encode_size;
+}
+
 ssize_t
 sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
 {
 	assert (m != NULL);
 	assert (buf != NULL);
 
+	if (len < m->encode_size) {
+		return SP_HTTP_EBUFS;
+	}
+
 	char *p = buf;
-	char *pe = p + len;
 	const SpMapEntry *me;
 
 	sp_map_each (&m->map, me) {
@@ -632,25 +677,61 @@ sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
 		size_t i;
 		sp_vec_each (e->values, i) {
 			const uint16_t *s = e->values[i];
-			if (p + e->len + *s + 4 > pe) {
-				return SP_HTTP_EBUFS;
-			}
 			pstr_copy (&e->len, p);
 			p += e->len;
-			memcpy (p, ": ", 2);
-			p += 2;
+			memcpy (p, sep, sizeof sep - 1);
+			p += sizeof sep - 1;
 			pstr_copy (s, p);
 			p += *s;
-			memcpy (p, "\r\n", 2);
-			p += 2;
+			memcpy (p, crlf, sizeof crlf - 1);
+			p += sizeof crlf - 1;
 		}
 	}
 
-	if (p < pe) {
+	if (len > m->encode_size) {
 		*p = '\0';
 	}
 
 	return p - (char *)buf;
+}
+
+ssize_t
+sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov, size_t n)
+{
+	assert (m != NULL);
+	assert (iov != NULL);
+
+	if (n < m->scatter_count) {
+		return SP_HTTP_EBUFS;
+	}
+
+	const SpMapEntry *me;
+	sp_map_each (&m->map, me) {
+		const SpHttpEntry *e = me->value;
+		size_t i;
+		sp_vec_each (e->values, i) {
+			const uint16_t *s = e->values[i];
+			iov[0].iov_base = (void *)(e+1);
+			iov[0].iov_len = e->len;
+			iov[1].iov_base = (void *)sep;
+			iov[1].iov_len = sizeof sep - 1;
+			iov[2].iov_base = (void *)(s+1);
+			iov[2].iov_len = *s;
+			iov[3].iov_base = (void *)crlf;
+			iov[3].iov_len = sizeof crlf - 1;
+			iov += 4;
+		}
+	}
+
+	return m->scatter_count;
+}
+
+size_t
+sp_http_map_scatter_count (const SpHttpMap *m)
+{
+	assert (m != NULL);
+
+	return m->scatter_count;
 }
 
 void

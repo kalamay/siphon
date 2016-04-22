@@ -297,8 +297,9 @@ test_request_capture (ssize_t speed)
 	mu_assert_str_eq ("value 3", iov.iov_base);
 
 	char buf[1024];
-	ssize_t len = sp_http_map_encode (p.headers, buf, sizeof buf);
-	mu_assert_int_eq (len, 217);
+	mu_assert_uint_eq (sp_http_map_encode_size (p.headers), 217);
+	mu_assert_uint_eq (sp_http_map_scatter_count (p.headers), 44);
+	mu_assert_int_eq (sp_http_map_encode (p.headers, buf, sizeof buf), 217);
 
 	sp_http_final (&p);
 }
