@@ -660,14 +660,10 @@ sp_http_map_encode_size (const SpHttpMap *m)
 }
 
 ssize_t
-sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
+sp_http_map_encode (const SpHttpMap *m, void *buf)
 {
 	assert (m != NULL);
 	assert (buf != NULL);
-
-	if (len < m->encode_size) {
-		return SP_HTTP_EBUFS;
-	}
 
 	char *p = buf;
 	const SpMapEntry *me;
@@ -675,8 +671,10 @@ sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
 	sp_map_each (&m->map, me) {
 		const SpHttpEntry *e = me->value;
 		size_t i;
+
 		sp_vec_each (e->values, i) {
 			const uint16_t *s = e->values[i];
+
 			pstr_copy (&e->len, p);
 			p += e->len;
 			memcpy (p, sep, sizeof sep - 1);
@@ -688,29 +686,32 @@ sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
 		}
 	}
 
-	if (len > m->encode_size) {
-		*p = '\0';
-	}
-
 	return p - (char *)buf;
 }
 
+size_t
+sp_http_map_scatter_count (const SpHttpMap *m)
+{
+	assert (m != NULL);
+
+	return m->scatter_count;
+}
+
 ssize_t
-sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov, size_t n)
+sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov)
 {
 	assert (m != NULL);
 	assert (iov != NULL);
 
-	if (n < m->scatter_count) {
-		return SP_HTTP_EBUFS;
-	}
-
 	const SpMapEntry *me;
+
 	sp_map_each (&m->map, me) {
 		const SpHttpEntry *e = me->value;
 		size_t i;
+
 		sp_vec_each (e->values, i) {
 			const uint16_t *s = e->values[i];
+
 			iov[0].iov_base = (void *)(e+1);
 			iov[0].iov_len = e->len;
 			iov[1].iov_base = (void *)sep;
@@ -722,14 +723,6 @@ sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov, size_t n)
 			iov += 4;
 		}
 	}
-
-	return m->scatter_count;
-}
-
-size_t
-sp_http_map_scatter_count (const SpHttpMap *m)
-{
-	assert (m != NULL);
 
 	return m->scatter_count;
 }
