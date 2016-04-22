@@ -101,7 +101,7 @@ main (int argc, char **argv)
 	size_t freelen = len;
 
 	SpHttp p;
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 
 	while (!sp_http_is_done (&p) && cur < end) {
 		rc = sp_http_next (&p, cur, len);

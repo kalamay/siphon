@@ -4,6 +4,8 @@
 #include "common.h"
 #include "range.h"
 
+#include <sys/socket.h>
+
 #define SP_HTTP_MAX_METHOD 32
 #define SP_HTTP_MAX_URI 8192
 #define SP_HTTP_MAX_REASON 256
@@ -54,6 +56,14 @@ typedef enum {
 	SP_HTTP_TRAILER_END  // complete request or response
 } SpHttpType;
 
+typedef struct SpHttpMap SpHttpMap;
+typedef struct SpHttpEntry SpHttpEntry;
+
+typedef struct {
+	uint16_t len;
+	char value[1];
+} SpHttpSlice;
+
 typedef struct {
 	// public
 	uint16_t max_method; // max size for a request method
@@ -73,13 +83,17 @@ typedef struct {
 	unsigned cs;         // current scanner state
 	size_t off;          // internal offset mark
 	size_t body_len;     // content length or current chunk size
+	SpHttpMap *headers;  // map reference to capture headers
 } SpHttp;
 
-SP_EXPORT void
-sp_http_init_request (SpHttp *p);
+SP_EXPORT int
+sp_http_init_request (SpHttp *p, bool capture);
+
+SP_EXPORT int
+sp_http_init_response (SpHttp *p, bool capture);
 
 SP_EXPORT void
-sp_http_init_response (SpHttp *p);
+sp_http_final (SpHttp *p);
 
 SP_EXPORT void
 sp_http_reset (SpHttp *p);
@@ -92,6 +106,37 @@ sp_http_is_done (const SpHttp *p);
 
 SP_EXPORT void
 sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out);
+
+
+
+SP_EXPORT SpHttpMap *
+sp_http_map_new (void);
+
+SP_EXPORT void
+sp_http_map_free (SpHttpMap *m);
+
+SP_EXPORT int
+sp_http_map_put (SpHttpMap *m,
+		const void *name, uint16_t nlen,
+		const void *value, uint16_t vlen);
+
+SP_EXPORT bool
+sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen);
+
+SP_EXPORT const SpHttpEntry *
+sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen);
+
+SP_EXPORT void
+sp_http_entry_name (const SpHttpEntry *e, struct iovec *iov);
+
+SP_EXPORT size_t
+sp_http_entry_count (const SpHttpEntry *e);
+
+SP_EXPORT bool
+sp_http_entry_value (const SpHttpEntry *e, size_t idx, struct iovec *iov);
+
+SP_EXPORT void
+sp_http_map_print (const SpHttpMap *m, FILE *out);
 
 #endif
 

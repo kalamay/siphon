@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6-alpha
+
+* allow proper http header capturing
+
 ## 0.2.5
 
 * fix msgpack nested decoding

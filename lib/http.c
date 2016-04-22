@@ -1,4 +1,8 @@
 #include "../include/siphon/http.h"
+#include "../include/siphon/vec.h"
+#include "../include/siphon/map.h"
+#include "../include/siphon/hash.h"
+#include "../include/siphon/alloc.h"
 #include "parser.h"
 
 #include <assert.h>
@@ -36,6 +40,12 @@ static const uint8_t crlf[] = "\r\n";
 static int
 scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 {
+	if (p->headers != NULL) {
+		sp_http_map_put (p->headers,
+				m+p->as.field.name.off, p->as.field.name.len,
+				m+p->as.field.value.off, p->as.field.value.len);
+	}
+
 	if (p->trailers || p->body_len) {
 		return 0;
 	}
@@ -214,10 +224,8 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 		EXPECT_CRLF (p->max_value + p->as.field.value.off, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
 		p->as.field.value.len = (uint16_t)(p->off - p->as.field.value.off - (sizeof crlf - 1));
-		if (!p->trailers) {
-			scrape_field (p, m);
-		}
-		YIELD (SP_HTTP_FIELD, FLD);
+		scrape_field (p, m);
+		YIELD (p->headers == NULL ? SP_HTTP_FIELD : SP_HTTP_NONE, FLD);
 
 	default:
 		YIELD_ERROR (SP_HTTP_ESTATE);
@@ -290,18 +298,29 @@ init_sizes (SpHttp *p)
 	p->max_value = SP_HTTP_MAX_VALUE;
 }
 
-void
-sp_http_init_request (SpHttp *p)
+static int
+init_capture (SpHttp *p)
+{
+	p->headers = sp_http_map_new ();
+	if (p->headers == NULL) {
+		return SP_ESYSTEM (errno);
+	}
+	return 0;
+}
+
+int
+sp_http_init_request (SpHttp *p, bool capture)
 {
 	assert (p != NULL);
 
 	memset (p, 0, sizeof *p);
 	init_sizes (p);
 	p->cs = REQ;
+	return capture ? init_capture (p) : 0;
 }
 
-void
-sp_http_init_response (SpHttp *p)
+int
+sp_http_init_response (SpHttp *p, bool capture)
 {
 	assert (p != NULL);
 
@@ -309,6 +328,18 @@ sp_http_init_response (SpHttp *p)
 	init_sizes (p);
 	p->cs = RES;
 	p->response = true;
+	return capture ? init_capture (p) : 0;
+}
+
+void
+sp_http_final (SpHttp *p)
+{
+	assert (p != NULL);
+
+	if (p->headers != NULL) {
+		sp_http_map_free (p->headers);
+		p->headers = NULL;
+	}
 }
 
 void
@@ -321,12 +352,13 @@ sp_http_reset (SpHttp *p)
 	uint16_t max_reason = p->max_reason;
 	uint16_t max_field = p->max_field;
 	uint16_t max_value = p->max_value;
+	SpHttpMap *headers = p->headers;
 
 	if (p->response) {
-		sp_http_init_response (p);
+		sp_http_init_response (p, false);
 	}
 	else {
-		sp_http_init_request (p);
+		sp_http_init_request (p, false);
 	}
 
 	p->max_method = max_method;
@@ -334,6 +366,9 @@ sp_http_reset (SpHttp *p)
 	p->max_reason = max_reason;
 	p->max_field = max_field;
 	p->max_value = max_value;
+
+	if (headers) {
+	}
 }
 
 ssize_t
@@ -404,6 +439,222 @@ sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out)
 		fprintf (out, "%c\n", p->response ? '<' : '>');
 		break;
 	default: break;
+	}
+}
+
+
+
+struct SpHttpMap {
+	SpMap map;
+};
+
+struct SpHttpEntry {
+	uint16_t **values;
+	uint16_t len;
+} __attribute__((packed));
+
+static void
+pstr_assign (uint16_t *s, const void *val, uint16_t len)
+{
+	*s = len;
+	uint8_t *buf = (uint8_t *)(s+1);
+	memcpy (buf, val, len);
+	buf[len] = 0;
+}
+
+static uint16_t *
+pstr_new (const void *val, uint16_t len)
+{
+	uint16_t *s = sp_malloc (sizeof *s + len + 1);
+	if (s != NULL) {
+		pstr_assign (s, val, len);
+	}
+	return s;
+}
+
+static void
+pstr_free (uint16_t *s)
+{
+	if (s != NULL) {
+		sp_free (s, sizeof *s + *s + 1);
+	}
+}
+
+static bool
+pstr_case_eq (const uint16_t *s, const void *val, uint16_t len)
+{
+	return *s == len && strncasecmp ((const char *)(s+1), val, len) == 0;
+}
+
+static void
+pstr_set (const uint16_t *s, struct iovec *iov)
+{
+	iov->iov_len = *s;
+	iov->iov_base = (void *)(s+1);
+}
+
+static bool
+entry_iskey (const void *val, const void *key, size_t len)
+{
+	const SpHttpEntry *e = val;
+	return pstr_case_eq (&e->len, key, len);
+}
+
+static SpHttpEntry *
+entry_new (const void *name, uint16_t len)
+{
+	SpHttpEntry *e = sp_malloc (sizeof *e + len + 1);
+	if (e != NULL) {
+		e->values = NULL;
+		pstr_assign (&e->len, name, len);
+	}
+	return e;
+}
+
+static void
+entry_free (void *val)
+{
+	SpHttpEntry *e = val;
+
+	size_t i;
+	sp_vec_each (e->values, i) {
+		pstr_free (e->values[i]);
+	}
+	sp_vec_free (e->values);
+	sp_free (e, sizeof *e + e->len + 1);
+}
+
+static const SpType map_type = {
+	.hash = sp_siphash_case,
+	.iskey = entry_iskey,
+	.free = entry_free
+};
+
+SpHttpMap *
+sp_http_map_new (void)
+{
+	SpHttpMap *m = sp_malloc (sizeof *m);
+	if (m != NULL) {
+		sp_map_init (&m->map, 0, 0.0, &map_type);
+	}
+	return m;
+}
+
+void
+sp_http_map_free (SpHttpMap *m)
+{
+	if (m != NULL) {
+		sp_map_final (&m->map);
+		sp_free (m, sizeof *m);
+	}
+}
+
+int
+sp_http_map_put (SpHttpMap *m,
+		const void *name, uint16_t nlen,
+		const void *value, uint16_t vlen)
+{
+	assert (m != NULL);
+	assert (name != NULL);
+	assert (value != NULL);
+
+	uint16_t *s = pstr_new (value, vlen);
+	if (s == NULL) {
+		goto err;
+	}
+
+	bool new;
+	SpHttpEntry *e;
+	void **loc = sp_map_reserve (&m->map, name, nlen, &new);
+
+	if (loc == NULL) {
+		goto err;
+	}
+
+	if (new) {
+		e = entry_new (name, nlen);
+		if (e == NULL) {
+			goto err;
+		}
+		sp_map_assign (&m->map, loc, e);
+	}
+	else {
+		e = *loc;
+	}
+
+	sp_vec_push (e->values, s);
+
+	return 0;
+
+err:
+	pstr_free (s);
+	return SP_ESYSTEM (errno);
+}
+
+bool
+sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen)
+{
+	return sp_map_del (&m->map, name, nlen);
+}
+
+const SpHttpEntry *
+sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen)
+{
+	return sp_map_get (&m->map, name, nlen);
+}
+
+void
+sp_http_entry_name (const SpHttpEntry *e, struct iovec *iov)
+{
+	assert (e != NULL);
+
+	pstr_set (&e->len, iov);
+}
+
+size_t
+sp_http_entry_count (const SpHttpEntry *e)
+{
+	assert (e != NULL);
+
+	return sp_vec_count (e->values);
+}
+
+bool
+sp_http_entry_value (const SpHttpEntry *e, size_t idx, struct iovec *iov)
+{
+	assert (e != NULL);
+
+	if (idx < sp_vec_count (e->values)) {
+		pstr_set (e->values[idx], iov);
+		return true;
+	}
+	return false;
+}
+
+void
+sp_http_map_print (const SpHttpMap *m, FILE *out)
+{
+	if (out == NULL) {
+		out = stderr;
+	}
+
+	if (m == NULL) {
+		fprintf (out, "#<SpHttpMap:(null)>\n");
+	}
+	else {
+		fprintf (out, "#<SpHttpMap:%p> {\n", (void *)m);
+		const SpMapEntry *me;
+		sp_map_each (&m->map, me) {
+			const SpHttpEntry *e = me->value;
+			size_t i;
+			sp_vec_each (e->values, i) {
+				const uint16_t *s = e->values[i];
+				fprintf (out, "    %.*s: %.*s\n",
+					(int)e->len, (void *)(e+1),
+					(int)*s, (void *)(s+1));
+			}
+		}
+		fprintf (out, "}\n");
 	}
 }
 

@@ -139,7 +139,7 @@ static void
 test_request (ssize_t speed)
 {
 	SpHttp p;
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 
 	static const uint8_t request[] = 
 		"GET /some/path HTTP/1.1\r\n"
@@ -180,13 +180,15 @@ test_request (ssize_t speed)
 	mu_assert_str_eq ("Content-Length", msg.fields[6].name);
 	mu_assert_str_eq ("12", msg.fields[6].value);
 	mu_assert_str_eq ("Hello World!", msg.body);
+
+	sp_http_final (&p);
 }
 
 static void
 test_chunked_request (ssize_t speed)
 {
 	SpHttp p;
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 
 	static const uint8_t request[] = 
 		"GET /some/path HTTP/1.1\r\n"
@@ -238,10 +240,70 @@ test_chunked_request (ssize_t speed)
 }
 
 static void
+test_request_capture (ssize_t speed)
+{
+	SpHttp p;
+	sp_http_init_request (&p, true);
+
+	static const uint8_t request[] = 
+		"GET /some/path HTTP/1.1\r\n"
+		"Empty:\r\n"
+		"Empty-Space: \r\n"
+		"Space: value\r\n"
+		"No-Space:value\r\n"
+		"Spaces: value with spaces\r\n"
+		"Pre-Spaces:           value with prefix spaces\r\n"
+		"Transfer-Encoding: chunked\r\n"
+		"Test: value 1\r\n"
+		"TEST: value 2\r\n"
+		"test: value 3\r\n"
+		//"Newlines: stuff\r\n with\r\n newlines\r\n"
+		//"String: stuff\r\n \"with\r\n\\\"strings\\\" and things\r\n\"\r\n"
+		"\r\n"
+		"5\r\n"
+		"Hello\r\n"
+		"7\r\n"
+		" World!\r\n"
+		"0\r\n"
+		"Trailer: trailer value\r\n"
+		"\r\n"
+		;
+
+	Message msg;
+	if (!parse (&p, &msg, request, sizeof request - 1, speed)) {
+		return;
+	}
+
+	mu_assert_str_eq ("GET", msg.as.request.method);
+	mu_assert_str_eq ("/some/path", msg.as.request.uri);
+	mu_assert_uint_eq (1, msg.as.request.version);
+	mu_assert_uint_eq (0, msg.field_count);
+	mu_assert_str_eq ("Hello World!", msg.body);
+
+	struct iovec iov;
+	const SpHttpEntry *e = sp_http_map_get (p.headers, "TeSt", 4);
+	mu_fassert_ptr_ne (e, NULL);
+
+	sp_http_entry_name (e, &iov);
+	mu_assert_str_eq ("Test", iov.iov_base);
+
+	mu_fassert_uint_eq (3, sp_http_entry_count (e));
+
+	mu_fassert (sp_http_entry_value (e, 0, &iov));
+	mu_assert_str_eq ("value 1", iov.iov_base);
+	mu_fassert (sp_http_entry_value (e, 1, &iov));
+	mu_assert_str_eq ("value 2", iov.iov_base);
+	mu_fassert (sp_http_entry_value (e, 2, &iov));
+	mu_assert_str_eq ("value 3", iov.iov_base);
+
+	sp_http_final (&p);
+}
+
+static void
 test_response (ssize_t speed)
 {
 	SpHttp p;
-	sp_http_init_response (&p);
+	sp_http_init_response (&p, false);
 
 	static const uint8_t response[] = 
 		"HTTP/1.1 200 OK\r\n"
@@ -282,13 +344,15 @@ test_response (ssize_t speed)
 	mu_assert_str_eq ("Content-Length", msg.fields[6].name);
 	mu_assert_str_eq ("12", msg.fields[6].value);
 	mu_assert_str_eq ("Hello World!", msg.body);
+
+	sp_http_final (&p);
 }
 
 static void
 test_chunked_response (ssize_t speed)
 {
 	SpHttp p;
-	sp_http_init_response (&p);
+	sp_http_init_response (&p, false);
 
 	static const uint8_t response[] = 
 		"HTTP/1.1 200 OK\r\n"
@@ -337,6 +401,8 @@ test_chunked_response (ssize_t speed)
 	mu_assert_str_eq ("Trailer", msg.fields[7].name);
 	mu_assert_str_eq ("trailer value", msg.fields[7].value);
 	mu_assert_str_eq ("Hello World!", msg.body);
+
+	sp_http_final (&p);
 }
 
 static void
@@ -351,7 +417,7 @@ test_invalid_header (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
 	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
@@ -371,7 +437,7 @@ test_limit_method_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, 54);
 }
@@ -388,7 +454,7 @@ test_exceed_method_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_assert_int_eq (rc, SP_HTTP_ESIZE);
 }
@@ -405,7 +471,7 @@ test_limit_name_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
 	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
@@ -425,7 +491,7 @@ test_exceed_name_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
 	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
@@ -445,7 +511,7 @@ test_limit_value_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
 	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
@@ -465,7 +531,7 @@ test_exceed_value_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
 	mu_assert_int_eq (p.type, SP_HTTP_REQUEST);
@@ -485,7 +551,7 @@ test_increase_value_size (void)
 	SpHttp p;
 	ssize_t rc;
 
-	sp_http_init_request (&p);
+	sp_http_init_request (&p, false);
 	p.max_value = 2048;
 	rc = sp_http_next (&p, request, sizeof request - 1);
 	mu_fassert_int_eq (rc, 25);
@@ -509,6 +575,11 @@ main (void)
 	test_chunked_request (1);  // parse 1 byte at a time
 	test_chunked_request (2);  // parse 2 bytes at a time
 	test_chunked_request (11); // parse 11 bytes at a time
+
+	test_request_capture (-1); // parse full message
+	test_request_capture (1);  // parse 1 byte at a time
+	test_request_capture (2);  // parse 2 bytes at a time
+	test_request_capture (11); // parse 11 bytes at a time
 
 	test_response (-1); // parse full message
 	test_response (1);  // parse 1 byte at a time
