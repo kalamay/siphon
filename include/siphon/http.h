@@ -60,11 +60,6 @@ typedef struct SpHttpMap SpHttpMap;
 typedef struct SpHttpEntry SpHttpEntry;
 
 typedef struct {
-	uint16_t len;
-	char value[1];
-} SpHttpSlice;
-
-typedef struct {
 	// public
 	uint16_t max_method; // max size for a request method
 	uint16_t max_uri;    // max size for a request uri
