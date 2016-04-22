@@ -606,25 +606,24 @@ sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen)
 void
 sp_http_entry_name (const SpHttpEntry *e, struct iovec *iov)
 {
-	assert (e != NULL);
-
-	pstr_set (&e->len, iov);
+	if (e == NULL) {
+		iov->iov_len = 0;
+	}
+	else {
+		pstr_set (&e->len, iov);
+	}
 }
 
 size_t
 sp_http_entry_count (const SpHttpEntry *e)
 {
-	assert (e != NULL);
-
-	return sp_vec_count (e->values);
+	return e == NULL ? 0 : sp_vec_count (e->values);
 }
 
 bool
 sp_http_entry_value (const SpHttpEntry *e, size_t idx, struct iovec *iov)
 {
-	assert (e != NULL);
-
-	if (idx < sp_vec_count (e->values)) {
+	if (e != NULL && idx < sp_vec_count (e->values)) {
 		pstr_set (e->values[idx], iov);
 		return true;
 	}
