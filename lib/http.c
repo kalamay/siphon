@@ -495,6 +495,12 @@ pstr_set (const uint16_t *s, struct iovec *iov)
 	iov->iov_base = (void *)(s+1);
 }
 
+static void
+pstr_copy (const uint16_t *s, void *dst)
+{
+	memcpy (dst, s+1, *s);
+}
+
 static bool
 entry_iskey (const void *val, const void *key, size_t len)
 {
@@ -609,6 +615,42 @@ const SpHttpEntry *
 sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen)
 {
 	return sp_map_get (&m->map, name, nlen);
+}
+
+ssize_t
+sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len)
+{
+	assert (m != NULL);
+	assert (buf != NULL);
+
+	char *p = buf;
+	char *pe = p + len;
+	const SpMapEntry *me;
+
+	sp_map_each (&m->map, me) {
+		const SpHttpEntry *e = me->value;
+		size_t i;
+		sp_vec_each (e->values, i) {
+			const uint16_t *s = e->values[i];
+			if (p + e->len + *s + 4 > pe) {
+				return SP_HTTP_EBUFS;
+			}
+			pstr_copy (&e->len, p);
+			p += e->len;
+			memcpy (p, ": ", 2);
+			p += 2;
+			pstr_copy (s, p);
+			p += *s;
+			memcpy (p, "\r\n", 2);
+			p += 2;
+		}
+	}
+
+	if (p < pe) {
+		*p = '\0';
+	}
+
+	return p - (char *)buf;
 }
 
 void

@@ -296,6 +296,10 @@ test_request_capture (ssize_t speed)
 	mu_fassert (sp_http_entry_value (e, 2, &iov));
 	mu_assert_str_eq ("value 3", iov.iov_base);
 
+	char buf[1024];
+	ssize_t len = sp_http_map_encode (p.headers, buf, sizeof buf);
+	mu_assert_int_eq (len, 217);
+
 	sp_http_final (&p);
 }
 

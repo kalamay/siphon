@@ -30,6 +30,7 @@
 #define SP_HTTP_ESIZE       (-1011)
 #define SP_HTTP_ESTATE      (-1012)
 #define SP_HTTP_ETOOSHORT   (-1013)
+#define SP_HTTP_EBUFS       (-1014)
 
 #define SP_JSON_ESYNTAX     (-1020)
 #define SP_JSON_ESIZE       (-1021)

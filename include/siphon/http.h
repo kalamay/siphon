@@ -124,6 +124,9 @@ sp_http_map_clear (SpHttpMap *m);
 SP_EXPORT const SpHttpEntry *
 sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen);
 
+SP_EXPORT ssize_t
+sp_http_map_encode (const SpHttpMap *m, void *buf, size_t len);
+
 SP_EXPORT void
 sp_http_entry_name (const SpHttpEntry *e, struct iovec *iov);
 
