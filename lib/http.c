@@ -368,6 +368,8 @@ sp_http_reset (SpHttp *p)
 	p->max_value = max_value;
 
 	if (headers) {
+		sp_http_map_clear (headers);
+		p->headers = headers;
 	}
 }
 
@@ -595,6 +597,12 @@ bool
 sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen)
 {
 	return sp_map_del (&m->map, name, nlen);
+}
+
+void
+sp_http_map_clear (SpHttpMap *m)
+{
+	sp_map_clear (&m->map);
 }
 
 const SpHttpEntry *

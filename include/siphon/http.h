@@ -118,6 +118,9 @@ sp_http_map_put (SpHttpMap *m,
 SP_EXPORT bool
 sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen);
 
+SP_EXPORT void
+sp_http_map_clear (SpHttpMap *m);
+
 SP_EXPORT const SpHttpEntry *
 sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen);
 
