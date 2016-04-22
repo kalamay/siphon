@@ -650,8 +650,8 @@ sp_http_map_print (const SpHttpMap *m, FILE *out)
 			sp_vec_each (e->values, i) {
 				const uint16_t *s = e->values[i];
 				fprintf (out, "    %.*s: %.*s\n",
-					(int)e->len, (void *)(e+1),
-					(int)*s, (void *)(s+1));
+					(int)e->len, (char *)(e+1),
+					(int)*s, (char *)(s+1));
 			}
 		}
 		fprintf (out, "}\n");
