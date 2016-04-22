@@ -659,7 +659,7 @@ sp_http_map_encode_size (const SpHttpMap *m)
 	return m->encode_size;
 }
 
-ssize_t
+void
 sp_http_map_encode (const SpHttpMap *m, void *buf)
 {
 	assert (m != NULL);
@@ -685,8 +685,6 @@ sp_http_map_encode (const SpHttpMap *m, void *buf)
 			p += sizeof crlf - 1;
 		}
 	}
-
-	return p - (char *)buf;
 }
 
 size_t
@@ -697,7 +695,7 @@ sp_http_map_scatter_count (const SpHttpMap *m)
 	return m->scatter_count;
 }
 
-ssize_t
+void
 sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov)
 {
 	assert (m != NULL);
@@ -723,8 +721,6 @@ sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov)
 			iov += 4;
 		}
 	}
-
-	return m->scatter_count;
 }
 
 void

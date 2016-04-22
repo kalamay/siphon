@@ -297,9 +297,20 @@ test_request_capture (ssize_t speed)
 	mu_assert_str_eq ("value 3", iov.iov_base);
 
 	char buf[1024];
+
 	mu_assert_uint_eq (sp_http_map_encode_size (p.headers), 217);
 	mu_assert_uint_eq (sp_http_map_scatter_count (p.headers), 44);
-	mu_assert_int_eq (sp_http_map_encode (p.headers, buf), 217);
+	memset (buf, 0, sizeof buf);
+	sp_http_map_encode (p.headers, buf);
+	mu_assert_uint_eq (strlen (buf), 217);
+
+	sp_http_map_del (p.headers, "test", 4);
+
+	mu_assert_uint_eq (sp_http_map_encode_size (p.headers), 172);
+	mu_assert_uint_eq (sp_http_map_scatter_count (p.headers), 32);
+	memset (buf, 0, sizeof buf);
+	sp_http_map_encode (p.headers, buf);
+	mu_assert_uint_eq (strlen (buf), 172);
 
 	sp_http_final (&p);
 }
