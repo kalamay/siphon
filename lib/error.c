@@ -3,7 +3,7 @@
 #include "config.h"
 
 #include <stdlib.h>
-#if HAVE_EXECINFO_H
+#if SP_HAVE_EXECINFO
 # include <execinfo.h>
 #endif
 
@@ -433,7 +433,7 @@ sp_error_checkset (int code, const char *domain, const char *name, const char *m
 inline size_t
 sp_stack (char *buf, size_t len)
 {
-#if HAVE_EXECINFO_H
+#if SP_HAVE_EXECINFO
 	char **strs = NULL;
 	void *stack[32];
 	int count = 0, i = 0;

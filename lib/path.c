@@ -591,7 +591,7 @@ again:
 		}
 	} while (is_rel_dir (ent));
 
-#ifdef HAVE_DIRENT_NAMLEN
+#ifdef SP_HAVE_DIRENT_NAMLEN
 	size_t namlen = ent->d_namlen;
 #else
 	size_t namlen = strnlen (ent->d_name, sizeof ent->d_name);
