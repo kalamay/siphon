@@ -3,6 +3,7 @@
 ## 0.2.6-alpha
 
 * allow proper http header capturing
+* add basic config step during build
 
 ## 0.2.5
 
