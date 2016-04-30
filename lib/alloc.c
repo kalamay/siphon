@@ -118,7 +118,7 @@ sp_alloc_debug (void *ptr, size_t oldsz, size_t newsz, bool zero)
 {
 	if (
 			sp_unlikely (pagesize == 0)
-#if SP_VALGRIND
+#if HAVE_VALGRIND_H
 			|| RUNNING_ON_VALGRIND
 #endif
 	) {

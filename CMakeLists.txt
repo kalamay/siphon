@@ -22,6 +22,17 @@ set(SIPHON_VER_STRING ${SIPHON_VER_MAJOR}.${SIPHON_VER_MINOR}.${SIPHON_VER_PATCH
 
 
 
+include(CheckIncludeFiles)
+include(CheckCSourceCompiles)
+
+check_include_files("execinfo.h" HAVE_EXECINFO_H)
+check_include_files("valgrind/valgrind.h" HAVE_VALGRIND_H)
+check_c_source_compiles("#include <dirent.h>\nint main(void) { struct dirent d; return d.d_namlen; }" HAVE_DIRENT_NAMLEN)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/lib/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+
+
 find_program(RAGEL_COMMAND ragel)
 if(NOT RAGEL_COMMAND)
 	message(FATAL_ERROR "'ragel' not found")

@@ -1,8 +1,12 @@
+#cmakedefine HAVE_EXECINFO_H 1
+#cmakedefine HAVE_VALGRIND_H 1
+#cmakedefine HAVE_DIRENT_NAMLEN 1
+
 #if defined(__unix__)
 # include <sys/param.h>
 #endif
 
-#if !defined(NDEBUG) && defined(SP_USE_VALGRIND)
+#if !defined(NDEBUG) && HAVE_VALGRIND_H
 # define SP_VALGRIND 1
 # include <valgrind/valgrind.h>
 #endif

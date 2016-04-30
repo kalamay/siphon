@@ -591,10 +591,10 @@ again:
 		}
 	} while (is_rel_dir (ent));
 
-#ifdef _DIRENT_HAVE_D_RECLEN
-	size_t namlen = strnlen (ent->d_name, sizeof ent->d_name);
-#else
+#ifdef HAVE_DIRENT_NAMLEN
 	size_t namlen = ent->d_namlen;
+#else
+	size_t namlen = strnlen (ent->d_name, sizeof ent->d_name);
 #endif
 
 	len = self->dirlen + namlen + 1;

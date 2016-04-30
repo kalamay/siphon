@@ -1,8 +1,11 @@
 #include "../include/siphon/error.h"
 #include "../include/siphon/vec.h"
+#include "config.h"
 
 #include <stdlib.h>
-#include <execinfo.h>
+#if HAVE_EXECINFO_H
+# include <execinfo.h>
+#endif
 
 #include "lock.h"
 
@@ -430,6 +433,7 @@ sp_error_checkset (int code, const char *domain, const char *name, const char *m
 inline size_t
 sp_stack (char *buf, size_t len)
 {
+#if HAVE_EXECINFO_H
 	char **strs = NULL;
 	void *stack[32];
 	int count = 0, i = 0;
@@ -454,5 +458,10 @@ sp_stack (char *buf, size_t len)
 
 	free (strs);
 	return total;
+#else
+	(void)buf;
+	(void)len;
+	return 0;
+#endif
 }
 
