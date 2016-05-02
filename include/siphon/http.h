@@ -99,6 +99,9 @@ sp_http_next (SpHttp *p, const void *restrict buf, size_t len);
 SP_EXPORT bool
 sp_http_is_done (const SpHttp *p);
 
+SP_EXPORT SpHttpMap *
+sp_http_steal_headers (SpHttp *p);
+
 SP_EXPORT void
 sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out);
 

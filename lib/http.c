@@ -409,6 +409,18 @@ sp_http_is_done (const SpHttp *p)
 	return IS_DONE (p->cs);
 }
 
+SpHttpMap *
+sp_http_steal_headers (SpHttp *p)
+{
+	assert (p != NULL);
+
+	SpHttpMap *headers = p->headers;
+	if (headers != NULL) {
+		init_capture (p);
+	}
+	return headers;
+}
+
 void
 sp_http_print (const SpHttp *p, const void *restrict buf, FILE *out)
 {
