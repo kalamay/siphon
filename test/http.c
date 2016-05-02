@@ -1,6 +1,7 @@
 #include "../include/siphon/http.h"
 #include "../include/siphon/alloc.h"
 #include "../include/siphon/error.h"
+#include "../include/siphon/fmt.h"
 #include "mu.h"
 
 #include <stdlib.h>
@@ -27,24 +28,6 @@ typedef struct {
 	char body[256];
 } Message;
 
-static void
-print_string (FILE *out, const void *val, size_t len)
-{
-	for (const uint8_t *p = val, *pe = p + len; p < pe; p++) {
-		if (isprint (*p)) {
-			fputc (*p, out);
-		}
-		else if (*p >= '\a' && *p <= '\r') {
-			static const char tab[] = "abtnvfr";
-			fprintf (out, "\\%c", tab[*p - '\a']);
-		}
-		else {
-			fprintf (out, "\\x%02X", *p);
-		}
-	}
-	fputc ('\n', out);
-}
-
 static bool
 parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 {
@@ -54,6 +37,7 @@ parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 	size_t len, trim = 0;
 	size_t body = 0;
 	ssize_t rc;
+	bool ok = true;
 
 	if (speed > 0) {
 		len = speed;
@@ -64,7 +48,10 @@ parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 
 	while (body > 0 || !sp_http_is_done (p)) {
 		mu_assert_uint_ge (len, trim);
-		if (len < trim) return false;
+		if (len < trim) {
+			ok = false;
+			goto out;
+		}
 
 		if (body > 0) {
 			rc = len - trim;
@@ -80,9 +67,13 @@ parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 			// normally rc could equal 0 if a full scan couldn't be completed
 			mu_assert_int_ge (rc, 0);
 			if (rc < 0) {
-				fprintf (stderr, "FAILED PARSING: ");
-				print_string (stderr, buf, len - trim);
-				return false;
+				char err[256];
+				sp_error_string (rc, err, sizeof err);
+				fprintf (stderr, "Parsing Failed:\n\terror=\"%s\"\n\tinput=", err);
+				sp_fmt_str (stderr, buf, len - trim, true);
+				fprintf  (stderr, "\n");
+				ok = false;
+				goto out;
 			}
 
 			if (p->type == SP_HTTP_REQUEST) {
@@ -132,7 +123,8 @@ parse (SpHttp *p, Message *msg, const uint8_t *in, size_t inlen, ssize_t speed)
 		}
 	}
 
-	return true;
+out:
+	return ok;
 }
 
 static void
@@ -157,9 +149,7 @@ test_request (ssize_t speed)
 		;
 
 	Message msg;
-	if (!parse (&p, &msg, request, sizeof request - 1, speed)) {
-		return;
-	}
+	mu_fassert (parse (&p, &msg, request, sizeof request - 1, speed));
 
 	mu_assert_str_eq ("GET", msg.as.request.method);
 	mu_assert_str_eq ("/some/path", msg.as.request.uri);
@@ -180,6 +170,74 @@ test_request (ssize_t speed)
 	mu_assert_str_eq ("Content-Length", msg.fields[6].name);
 	mu_assert_str_eq ("12", msg.fields[6].value);
 	mu_assert_str_eq ("Hello World!", msg.body);
+
+	sp_http_final (&p);
+}
+
+static void
+test_request_capture (ssize_t speed)
+{
+	SpHttp p;
+	sp_http_init_request (&p, true);
+
+	static const uint8_t request[] = 
+		"GET /some/path HTTP/1.1\r\n"
+		"Empty:\r\n"
+		"Empty-Space: \r\n"
+		"Space: value\r\n"
+		"No-Space:value\r\n"
+		"Spaces: value with spaces\r\n"
+		"Pre-Spaces:           value with prefix spaces\r\n"
+		"Content-Length: 12\r\n"
+		"Test: value 1\r\n"
+		"TEST: value 2\r\n"
+		"test: value 3\r\n"
+		//"Newlines: stuff\r\n with\r\n newlines\r\n"
+		//"String: stuff\r\n \"with\r\n\\\"strings\\\" and things\r\n\"\r\n"
+		"\r\n"
+		"Hello World!"
+		;
+
+	Message msg;
+	mu_fassert (parse (&p, &msg, request, sizeof request - 1, speed));
+
+	mu_assert_str_eq ("GET", msg.as.request.method);
+	mu_assert_str_eq ("/some/path", msg.as.request.uri);
+	mu_assert_uint_eq (1, msg.as.request.version);
+	mu_assert_uint_eq (0, msg.field_count);
+	mu_assert_str_eq ("Hello World!", msg.body);
+
+	struct iovec iov = { NULL, 0 };
+	const SpHttpEntry *e = sp_http_map_get (p.headers, "TeSt", 4);
+	mu_fassert_ptr_ne (e, NULL);
+
+	sp_http_entry_name (e, &iov);
+	mu_assert_str_eq ("Test", iov.iov_base);
+
+	mu_fassert_uint_eq (3, sp_http_entry_count (e));
+
+	mu_fassert (sp_http_entry_value (e, 0, &iov));
+	mu_assert_str_eq ("value 1", iov.iov_base);
+	mu_fassert (sp_http_entry_value (e, 1, &iov));
+	mu_assert_str_eq ("value 2", iov.iov_base);
+	mu_fassert (sp_http_entry_value (e, 2, &iov));
+	mu_assert_str_eq ("value 3", iov.iov_base);
+
+	char buf[1024];
+
+	mu_assert_uint_eq (sp_http_map_encode_size (p.headers), 185);
+	mu_assert_uint_eq (sp_http_map_scatter_count (p.headers), 40);
+	memset (buf, 0, sizeof buf);
+	sp_http_map_encode (p.headers, buf);
+	mu_assert_uint_eq (strlen (buf), 185);
+
+	sp_http_map_del (p.headers, "test", 4);
+
+	mu_assert_uint_eq (sp_http_map_encode_size (p.headers), 140);
+	mu_assert_uint_eq (sp_http_map_scatter_count (p.headers), 28);
+	memset (buf, 0, sizeof buf);
+	sp_http_map_encode (p.headers, buf);
+	mu_assert_uint_eq (strlen (buf), 140);
 
 	sp_http_final (&p);
 }
@@ -212,9 +270,7 @@ test_chunked_request (ssize_t speed)
 		;
 
 	Message msg;
-	if (!parse (&p, &msg, request, sizeof request - 1, speed)) {
-		return;
-	}
+	mu_fassert (parse (&p, &msg, request, sizeof request - 1, speed));
 
 	mu_assert_str_eq ("GET", msg.as.request.method);
 	mu_assert_str_eq ("/some/path", msg.as.request.uri);
@@ -240,7 +296,7 @@ test_chunked_request (ssize_t speed)
 }
 
 static void
-test_request_capture (ssize_t speed)
+test_chunked_request_capture (ssize_t speed)
 {
 	SpHttp p;
 	sp_http_init_request (&p, true);
@@ -270,9 +326,7 @@ test_request_capture (ssize_t speed)
 		;
 
 	Message msg;
-	if (!parse (&p, &msg, request, sizeof request - 1, speed)) {
-		return;
-	}
+	mu_fassert (parse (&p, &msg, request, sizeof request - 1, speed));
 
 	mu_assert_str_eq ("GET", msg.as.request.method);
 	mu_assert_str_eq ("/some/path", msg.as.request.uri);
@@ -280,7 +334,7 @@ test_request_capture (ssize_t speed)
 	mu_assert_uint_eq (0, msg.field_count);
 	mu_assert_str_eq ("Hello World!", msg.body);
 
-	struct iovec iov;
+	struct iovec iov = { NULL, 0 };
 	const SpHttpEntry *e = sp_http_map_get (p.headers, "TeSt", 4);
 	mu_fassert_ptr_ne (e, NULL);
 
@@ -337,9 +391,7 @@ test_response (ssize_t speed)
 		;
 
 	Message msg;
-	if (!parse (&p, &msg, response, sizeof response - 1, speed)) {
-		return;
-	}
+	mu_fassert (parse (&p, &msg, response, sizeof response - 1, speed));
 
 	mu_assert_uint_eq (1, msg.as.response.version);
 	mu_assert_uint_eq (200, msg.as.response.status);
@@ -392,9 +444,7 @@ test_chunked_response (ssize_t speed)
 		;
 
 	Message msg;
-	if (!parse (&p, &msg, response, sizeof response - 1, speed)) {
-		return;
-	}
+	mu_fassert (parse (&p, &msg, response, sizeof response - 1, speed));
 
 	mu_assert_uint_eq (1, msg.as.response.version);
 	mu_assert_uint_eq (200, msg.as.response.status);
@@ -582,30 +632,20 @@ main (void)
 {
 	mu_init ("http");
 
-	test_request (-1); // parse full message
-	test_request (1);  // parse 1 byte at a time
-	test_request (2);  // parse 2 bytes at a time
-	test_request (11); // parse 11 bytes at a time
-
-	test_chunked_request (-1); // parse full message
-	test_chunked_request (1);  // parse 1 byte at a time
-	test_chunked_request (2);  // parse 2 bytes at a time
-	test_chunked_request (11); // parse 11 bytes at a time
-
-	test_request_capture (-1); // parse full message
-	test_request_capture (1);  // parse 1 byte at a time
-	test_request_capture (2);  // parse 2 bytes at a time
-	test_request_capture (11); // parse 11 bytes at a time
-
-	test_response (-1); // parse full message
-	test_response (1);  // parse 1 byte at a time
-	test_response (2);  // parse 2 bytes at a time
-	test_response (11); // parse 11 bytes at a time
-
-	test_chunked_response (-1); // parse full message
-	test_chunked_response (1);  // parse 1 byte at a time
-	test_chunked_response (2);  // parse 2 bytes at a time
-	test_chunked_response (11); // parse 11 bytes at a time
+	/**
+	 * Parse the input at varying "speeds". The speed is the number
+	 * of bytes to emulate reading at each pass of the parser.
+	 * 0 indicates that all bytes should be available at the start
+	 * of the parser.
+	 */
+	for (ssize_t i = 0; i <= 250; i++) {
+		test_request (i);
+		test_chunked_request (i);
+		test_request_capture (i);
+		test_chunked_request_capture (i);
+		test_response (i);
+		test_chunked_response (i);
+	}
 
 	test_invalid_header ();
 

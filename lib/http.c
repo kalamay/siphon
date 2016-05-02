@@ -42,9 +42,12 @@ static int
 scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 {
 	if (p->headers != NULL) {
-		sp_http_map_put (p->headers,
+		int rc = sp_http_map_put (p->headers,
 				m+p->as.field.name.off, p->as.field.name.len,
 				m+p->as.field.value.off, p->as.field.value.len);
+		if (rc < 0) {
+			return rc;
+		}
 	}
 
 	if (p->trailers || p->body_len) {
@@ -79,7 +82,7 @@ scrape_field (SpHttp *restrict p, const uint8_t *restrict m)
 }
 
 static ssize_t
-parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_request_line (SpHttp *restrict p, const uint8_t *const restrict m, const size_t len)
 {
 	static const uint8_t method_sep[] = "\0@[`{\xff"; // must match ' '
 	static const uint8_t uri_sep[] = "\0 \x7f\xff"; // must match ' '
@@ -125,7 +128,7 @@ parse_request_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 }
 
 static ssize_t
-parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_response_line (SpHttp *restrict p, const uint8_t *const restrict m, const size_t len)
 {
 	const uint8_t *end = m + p->off;
 
@@ -181,19 +184,24 @@ parse_response_line (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 }
 
 static ssize_t
-parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_field (SpHttp *restrict p, const uint8_t *const restrict m, const size_t len)
 {
 	static const uint8_t field_sep[] = ":@\0 \"\"()[]//{{}}"; // must match ':', allows commas
 	static const uint8_t field_lws[] = "\0\x08\x0A\x1f!\xff";
 
 	const uint8_t *end = m + p->off;
+	size_t scan = 0;
 
+#undef SCAN
+#define SCAN scan
+
+again:
 	p->type = SP_HTTP_NONE;
 
 	switch (p->cs) {
 	case FLD:
-		if (len < sizeof crlf - 1) {
-			return 0;
+		if (REMAIN < sizeof crlf - 1) {
+			return SCAN;
 		}
 		if (end[0] == crlf[0] && end[1] == crlf[1]) {
 			end += 2;
@@ -224,17 +232,30 @@ parse_field (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
 	case FLD_VAL:
 		EXPECT_CRLF (p->max_value + p->as.field.value.off, false,
 				SP_HTTP_ESYNTAX, SP_HTTP_ESIZE);
-		p->as.field.value.len = (uint16_t)(p->off - p->as.field.value.off - (sizeof crlf - 1));
-		scrape_field (p, m);
-		YIELD (p->headers == NULL ? SP_HTTP_FIELD : SP_HTTP_NONE, FLD);
+		p->as.field.name.off = SCAN;
+		p->as.field.value.off += SCAN;
+		p->as.field.value.len = (uint16_t)(p->off + SCAN - p->as.field.value.off - (sizeof crlf - 1));
+		CHECK_ERROR (scrape_field (p, m));
+		if (p->headers == NULL) {
+			YIELD (SP_HTTP_FIELD, FLD);
+		}
+		else {
+			SCAN = end - m;
+			p->cs = FLD;
+			p->off = 0;
+			goto again;
+		}
 
 	default:
 		YIELD_ERROR (SP_HTTP_ESTATE);
 	}
+
+#undef SCAN
+#define SCAN 0
 }
 
 static ssize_t
-parse_chunk (SpHttp *restrict p, const uint8_t *restrict m, size_t len)
+parse_chunk (SpHttp *restrict p, const uint8_t *const restrict m, const size_t len)
 {
 	static const uint8_t hex[] = {
 		['0'] = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
