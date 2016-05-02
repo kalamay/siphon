@@ -6,6 +6,10 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+	set(SIPHON_TEST "1")
+endif()
+
 if (NOT CMAKE_INSTALL_NAME_DIR)
 	set(CMAKE_INSTALL_NAME_DIR "/usr/local")
 endif()
@@ -133,7 +137,7 @@ target_link_libraries(test-uri-input siphon-static m)
 add_executable(test-utf8-encode test/utf8-encode.c)
 target_link_libraries(test-utf8-encode siphon-static m)
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
+if(DEFINED SIPHON_TEST)
 
 	find_program(VALGRIND_COMMAND valgrind)
 
