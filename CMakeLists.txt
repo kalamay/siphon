@@ -200,10 +200,6 @@ if(DEFINED SIPHON_TEST)
 	add_executable(test-bloom test/bloom.c)
 	target_link_libraries(test-bloom siphon-static m)
 
-	add_test(NAME cache COMMAND test-cache)
-	add_executable(test-cache test/cache.c)
-	target_link_libraries(test-cache siphon-static m)
-
 	add_test(NAME line COMMAND test-line)
 	add_executable(test-line test/line.c)
 	target_link_libraries(test-line siphon-static m)
