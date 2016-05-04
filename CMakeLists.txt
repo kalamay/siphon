@@ -50,12 +50,12 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
 		${PROJECT_SOURCE_DIR}/lib/uri_parser.rl
 )
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/http_cache_control.c
 	COMMAND ${RAGEL_COMMAND} -G2 -o
-		${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
-		${PROJECT_SOURCE_DIR}/lib/cache_parser.rl 
+		${CMAKE_CURRENT_BINARY_DIR}/http_cache_control.c
+		${PROJECT_SOURCE_DIR}/lib/http/cache_control.rl 
 	DEPENDS
-		${PROJECT_SOURCE_DIR}/lib/cache_parser.rl
+		${PROJECT_SOURCE_DIR}/lib/http/cache_control.rl
 )
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.h
@@ -92,7 +92,7 @@ add_library(siphon OBJECT
 	lib/line.c
 	lib/ring.c
 	${CMAKE_CURRENT_BINARY_DIR}/uri_parser.c
-	${CMAKE_CURRENT_BINARY_DIR}/cache_parser.c
+	${CMAKE_CURRENT_BINARY_DIR}/http_cache_control.c
 )
 
 add_library(siphon-static STATIC $<TARGET_OBJECTS:siphon>)
