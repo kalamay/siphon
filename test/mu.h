@@ -65,7 +65,7 @@ static int mu_register = 0;
 
 #define mu_cassert_call(c, exp) do {                              \
 	__sync_fetch_and_add (&mu_assert_count, 1);                   \
-	if ((exp) != 0) {                                             \
+	if ((exp) < 0) {                                              \
 		mu_cfail (c, "'%s' failed (%s)", #exp, strerror (errno)); \
 	}                                                             \
 } while (0);
