@@ -4,6 +4,7 @@
 
 * allow proper http header capturing
 * add basic config step during build
+* path module additions
 
 ## 0.2.5
 
