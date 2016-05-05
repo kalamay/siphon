@@ -5,6 +5,9 @@
 
 #include <errno.h>
 
+#define SP_TEST_ROOT PROJECT_SOURCE_DIR "/test"
+#define SP_TEST_DIR_ROOT SP_TEST_ROOT "/dir"
+
 #define TEST_JOIN(base, rel, exp) do {                               \
 	char buf[1024];                                                  \
 	int rc = sp_path_join (buf, sizeof buf,                          \
@@ -209,7 +212,7 @@ test_proc (void)
 {
 	char buf[SP_PATH_MAX] = {0};
 	int len = sp_path_proc (buf, sizeof buf);
-	printf ("DEBUG: process path '%s'\n", buf);
+	fprintf (stderr, "DEBUG: process path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
 }
 
@@ -218,17 +221,15 @@ test_env (void)
 {
 	char buf[SP_PATH_MAX] = {0};
 	int len = sp_path_env ("vi", buf, sizeof buf);
-	printf ("DEBUG: vi path '%s'\n", buf);
+	fprintf (stderr, "DEBUG: vi path '%s'\n", buf);
 	mu_assert_int_gt (len, 0);
 }
 
 static void
 test_dir_zero (void)
 {
-	const char *p = PROJECT_SOURCE_DIR "/test";
-
 	SpDir dir;
-	int rc = sp_dir_open (&dir, p, 0);
+	int rc = sp_dir_open (&dir, SP_TEST_ROOT, 0);
 	mu_fassert_int_eq (rc, 0);
 	int n = 0;
 
@@ -244,10 +245,8 @@ test_dir_zero (void)
 static void
 test_dir_single (void)
 {
-	const char *p = PROJECT_SOURCE_DIR "/test/dir";
-
 	SpDir dir;
-	int rc = sp_dir_open (&dir, p, 1);
+	int rc = sp_dir_open (&dir, SP_TEST_DIR_ROOT, 1);
 	mu_fassert_int_eq (rc, 0);
 	int n = 0;
 
@@ -261,26 +260,35 @@ test_dir_single (void)
 		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 2);
+	mu_assert_int_eq (n, 3);
 	sp_dir_close (&dir);
 }
 
 static void
 test_dir_tree (void)
 {
-	const char *p = PROJECT_SOURCE_DIR "/test/dir";
-
 	SpDir dir;
-	int rc = sp_dir_open (&dir, p, 16);
+	int rc = sp_dir_open (&dir, SP_TEST_DIR_ROOT, 16);
 	mu_fassert_int_eq (rc, 0);
-	int n = 0;
+	int files = 0, dirs = 0;
 
 	do {
 		rc = sp_dir_next (&dir);
 		if (rc > 0) {
 			mu_assert_uint_eq (strlen (dir.path), dir.pathlen);
-			if (dir.pathlen < 9 || memcmp (dir.path+dir.pathlen-9, ".DS_Store", 9)) {
-				n++;
+			if (dir.pathlen >= 9 && memcmp (dir.path+dir.pathlen-9, ".DS_Store", 9) == 0) {
+				continue;
+			}
+			switch (sp_dir_type (&dir)) {
+			case SP_PATH_DIR:
+				dirs++;
+				break;
+			case SP_PATH_REG:
+			case SP_PATH_LNK:
+				files++;
+				break;
+			default:
+				break;
 			}
 		}
 		else if (rc < 0) {
@@ -288,16 +296,19 @@ test_dir_tree (void)
 		}
 	} while (rc > 0);
 
-	mu_assert_int_eq (n, 12);
+	mu_assert_int_eq (files, 6);
+	mu_assert_int_eq (dirs, 9);
 
 	sp_dir_close (&dir);
 }
-
 
 int
 main (void)
 {
 	mu_init ("path");
+
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/{a,b,c}/{x,y}"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/{a,b}/f " SP_TEST_DIR_ROOT "/{a,b}/{x,y}/f"));
 
 	test_join ();
 	test_clean ();
