@@ -77,6 +77,16 @@
 			"Assertion '%s != %s' failed", a, b);                    \
 } while (0)
 
+#define TEST_SUFFIX_VALID(a, b) do {                                 \
+	mu_assert_msg (sp_path_suffix (a, b),                            \
+			"Assertion '%s ends %s' failed", a, b);                  \
+} while (0)
+
+#define TEST_SUFFIX_INVALID(a, b) do {                               \
+	mu_assert_msg (!sp_path_suffix (a, b),                           \
+			"Assertion '%s not ends %s' failed", a, b);              \
+} while (0)
+
 
 static void
 test_join (void)
@@ -204,6 +214,16 @@ test_match (void)
 	TEST_MATCH_VALID ("test-abc.c", "{test,value}-{abc,xyz}.{c,h}");
 	TEST_MATCH_VALID ("value-xyz.h", "{test,value}-{abc,xyz}.{c,h}");
 
+	TEST_MATCH_VALID ("/files/test.c", "/*/test.{cpp,c}");
+	TEST_MATCH_VALID ("/files/test.cpp", "/*/test.{c,cpp}");
+	TEST_MATCH_VALID ("/files/test-abc.c", "/*/test-abc.*");
+	TEST_MATCH_VALID ("/files/test-abc.c", "/*/test-*.c");
+	TEST_MATCH_VALID ("/files/test-abc.c", "/*/test-*.*");
+	TEST_MATCH_VALID ("/files/test-abc.c", "/*/test-*.[ch]");
+	TEST_MATCH_VALID ("/files/test-abc.cpp", "/*/test-*.[ch]pp");
+	TEST_MATCH_VALID ("/files/test-abc.c", "/*/{test,value}-{abc,xyz}.{c,h}");
+	TEST_MATCH_VALID ("/files/value-xyz.h", "/*/{test,value}-{abc,xyz}.{c,h}");
+
 	TEST_MATCH_VALID ("../files/test.c", "../*/test.{cpp,c}");
 	TEST_MATCH_VALID ("../files/test.cpp", "../*/test.{c,cpp}");
 	TEST_MATCH_VALID ("../files/test-abc.c", "../*/test-abc.*");
@@ -218,6 +238,73 @@ test_match (void)
 	TEST_MATCH_INVALID ("test.cpp", "test.{c,o}");
 	TEST_MATCH_INVALID ("test.c", "test.{cpp,o}");
 	TEST_MATCH_INVALID ("test.c", "test*");
+}
+
+static void
+test_suffix (void)
+{
+	TEST_SUFFIX_VALID ("test.c", "test.{cpp,c}");
+	TEST_SUFFIX_VALID ("test.cpp", "test.{c,cpp}");
+	TEST_SUFFIX_VALID ("test-abc.c", "test-abc.*");
+	TEST_SUFFIX_VALID ("test-abc.c", "test-*.c");
+	TEST_SUFFIX_VALID ("test-abc.c", "test-*.*");
+	TEST_SUFFIX_VALID ("test-abc.c", "test-*.[ch]");
+	TEST_SUFFIX_VALID ("test-abc.cpp", "test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("test-abc.c", "{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("value-xyz.h", "{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_VALID ("../files/test.c", "test.{cpp,c}");
+	TEST_SUFFIX_VALID ("../files/test.cpp", "test.{c,cpp}");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "test-abc.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "test-*.c");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "test-*.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "test-*.[ch]");
+	TEST_SUFFIX_VALID ("../files/test-abc.cpp", "test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("../files/value-xyz.h", "{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_VALID ("../files/test.c", "*/test.{cpp,c}");
+	TEST_SUFFIX_VALID ("../files/test.cpp", "*/test.{c,cpp}");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "*/test-abc.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "*/test-*.c");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "*/test-*.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "*/test-*.[ch]");
+	TEST_SUFFIX_VALID ("../files/test-abc.cpp", "*/test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "*/{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("../files/value-xyz.h", "*/{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_VALID ("../files/test.c", "files/test.{cpp,c}");
+	TEST_SUFFIX_VALID ("../files/test.cpp", "files/test.{c,cpp}");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "files/test-abc.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "files/test-*.c");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "files/test-*.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "files/test-*.[ch]");
+	TEST_SUFFIX_VALID ("../files/test-abc.cpp", "files/test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "files/{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("../files/value-xyz.h", "files/{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_VALID ("../files/test.c", "../files/test.{cpp,c}");
+	TEST_SUFFIX_VALID ("../files/test.cpp", "../files/test.{c,cpp}");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "../files/test-abc.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "../files/test-*.c");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "../files/test-*.*");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "../files/test-*.[ch]");
+	TEST_SUFFIX_VALID ("../files/test-abc.cpp", "../files/test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("../files/test-abc.c", "../files/{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("../files/value-xyz.h", "../files/{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_VALID ("/files/test.c", "/files/test.{cpp,c}");
+	TEST_SUFFIX_VALID ("/files/test.cpp", "/files/test.{c,cpp}");
+	TEST_SUFFIX_VALID ("/files/test-abc.c", "/files/test-abc.*");
+	TEST_SUFFIX_VALID ("/files/test-abc.c", "/files/test-*.c");
+	TEST_SUFFIX_VALID ("/files/test-abc.c", "/files/test-*.*");
+	TEST_SUFFIX_VALID ("/files/test-abc.c", "/files/test-*.[ch]");
+	TEST_SUFFIX_VALID ("/files/test-abc.cpp", "/files/test-*.[ch]pp");
+	TEST_SUFFIX_VALID ("/files/test-abc.c", "/files/{test,value}-{abc,xyz}.{c,h}");
+	TEST_SUFFIX_VALID ("/files/value-xyz.h", "/files/{test,value}-{abc,xyz}.{c,h}");
+
+	TEST_SUFFIX_INVALID ("/files/test.c", "/files/*/test.c");
+	TEST_SUFFIX_INVALID ("/files/test.c", "files/*/test.c");
 }
 
 static void
@@ -329,6 +416,7 @@ main (void)
 	test_splitext ();
 	test_pop ();
 	test_match ();
+	test_suffix ();
 	test_proc ();
 	test_env ();
 	test_dir_zero ();

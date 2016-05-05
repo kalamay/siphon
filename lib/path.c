@@ -430,6 +430,20 @@ sp_path_match (const char *path, const char *match)
 	return *p == '\0' && *m == '\0';
 }
 
+bool
+sp_path_suffix (const char *path, const char *match)
+{
+	if (*match != '/') {
+		const char *end = match;
+		int n = 0;
+		while ((end = strchr (end+1, '/'))) { n++; }
+		SpRange16 a, b;
+		sp_path_split (&a, &b, path, strnlen (path, SP_PATH_MAX), n+1);
+		path += b.off;
+	}
+	return sp_path_match (path, match);
+}
+
 int
 sp_path_proc (char *buf, size_t buflen)
 {

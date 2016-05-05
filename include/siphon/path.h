@@ -77,6 +77,9 @@ sp_path_clean (char *path, uint16_t len, SpPathMode mode);
 SP_EXPORT bool
 sp_path_match (const char *path, const char *match);
 
+SP_EXPORT bool
+sp_path_suffix (const char *path, const char *match);
+
 SP_EXPORT int
 sp_path_proc (char *buf, size_t buflen);
 
