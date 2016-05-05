@@ -144,6 +144,9 @@ test_split (void)
 	TEST_SPLIT ("/path/to/file.txt", 3, "/", "path/to/file.txt");
 	TEST_SPLIT ("/path/to/file.txt", 4, "", "/path/to/file.txt");
 	TEST_SPLIT ("/path/to/file.txt", 5, "", "/path/to/file.txt");
+	TEST_SPLIT ("path/to/file.txt", 1, "path/to", "file.txt");
+	TEST_SPLIT ("path/to/file.txt", 2, "path", "to/file.txt");
+	TEST_SPLIT ("path/to/file.txt", 3, "", "path/to/file.txt");
 	TEST_SPLIT ("/test/path/", 1, "/test/path", "");
 	TEST_SPLIT ("/test/path/", 2, "/test", "path/");
 	TEST_SPLIT ("/path/to/file.txt", -1, "/", "path/to/file.txt");
