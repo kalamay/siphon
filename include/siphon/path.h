@@ -106,6 +106,15 @@ sp_dir_type (SpDir *self);
 SP_EXPORT const SpStat *
 sp_dir_stat (SpDir *self);
 
+SP_EXPORT void
+sp_dir_path (const SpDir *self, const char **start, size_t *len);
+
+SP_EXPORT void
+sp_dir_dirname (const SpDir *self, const char **start, size_t *len);
+
+SP_EXPORT void
+sp_dir_basename (const SpDir *self, const char **start, size_t *len);
+
 
 
 SP_EXPORT int

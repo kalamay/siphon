@@ -690,6 +690,33 @@ sp_dir_stat (SpDir *self)
 	return &self->stat;
 }
 
+void
+sp_dir_path (const SpDir *self, const char **start, size_t *len)
+{
+	assert (self != NULL);
+
+	*start = self->path;
+	*len = self->pathlen;
+}
+
+void
+sp_dir_dirname (const SpDir *self, const char **start, size_t *len)
+{
+	assert (self != NULL);
+
+	*start = self->path;
+	*len = self->dirlen;
+}
+
+void
+sp_dir_basename (const SpDir *self, const char **start, size_t *len)
+{
+	assert (self != NULL);
+
+	*start = self->path + self->dirlen;
+	*len = self->pathlen - self->dirlen;
+}
+
 int
 sp_stat (const char *path, SpStat *sbuf, bool follow)
 {
