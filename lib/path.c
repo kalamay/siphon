@@ -717,6 +717,30 @@ sp_dir_basename (const SpDir *self, const char **start, size_t *len)
 	*len = self->pathlen - self->dirlen;
 }
 
+static inline void
+copy_stat (SpStat *sbuf, const struct stat *s)
+{
+	sbuf->device = s->st_dev;
+	sbuf->mode = s->st_mode;
+	sbuf->nlink = s->st_nlink;
+	sbuf->uid = s->st_uid;
+	sbuf->gid = s->st_gid;
+	sbuf->rdev = s->st_rdev;
+	sbuf->size = s->st_size;
+#if SP_STAT_CLOCK
+	sbuf->atime = s->st_atimespec;
+	sbuf->mtime = s->st_mtimespec;
+	sbuf->ctime = s->st_ctimespec;
+#else
+	sbuf->atime.tv_sec = s->st_atime;
+	sbuf->atime.tv_nsec = 0;
+	sbuf->mtime.tv_sec = s->st_mtime;
+	sbuf->mtime.tv_nsec = 0;
+	sbuf->ctime.tv_sec = s->st_ctime;
+	sbuf->ctime.tv_nsec = 0;
+#endif
+}
+
 int
 sp_stat (const char *path, SpStat *sbuf, bool follow)
 {
@@ -725,26 +749,19 @@ sp_stat (const char *path, SpStat *sbuf, bool follow)
 	if (rc < 0) {
 		return SP_ESYSTEM (errno);
 	}
+	copy_stat (sbuf, &s);
+	return 0;
+}
 
-	sbuf->device = s.st_dev;
-	sbuf->mode = s.st_mode;
-	sbuf->nlink = s.st_nlink;
-	sbuf->uid = s.st_uid;
-	sbuf->gid = s.st_gid;
-	sbuf->rdev = s.st_rdev;
-	sbuf->size = s.st_size;
-#if SP_STAT_CLOCK
-	sbuf->atime = s.st_atimespec;
-	sbuf->mtime = s.st_mtimespec;
-	sbuf->ctime = s.st_ctimespec;
-#else
-	sbuf->atime.tv_sec = s.st_atime;
-	sbuf->atime.tv_nsec = 0;
-	sbuf->mtime.tv_sec = s.st_mtime;
-	sbuf->mtime.tv_nsec = 0;
-	sbuf->ctime.tv_sec = s.st_ctime;
-	sbuf->ctime.tv_nsec = 0;
-#endif
+int
+sp_fstat (int fd, SpStat *sbuf)
+{
+	struct stat s;
+	int rc = fstat (fd, &s);
+	if (rc < 0) {
+		return SP_ESYSTEM (errno);
+	}
+	copy_stat (sbuf, &s);
 	return 0;
 }
 

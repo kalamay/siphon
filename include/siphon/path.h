@@ -120,5 +120,8 @@ sp_dir_basename (const SpDir *self, const char **start, size_t *len);
 SP_EXPORT int
 sp_stat (const char *path, SpStat *sbuf, bool follow);
 
+SP_EXPORT int
+sp_fstat (int fd, SpStat *sbuf);
+
 #endif
 
