@@ -201,6 +201,16 @@ test_match (void)
 	TEST_MATCH_VALID ("test-abc.c", "{test,value}-{abc,xyz}.{c,h}");
 	TEST_MATCH_VALID ("value-xyz.h", "{test,value}-{abc,xyz}.{c,h}");
 
+	TEST_MATCH_VALID ("../files/test.c", "../*/test.{cpp,c}");
+	TEST_MATCH_VALID ("../files/test.cpp", "../*/test.{c,cpp}");
+	TEST_MATCH_VALID ("../files/test-abc.c", "../*/test-abc.*");
+	TEST_MATCH_VALID ("../files/test-abc.c", "../*/test-*.c");
+	TEST_MATCH_VALID ("../files/test-abc.c", "../*/test-*.*");
+	TEST_MATCH_VALID ("../files/test-abc.c", "../*/test-*.[ch]");
+	TEST_MATCH_VALID ("../files/test-abc.cpp", "../*/test-*.[ch]pp");
+	TEST_MATCH_VALID ("../files/test-abc.c", "../*/{test,value}-{abc,xyz}.{c,h}");
+	TEST_MATCH_VALID ("../files/value-xyz.h", "../*/{test,value}-{abc,xyz}.{c,h}");
+
 	TEST_MATCH_INVALID ("test.c", "test.cpp");
 	TEST_MATCH_INVALID ("test.cpp", "test.{c,o}");
 	TEST_MATCH_INVALID ("test.c", "test.{cpp,o}");
