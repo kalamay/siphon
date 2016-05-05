@@ -63,6 +63,15 @@ static int mu_register = 0;
 #define mu_assert_msg(...) mu_cassert_msg(false, __VA_ARGS__)
 #define mu_fassert_msg(...) mu_cassert_msg(true, __VA_ARGS__)
 
+#define mu_cassert_call(c, exp) do {                              \
+	__sync_fetch_and_add (&mu_assert_count, 1);                   \
+	if ((exp) != 0) {                                             \
+		mu_cfail (c, "'%s' failed (%s)", #exp, strerror (errno)); \
+	}                                                             \
+} while (0);
+#define mu_assert_call(exp) mu_cassert_call(false, exp)
+#define mu_fassert_call(exp) mu_cassert_call(true, exp)
+
 #define mu_assert(exp) mu_assert_msg(exp, "'%s' failed", #exp)
 #define mu_fassert(exp) mu_fassert_msg(exp, "'%s' failed", #exp)
 
@@ -150,12 +159,25 @@ mu_final (void)
 	const char *name = mu_name;
 	mu_set (size_t, mu_failure_count, 0);
 	mu_set (size_t, mu_assert_count, 0);
+	int rc;
 	if (fails == 0) {
-		fprintf (stderr, "%8s: passed %zu assertion%s\n", name, asserts, asserts == 1 ? "" : "s");
-		return EXIT_SUCCESS;
+		fprintf (stderr, "%8s: passed %zu assertion%s\n",
+				name,
+				asserts,
+				asserts == 1 ? "" : "s");
+		rc = EXIT_SUCCESS;
 	}
-	fprintf (stderr, "%8s: failed %zu of %zu assertion%s\n", name, fails, asserts, asserts == 1 ? "" : "s");
-	return EXIT_FAILURE;
+	else {
+		fprintf (stderr, "%8s: failed %zu of %zu assertion%s\n",
+				name,
+				fails,
+				asserts,
+				asserts == 1 ? "" : "s");
+		rc = EXIT_FAILURE;
+	}
+	fflush (stderr);
+	fflush (stdout);
+	return rc;
 }
 
 static void __attribute__((noreturn))
