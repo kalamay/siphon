@@ -590,12 +590,15 @@ again:
 			rc = SP_ESYSTEM (errno);
 			if (rc < 0) { return rc; }
 
-			closedir (dir);
-			self->stack[--self->cur] = NULL;
-			if (self->cur == 0) {
-				self->flags &= ~F_OPEN;
+			if (self->cur == 1) {
+				rewinddir (dir);
+				self->flags = F_OPEN;
+				self->cur = 1;
 				return 0;
 			}
+
+			closedir (dir);
+			self->stack[--self->cur] = NULL;
 
 			SpRange16 pop = { 0, self->pathlen };
 			sp_path_pop (self->path, &pop, popn);
