@@ -407,8 +407,18 @@ main (void)
 {
 	mu_init ("path");
 
-	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/{a,b,c}/{x,y}"));
-	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/{a,b}/f " SP_TEST_DIR_ROOT "/{a,b}/{x,y}/f"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/a/x"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/a/y"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/b/x"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/b/y"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/c/x"));
+	mu_fassert_call (system ("mkdir -p " SP_TEST_DIR_ROOT "/c/y"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/a/f"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/b/f"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/a/x/f"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/a/yf"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/b/x/f"));
+	mu_fassert_call (system ("touch " SP_TEST_DIR_ROOT "/b/yf"));
 
 	test_join ();
 	test_clean ();
