@@ -6,10 +6,6 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-	set(SIPHON_TEST "1")
-endif()
-
 if (NOT CMAKE_INSTALL_NAME_DIR)
 	set(CMAKE_INSTALL_NAME_DIR "/usr/local")
 endif()
@@ -17,6 +13,7 @@ endif()
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -Werror -pedantic -D_BSD_SOURCE -D_GNU_SOURCE -fPIC -fvisibility=hidden")
 set(CMAKE_C_FLAGS_DEBUG "-g -DSP_ALLOC_DEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELEASE} -g")
 SET(CMAKE_MACOSX_RPATH ON)
 
 set(SIPHON_VER_MAJOR 0)
@@ -137,7 +134,7 @@ target_link_libraries(test-uri-input siphon-static m)
 add_executable(test-utf8-encode test/utf8-encode.c)
 target_link_libraries(test-utf8-encode siphon-static m)
 
-if(DEFINED SIPHON_TEST)
+if(BUILD_TESTING)
 
 	find_program(VALGRIND_COMMAND valgrind)
 

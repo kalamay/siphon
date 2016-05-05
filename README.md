@@ -179,7 +179,7 @@ The debug build is preferrable for devlopment and more thourough testing purpose
 These steps assume [`valgrind(1)`](http://valgrind.org) is installed.
 
 ```bash
-cmake -H. -Bbuild/debug -DCMAKE_BUILD_TYPE=Debug
+cmake -H. -Bbuild/debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
 cmake --build build/debug
 cd build/debug
 ctest --output-on-failure -D ExperimentalMemCheck
