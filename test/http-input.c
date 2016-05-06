@@ -101,13 +101,16 @@ main (int argc, char **argv)
 	size_t freelen = len;
 
 	SpHttp p;
-	sp_http_init_request (&p, false);
+	sp_http_init_request (&p, true);
 
 	while (!sp_http_is_done (&p) && cur < end) {
 		rc = sp_http_next (&p, cur, len);
 		if (rc < 0) goto error;
 
 		if (rc > 0) {
+			if (p.type == SP_HTTP_BODY_START) {
+				sp_http_map_print (p.headers, stdout);
+			}
 			sp_http_print (&p, cur, stdout);
 			cur += rc;
 			len -= rc;
@@ -120,6 +123,7 @@ main (int argc, char **argv)
 		}
 	}
 
+	sp_http_final (&p);
 	sp_free (buf, freelen);
 	sp_alloc_summary ();
 	return 0;

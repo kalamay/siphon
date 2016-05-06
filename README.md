@@ -207,7 +207,8 @@ are in your `$PATH`.
 Now to build the test programs:
 
 ```bash
-cmake -H. -Bbuild/fuzz -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=$(which afl-gcc)
+cmake -H. -Bbuild/fuzz -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=$(which afl-gcc)
+# or cmake -H. -Bbuild/fuzz -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=$(which afl-clang)
 cmake --build build/fuzz
 ```
 
