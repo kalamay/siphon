@@ -1,1 +1,1 @@
-cd build && ctest --output-on-failure -D ExperimentalMemCheck
+cd build && ../bin/ctest --output-on-failure -D ExperimentalMemCheck

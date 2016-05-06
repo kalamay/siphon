@@ -1,8 +1,10 @@
-CMAKE=cmake-3.5.0-Linux-x86_64
+CMAKE_MINOR=3.5
+CMAKE=cmake-${CMAKE_MINOR}.2-Linux-x86_64
 
 sudo apt-get update
 sudo apt-get install ragel valgrind
-wget --no-check-certificate https://cmake.org/files/v3.5/${CMAKE}.tar.gz
+curl -O https://cmake.org/files/v${CMAKE_MINOR}/${CMAKE}.tar.gz
 tar -xzf ${CMAKE}.tar.gz
-./${CMAKE}/bin/cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON
-./${CMAKE}/bin/cmake --build build
+cp -r ${CMAKE}/bin bin
+./bin/cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON
+./bin/cmake --build build
