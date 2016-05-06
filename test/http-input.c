@@ -95,9 +95,10 @@ main (int argc, char **argv)
 {
 	size_t len;
 	char *buf = readin (argc > 1 ? argv[1] : NULL, &len);
+	printf ("readin: %zu\n", len);
 	char *cur = buf;
 	char *end = buf + len;
-	ssize_t rc;
+	ssize_t rc = 0;
 	size_t freelen = len;
 
 	SpHttp p;
@@ -105,7 +106,7 @@ main (int argc, char **argv)
 
 	while (!sp_http_is_done (&p) && cur < end) {
 		rc = sp_http_next (&p, cur, len);
-		if (rc < 0) goto error;
+		if (rc < 0) break;
 
 		if (rc > 0) {
 			if (p.type == SP_HTTP_BODY_START) {
@@ -116,21 +117,18 @@ main (int argc, char **argv)
 			len -= rc;
 			if (p.type == SP_HTTP_BODY_START) {
 				rc = read_body (&p, cur, len);
-				if (rc < 0) goto error;
+				if (rc < 0) break;
 				cur += rc;
 				len -= rc;
 			}
 		}
 	}
 
+	if (rc < 0) {
+		fprintf (stderr, "http error: %s\n", sp_strerror (rc));
+	}
 	sp_http_final (&p);
 	sp_free (buf, freelen);
-	sp_alloc_summary ();
-	return 0;
-
-error:
-	fprintf (stderr, "http error: %s\n", sp_strerror (rc));
-	sp_free (buf, len);
-	return 1;
+	return sp_alloc_summary () && rc >= 0 ? 0 : 1;
 }
 
