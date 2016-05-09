@@ -5,38 +5,47 @@
 #include <unistd.h>
 #include <assert.h>
 
-/*
- * The SP_MAP_SPACE_OPTIMIZED definition will change the growth curve of the
- * hash table bucket array. With it undefined, the growth is always by a power
- * of two. With the value defined, the growth will flatten out once reaching a
- * multiple of 16 page bytes. The consequence of this is that the bucket
- * location must be found using a modulus instead of the faster bitwise and.
- */
-
-#ifdef SP_MAP_SPACE_OPTIMIZED
-static size_t max_unit;
-
-static void __attribute__((constructor))
-init (void)
-{
-	max_unit = getpagesize () * 16 / sizeof (struct SpMapEntry);
-}
-#endif
+static const uint64_t primes[] = {
+	1ULL, 2ULL, 3ULL,
+	7ULL, 13ULL, 31ULL,
+	61ULL, 127ULL, 251ULL,
+	509ULL, 1021ULL, 2039ULL,
+	4093ULL, 8191ULL, 16381ULL,
+	32749ULL, 65521ULL, 131071ULL,
+	262139ULL, 524287ULL, 1048573ULL,
+	2097143ULL, 4194301ULL, 8388593ULL,
+	16777213ULL, 33554393ULL, 67108859ULL,
+	134217689ULL, 268435399ULL, 536870909ULL,
+	1073741789ULL, 2147483647ULL, 4294967291ULL,
+	8589934583ULL, 17179869143ULL, 34359738337ULL,
+	68719476731ULL, 137438953447ULL, 274877906899ULL,
+	549755813881ULL, 1099511627689ULL, 2199023255531ULL,
+	4398046511093ULL, 8796093022151ULL, 17592186044399ULL,
+	35184372088777ULL, 70368744177643ULL, 140737488355213ULL,
+	281474976710597ULL, 562949953421231ULL, 1125899906842597ULL,
+	2251799813685119ULL, 4503599627370449ULL, 9007199254740881ULL,
+	18014398509481951ULL, 36028797018963913ULL, 72057594037927931ULL,
+	144115188075855859ULL, 288230376151711717ULL, 576460752303423433ULL,
+	1152921504606846883ULL, 2305843009213693951ULL, 4611686018427387847ULL,
+	9223372036854775783ULL,
+};
 
 static inline size_t
 start (const SpMap *self, uint64_t hash)
 {
-#ifdef SP_MAP_SPACE_OPTIMIZED
-	return hash % self->capacity;
-#else
-	return hash & self->mask;
-#endif
+	return hash % self->mod;
+}
+
+static inline size_t
+wrap (const SpMap *self, size_t idx)
+{
+	return idx & self->mask;
 }
 
 static inline size_t
 probe (const SpMap *self, uint64_t hash, size_t idx)
 {
-	return start (self, idx + self->capacity - start (self, hash));
+	return wrap (self, idx + self->size - start (self, hash));
 }
 
 int
@@ -60,7 +69,7 @@ sp_map_final (SpMap *self)
 	self->bloom = NULL;
 
 	sp_map_clear (self);
-	sp_free (self->entries, self->capacity * sizeof *self->entries);
+	sp_free (self->entries, self->size * sizeof *self->entries);
 	*self = SP_MAP_MAKE (self->type);
 }
 
@@ -70,13 +79,13 @@ sp_map_clear (SpMap *self)
 	assert (self != NULL);
 
 	if (self->type->free) {
-		for (size_t i=0; i<self->capacity; i++) {
+		for (size_t i=0; i<self->size; i++) {
 			if (self->entries[i].hash && self->entries[i].value != NULL) {
 				self->type->free (self->entries[i].value);
 			}
 		}
 	}
-	memset (self->entries, 0, sizeof *self->entries * self->capacity);
+	memset (self->entries, 0, sizeof *self->entries * self->size);
 	self->count = 0;
 	sp_bloom_clear (self->bloom);
 }
@@ -90,11 +99,11 @@ sp_map_count (const SpMap *self)
 }
 
 size_t
-sp_map_capacity (const SpMap *self)
+sp_map_size (const SpMap *self)
 {
 	assert (self != NULL);
 
-	return self->capacity;
+	return self->size;
 }
 
 double
@@ -102,7 +111,7 @@ sp_map_load (const SpMap *self)
 {
 	assert (self != NULL);
 
-	return (double)self->count / (double)self->capacity;
+	return (double)self->count / (double)self->size;
 }
 
 double
@@ -119,7 +128,7 @@ sp_map_set_load_factor (SpMap *self, size_t hint, double loadf)
 	assert (self != NULL);
 
 	if (isnan (loadf) || loadf <= 0.0) {
-		self->loadf = 0.8;
+		self->loadf = 0.85;
 	}
 	else if (loadf < 0.2) {
 		self->loadf = 0.2;
@@ -148,69 +157,36 @@ sp_map_hash (const SpMap *self, const void *restrict key, size_t len)
 	return self->type->hash (key, len, SP_SEED_RANDOM);
 }
 
-static size_t
-capacity (size_t hint, double loadf)
+static int
+set_size (SpMap *self, size_t new_size)
 {
-	hint = (size_t)((double)hint / loadf);
+	SpMapEntry *const old_entries = self->entries;
+	const size_t old_size = self->size;
 
-	if (hint <= 16) {
-		hint = 16;
-	}
-#ifdef SP_MAP_SPACE_OPTIMIZED
-	else if (hint >= max_unit) {
-		hint = (1 + ((hint - 1) / max_unit)) * max_unit;
-	}
-#endif
-	else {
-		hint = sp_power_of_2 (hint);
-	}
-
-	return hint;
-}
-
-int
-sp_map_resize (SpMap *self, size_t hint)
-{
-	assert (self != NULL);
-
-	hint = capacity (hint, self->loadf);
-
-	// hint will overflow to 0 if too large for next power of two
-	if (hint == 0) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (hint == self->capacity) {
-		return 0;
-	}
-
-	SpMapEntry *const entries = self->entries;
-	const size_t capacity = self->capacity;
-
-	self->entries = sp_calloc (hint, sizeof *self->entries);
+	self->entries = sp_calloc (new_size, sizeof *self->entries);
 	if (self->entries == NULL) {
-		self->entries = entries;
+		self->entries = old_entries;
 		return -1;
 	}
 
-	self->capacity = hint;
-	self->mask = hint - 1;
-	self->max = hint * self->loadf;
+	self->size = new_size;
+	self->max = new_size * self->loadf;
+	self->mask = new_size - 1;
+	self->mod = primes[63 - __builtin_clzll (new_size)];
 
 	if (self->count == 0) {
 		return 0;
 	}
 
-	for (size_t i = 0; i < capacity; i++) {
-		if (entries[i].value == NULL) {
+	for (size_t i = 0; i < old_size; i++) {
+		if (old_entries[i].value == NULL) {
 			continue;
 		}
-		SpMapEntry entry = entries[i];
+		SpMapEntry entry = old_entries[i];
 		size_t idx = start (self, entry.hash);
 		size_t dist, next;
 
-		for (dist = 0; true; dist++, idx = start (self, idx+1)) {
+		for (dist = 0; true; dist++, idx = wrap (self, idx+1)) {
 			if (self->entries[idx].value == NULL) {
 				self->entries[idx] = entry;
 				break;
@@ -225,9 +201,38 @@ sp_map_resize (SpMap *self, size_t hint)
 		}
 	}
 
-	sp_free (entries, sizeof *entries * capacity);
+	sp_free (old_entries, sizeof *old_entries * old_size);
 
 	return 0;
+}
+
+int
+sp_map_resize (SpMap *self, size_t hint)
+{
+	assert (self != NULL);
+
+	// grow hint to ensure load factor is maintained
+	size_t new_size = (size_t)((double)hint / self->loadf);
+
+	// clamp to 8 entries or grow to the nearest power of 2
+	if (new_size <= 8) {
+		new_size = 8;
+	}
+	else {
+		new_size = sp_power_of_2 (new_size);
+		// size will overflow to 0 if too large for next power of two
+		if (new_size == 0) {
+			errno = EINVAL;
+			return -1;
+		}
+	}
+
+	// the current size is correct
+	if (new_size == self->size) {
+		return 0;
+	}
+
+	return set_size (self, new_size);
 }
 
 int
@@ -279,7 +284,7 @@ get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
 	size_t idx = start (self, h);
 	size_t dist;
 
-	for (dist = 0; true; dist++, idx = start (self, idx+1)) {
+	for (dist = 0; true; dist++, idx = wrap (self, idx+1)) {
 		uint64_t hash_tmp = self->entries[idx].hash;
 		if (hash_tmp == 0 || probe (self, hash_tmp, idx) < dist) {
 			return NULL;
@@ -357,7 +362,7 @@ sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
 	assert (isnew != NULL);
 
 	if (self->count == self->max) {
-		if (sp_map_resize (self, self->capacity + 1) < 0) {
+		if (sp_map_resize (self, self->size + 1) < 0) {
 			return NULL;
 		}
 	}
@@ -368,7 +373,7 @@ sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
 	size_t dist, next;
 	void **result = NULL;
 
-	for (dist = 0; true; dist++, idx = start (self, idx+1)) {
+	for (dist = 0; true; dist++, idx = wrap (self, idx+1)) {
 		SpMapEntry tmp = self->entries[idx];
 		if (tmp.value == NULL) {
 			self->entries[idx] = entry;
@@ -438,7 +443,7 @@ sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 	void *value = NULL;
 	bool shift = false;
 
-	for (dist = 0; true; dist++, idx = start (self, idx+1)) {
+	for (dist = 0; true; dist++, idx = wrap (self, idx+1)) {
 		SpMapEntry tmp = self->entries[idx];
 		if (tmp.value == NULL) {
 			break;
@@ -482,15 +487,13 @@ sp_map_print (const SpMap *self, FILE *out)
 	}
 	else {
 		flockfile (out);
-		fprintf (out, "#<SpMap:%p count=%zu, capacity=%zu> {\n", (void *)self, self->count, self->capacity);
-		for (size_t i=0; i<self->capacity; i++) {
+		fprintf (out, "#<SpMap:%p count=%zu, max=%zu, mod=%zu, size=%zu> {\n",
+				(void *)self, self->count, self->max, self->mod, self->size);
+		for (size_t i=0; i<self->size; i++) {
 			if (self->entries[i].hash) {
 				fprintf (out, "    %3zu %016" PRIx64 ": ", i, self->entries[i].hash);
 				print (self->entries[i].value, out);
 				fprintf (out, "\n");
-			}
-			else {
-				fprintf (out, "    %3zu 0000000000000000: (null)\n", i);
 			}
 		}
 		fprintf (out, "}\n");

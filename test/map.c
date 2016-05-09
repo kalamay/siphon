@@ -23,7 +23,8 @@ key_equals (const void *restrict val, const void *restrict key, size_t len)
 
 SpType junk_type = {
 	.hash = junk_hash,
-	.iskey = key_equals
+	.iskey = key_equals,
+	.print = sp_print_str
 };
 
 SpType good_type = {
@@ -124,25 +125,25 @@ test_bucket_collision_steal (void)
 {
 	SpMap map = SP_MAP_MAKE (&junk_type);
 
-	// a and q will collide in bucket positions
-	// b will sit after a
+	// c and j will collide in bucket positions
+	// d will sit after c
 
-	TEST_ADD_NEW (&map, "b", 1);
-	mu_assert_str_eq (map.entries[2].value, "b");
-	TEST_ADD_NEW (&map, "q", 2);
-	mu_assert_str_eq (map.entries[1].value, "q");
-	mu_assert_str_eq (map.entries[2].value, "b");
-	TEST_ADD_NEW (&map, "a", 3);
-	mu_assert_str_eq (map.entries[1].value, "q");
-	mu_assert_str_eq (map.entries[2].value, "a");
-	mu_assert_str_eq (map.entries[3].value, "b");
+	TEST_ADD_NEW (&map, "d", 1);
+	mu_assert_str_eq (map.entries[2].value, "d");
+	TEST_ADD_NEW (&map, "j", 2);
+	mu_assert_str_eq (map.entries[1].value, "j");
+	mu_assert_str_eq (map.entries[2].value, "d");
+	TEST_ADD_NEW (&map, "c", 3);
+	mu_assert_str_eq (map.entries[1].value, "j");
+	mu_assert_str_eq (map.entries[2].value, "c");
+	mu_assert_str_eq (map.entries[3].value, "d");
 
-	TEST_REM_OLD (&map, "a", 2);
-	mu_assert_str_eq (map.entries[1].value, "q");
-	mu_assert_str_eq (map.entries[2].value, "b");
-	TEST_REM_OLD (&map, "q", 1);
-	mu_assert_str_eq (map.entries[2].value, "b");
-	TEST_REM_OLD (&map, "b", 0);
+	TEST_REM_OLD (&map, "c", 2);
+	mu_assert_str_eq (map.entries[1].value, "j");
+	mu_assert_str_eq (map.entries[2].value, "d");
+	TEST_REM_OLD (&map, "j", 1);
+	mu_assert_str_eq (map.entries[2].value, "d");
+	TEST_REM_OLD (&map, "d", 0);
 
 	sp_map_final (&map);
 }
@@ -152,28 +153,28 @@ test_hash_to_bucket_collision (void)
 {
 	SpMap map = SP_MAP_MAKE (&junk_type);
 
-	// p1 and p2 should hash collide
-	// p2 should bucket collide with a
+	// b1 and b2 should hash collide
+	// b2 should bucket collide with c
 
-	TEST_ADD_NEW (&map, "a", 1);
-	TEST_ADD_NEW (&map, "b", 2);
-	TEST_ADD_NEW (&map, "c", 3);
-	mu_assert_str_eq (map.entries[1].value, "a");
-	mu_assert_str_eq (map.entries[2].value, "b");
-	mu_assert_str_eq (map.entries[3].value, "c");
-	TEST_ADD_NEW (&map, "p1", 4);
-	TEST_ADD_NEW (&map, "p2", 5);
-	mu_assert_str_eq (map.entries[0].value, "p1");
-	mu_assert_str_eq (map.entries[1].value, "p2");
-	mu_assert_str_eq (map.entries[2].value, "a");
-	mu_assert_str_eq (map.entries[3].value, "b");
-	mu_assert_str_eq (map.entries[4].value, "c");
+	TEST_ADD_NEW (&map, "c", 1);
+	TEST_ADD_NEW (&map, "d", 2);
+	TEST_ADD_NEW (&map, "e", 3);
+	mu_assert_str_eq (map.entries[1].value, "c");
+	mu_assert_str_eq (map.entries[2].value, "d");
+	mu_assert_str_eq (map.entries[3].value, "e");
+	TEST_ADD_NEW (&map, "b1", 4);
+	TEST_ADD_NEW (&map, "b2", 5);
+	mu_assert_str_eq (map.entries[0].value, "b1");
+	mu_assert_str_eq (map.entries[1].value, "b2");
+	mu_assert_str_eq (map.entries[2].value, "c");
+	mu_assert_str_eq (map.entries[3].value, "d");
+	mu_assert_str_eq (map.entries[4].value, "e");
 
-	TEST_REM_OLD (&map, "p2", 4);
-	TEST_REM_OLD (&map, "p1", 3);
-	mu_assert_str_eq (map.entries[1].value, "a");
-	mu_assert_str_eq (map.entries[2].value, "b");
-	mu_assert_str_eq (map.entries[3].value, "c");
+	TEST_REM_OLD (&map, "b2", 4);
+	TEST_REM_OLD (&map, "b1", 3);
+	mu_assert_str_eq (map.entries[1].value, "c");
+	mu_assert_str_eq (map.entries[2].value, "d");
+	mu_assert_str_eq (map.entries[3].value, "e");
 
 	sp_map_final (&map);
 }
@@ -182,48 +183,49 @@ static void
 test_hash_to_bucket_collision2 (void)
 {
 	SpMap map = SP_MAP_MAKE (&junk_type);
+	map.loadf = 0.95;
 
-	// p1, p2, p3, and p4 should hash collide
-	// p2+ should bucket collide with a+
+	// b1, b2, b3, and b4 should hash collide
+	// b2+ should bucket collide with c+
 
-	TEST_ADD_NEW (&map, "p1", 1);
-	TEST_ADD_NEW (&map, "p2", 2);
-	TEST_ADD_NEW (&map, "a", 3);
-	TEST_ADD_NEW (&map, "b", 4);
-	TEST_ADD_NEW (&map, "c", 5);
+	TEST_ADD_NEW (&map, "b1", 1);
+	TEST_ADD_NEW (&map, "b2", 2);
+	TEST_ADD_NEW (&map, "c", 3);
+	TEST_ADD_NEW (&map, "d", 4);
+	TEST_ADD_NEW (&map, "e", 5);
 
-	mu_assert_str_eq (map.entries[0].value, "p1");
-	mu_assert_str_eq (map.entries[1].value, "p2");
-	mu_assert_str_eq (map.entries[2].value, "a");
-	mu_assert_str_eq (map.entries[3].value, "b");
+	mu_assert_str_eq (map.entries[0].value, "b1");
+	mu_assert_str_eq (map.entries[1].value, "b2");
+	mu_assert_str_eq (map.entries[2].value, "c");
+	mu_assert_str_eq (map.entries[3].value, "d");
+	mu_assert_str_eq (map.entries[4].value, "e");
+
+	TEST_ADD_NEW (&map, "b3", 6);
+	TEST_ADD_NEW (&map, "b4", 7);
+
+	mu_assert_str_eq (map.entries[0].value, "b1");
+	mu_assert_str_eq (map.entries[1].value, "b2");
+	mu_assert_str_eq (map.entries[2].value, "b3");
+	mu_assert_str_eq (map.entries[3].value, "b4");
 	mu_assert_str_eq (map.entries[4].value, "c");
+	mu_assert_str_eq (map.entries[5].value, "d");
+	mu_assert_str_eq (map.entries[6].value, "e");
 
-	TEST_ADD_NEW (&map, "p3", 6);
-	TEST_ADD_NEW (&map, "p4", 7);
+	TEST_REM_OLD (&map, "b2", 6);
+	TEST_REM_OLD (&map, "b4", 5);
 
-	mu_assert_str_eq (map.entries[0].value, "p1");
-	mu_assert_str_eq (map.entries[1].value, "p2");
-	mu_assert_str_eq (map.entries[2].value, "p3");
-	mu_assert_str_eq (map.entries[3].value, "p4");
-	mu_assert_str_eq (map.entries[4].value, "a");
-	mu_assert_str_eq (map.entries[5].value, "b");
-	mu_assert_str_eq (map.entries[6].value, "c");
+	mu_assert_str_eq (map.entries[0].value, "b1");
+	mu_assert_str_eq (map.entries[1].value, "b3");
+	mu_assert_str_eq (map.entries[2].value, "c");
+	mu_assert_str_eq (map.entries[3].value, "d");
+	mu_assert_str_eq (map.entries[4].value, "e");
 
-	TEST_REM_OLD (&map, "p2", 6);
-	TEST_REM_OLD (&map, "p4", 5);
+	TEST_REM_OLD (&map, "b1", 4);
+	TEST_REM_OLD (&map, "b3", 3);
 
-	mu_assert_str_eq (map.entries[0].value, "p1");
-	mu_assert_str_eq (map.entries[1].value, "p3");
-	mu_assert_str_eq (map.entries[2].value, "a");
-	mu_assert_str_eq (map.entries[3].value, "b");
-	mu_assert_str_eq (map.entries[4].value, "c");
-
-	TEST_REM_OLD (&map, "p1", 4);
-	TEST_REM_OLD (&map, "p3", 3);
-
-	mu_assert_str_eq (map.entries[1].value, "a");
-	mu_assert_str_eq (map.entries[2].value, "b");
-	mu_assert_str_eq (map.entries[3].value, "c");
+	mu_assert_str_eq (map.entries[1].value, "c");
+	mu_assert_str_eq (map.entries[2].value, "d");
+	mu_assert_str_eq (map.entries[3].value, "e");
 
 	sp_map_final (&map);
 }
@@ -251,7 +253,7 @@ test_downsize (void)
 
 	sp_map_resize (&map, sp_map_count (&map));
 	mu_assert_uint_eq (sp_map_count (&map), 4);
-	mu_assert_uint_eq (sp_map_capacity (&map), 16);
+	mu_assert_uint_eq (sp_map_size (&map), 8);
 	mu_assert_str_eq (sp_map_get (&map, "k1", 2), "k1");
 	mu_assert_str_eq (sp_map_get (&map, "k2", 2), "k2");
 	mu_assert_str_eq (sp_map_get (&map, "k3", 2), "k3");

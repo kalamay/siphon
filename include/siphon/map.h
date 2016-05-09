@@ -17,20 +17,21 @@ struct SpMapEntry {
 struct SpMap {
 	const SpType *type;
 	SpMapEntry *entries;
-	size_t capacity, max, count, mask;
 	double loadf;
 	SpBloom *bloom;
+	size_t size, max, count, mask, mod;
 };
 
 #define SP_MAP_MAKE(typ) ((SpMap){ \
 	.type = (typ),                 \
 	.entries = NULL,               \
-	.capacity = 0,                 \
+	.loadf = 0.85,                 \
+	.bloom = NULL,                 \
+	.size = 0,                     \
 	.max = 0,                      \
 	.count = 0,                    \
 	.mask = 0,                     \
-	.loadf = 0.8,                  \
-	.bloom = NULL                  \
+	.mod = 1,                      \
 })
 
 SP_EXPORT int
@@ -46,7 +47,7 @@ SP_EXPORT size_t
 sp_map_count (const SpMap *self);
 
 SP_EXPORT size_t
-sp_map_capacity (const SpMap *self);
+sp_map_size (const SpMap *self);
 
 SP_EXPORT double
 sp_map_load (const SpMap *self);
@@ -91,7 +92,7 @@ SP_EXPORT void
 sp_map_print (const SpMap *self, FILE *out);
 
 #define sp_map_each(self, entry)                                       \
-	for (size_t sp_sym(i)=0; sp_sym(i)<(self)->capacity; sp_sym(i)++)  \
+	for (size_t sp_sym(i)=0; sp_sym(i)<(self)->size; sp_sym(i)++)      \
 		if ((self)->entries[sp_sym(i)].hash &&                         \
 			(entry = (const SpMapEntry *)&(self)->entries[sp_sym(i)])) \
 
