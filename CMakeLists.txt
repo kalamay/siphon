@@ -159,6 +159,10 @@ if(BUILD_TESTING)
 
 	include(CTest)
 
+	add_test(NAME common COMMAND test-common)
+	add_executable(test-common test/common.c)
+	target_link_libraries(test-common siphon-static m)
+
 	add_test(NAME crc COMMAND test-crc)
 	add_executable(test-crc test/crc.c)
 	target_link_libraries(test-crc siphon-static m)
