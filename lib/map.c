@@ -250,7 +250,7 @@ definitely_no (const SpMap *self, uint64_t h)
 }
 
 static SpMapEntry *
-get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
+get (const SpMap *self, uint64_t h, const void *restrict key, size_t len, size_t *outdist)
 {
 	if (definitely_no (self, h)) {
 		return NULL;
@@ -267,6 +267,7 @@ get (const SpMap *self, uint64_t h, const void *restrict key, size_t len)
 		if (h == hash_tmp) {
 			void *value = self->entries[idx].value;
 			if (sp_likely (value && self->type->iskey (value, key, len))) {
+				if (outdist) *outdist = dist;
 				return &self->entries[idx];
 			}
 		}
@@ -280,7 +281,7 @@ sp_map_has_key (const SpMap *self, const void *restrict key, size_t len)
 	assert (key != NULL);
 
 	uint64_t h = sp_map_hash (self, key, len);
-	return get (self, h, key, len) != NULL;
+	return get (self, h, key, len, NULL) != NULL;
 }
 
 void *
@@ -290,7 +291,7 @@ sp_map_get (const SpMap *self, const void *restrict key, size_t len)
 	assert (key != NULL);
 
 	uint64_t h = sp_map_hash (self, key, len);
-	SpMapEntry *e = get (self, h, key, len);
+	SpMapEntry *e = get (self, h, key, len, NULL);
 	return e ? e->value : NULL;
 }
 
@@ -367,7 +368,6 @@ sp_map_reserve (SpMap *self, const void *restrict key, size_t len, bool *isnew)
 		}
 		next = probe (self, tmp.hash, idx);
 		if (next < dist) {
-			tmp.value = self->entries[idx].value;
 			if (!result) {
 				result = &self->entries[idx].value;
 			}
@@ -407,42 +407,28 @@ sp_map_steal (SpMap *self, const void *restrict key, size_t len)
 	assert (key != NULL);
 
 	uint64_t h = sp_map_hash (self, key, len);
-
-	if (definitely_no (self, h)) {
+	size_t dist;
+	SpMapEntry *entry = get (self, h, key, len, &dist);
+	if (entry == NULL) {
 		return NULL;
 	}
 
-	SpMapEntry entry = { h, NULL };
-	size_t idx = start (self, entry.hash), prev = 0;
-	size_t dist;
-	void *value = NULL;
-	bool shift = false;
+	void *value = entry->value;
+	entry->hash = 0;
+	entry->value = NULL;
+	self->count--;
 
-	for (dist = 0; true; dist++, idx = wrap (self, idx+1)) {
+	size_t idx = entry - self->entries;
+	do {
+		size_t prev = idx;
+		idx = wrap (self, idx+1);
 		SpMapEntry tmp = self->entries[idx];
-		if (tmp.value == NULL) {
-			break;
+		if (tmp.value == NULL || probe (self, tmp.hash, idx) == 0) {
+			return value;
 		}
-		if (shift) {
-			if (probe (self, tmp.hash, idx) == 0) {
-				break;
-			}
-			self->entries[prev] = tmp;
-			self->entries[idx] = ((SpMapEntry){ 0, NULL });
-			prev = idx;
-		}
-		else if (entry.hash == tmp.hash) {
-			if (sp_likely (self->type->iskey (tmp.value, key, len))) {
-				value = tmp.value;
-				self->entries[idx] = ((SpMapEntry){ 0, NULL });
-				shift = true;
-				prev = idx;
-				self->count--;
-			}
-		}
-	}
-
-	return value;
+		self->entries[prev] = tmp;
+		self->entries[idx] = ((SpMapEntry){ 0, NULL });
+	} while (true);
 }
 
 void
