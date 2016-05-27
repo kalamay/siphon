@@ -5,6 +5,7 @@
 * allow proper http header capturing
 * add basic config step during build
 * path module additions
+* add `sp_fmt_bytes` for a quick xxd-like view
 
 ## 0.2.5
 

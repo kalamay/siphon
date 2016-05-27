@@ -21,34 +21,34 @@
 #define sp_unlikely(x) __builtin_expect(!!(x), 0)
 
 #define sp_power_of_2(n) __extension__ ({ \
-	__typeof (n) x = (n);                 \
-	if (x > 0) {                          \
-		x--;                              \
-		x |= x >> 1;                      \
-		x |= x >> 2;                      \
-		x |= x >> 4;                      \
-		if (sizeof x > 1) {               \
-			x |= x >> 8;                  \
-			if (sizeof x > 2) {           \
-				x |= x >> 16;             \
-				if (sizeof x > 4) {       \
-					x |= x >> 32;         \
+	__typeof (n) tmp = (n);               \
+	if (tmp > 0) {                        \
+		tmp--;                            \
+		tmp |= tmp >> 1;                  \
+		tmp |= tmp >> 2;                  \
+		tmp |= tmp >> 4;                  \
+		if (sizeof tmp > 1) {             \
+			tmp |= tmp >> 8;              \
+			if (sizeof tmp > 2) {         \
+				tmp |= tmp >> 16;         \
+				if (sizeof tmp > 4) {     \
+					tmp |= tmp >> 32;     \
 				}                         \
 			}                             \
 		}                                 \
-		x++;                              \
+		tmp++;                            \
 	}                                     \
-	x;                                    \
+	tmp;                                  \
 })
 
-#define sp_power_of_2_prime(n) __extension__ ({                        \
-	__typeof (n) x = (n);                                              \
-	x > 0 ? POWER_OF_2_PRIMES[63 - __builtin_clzll (x)] : (uint64_t)0; \
+#define sp_power_of_2_prime(n) __extension__ ({                            \
+	__typeof (n) tmp = (n);                                                \
+	tmp > 0 ? POWER_OF_2_PRIMES[63 - __builtin_clzll (tmp)] : (uint64_t)0; \
 })
 
 #define sp_next_quantum(n, quant) __extension__ ({ \
-	__typeof (n) x = (quant);                      \
-	(((((n) - 1) / x) + 1) * x);                   \
+	__typeof (n) tmp = (quant);                    \
+	(((((n) - 1) / tmp) + 1) * tmp);               \
 })
 
 #define sp_container_of(ptr, type, member) __extension__ ({ \
@@ -58,6 +58,12 @@
 
 #define sp_len(a) \
 	(sizeof (a) / sizeof ((a)[0]))
+
+#define sp_swap(a, b) do {  \
+	__typeof (a) tmp = (a); \
+	(a) = (b);              \
+	(b) = tmp;              \
+} while (0)
 
 SP_EXPORT const uint64_t POWER_OF_2_PRIMES[64];
 
