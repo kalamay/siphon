@@ -64,7 +64,7 @@ main (int argc, char **argv)
 	while (!sp_json_is_done (&p)) {
 		ssize_t rc = sp_json_next (&p, buf, len, true);
 		if (rc < 0 || (size_t)rc > len) {
-			sp_free (val, len);
+			sp_free (val, freelen);
 			errx (EXIT_FAILURE, "failed to parse");
 		}
 
