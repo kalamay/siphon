@@ -43,7 +43,7 @@
 
 #define sp_power_of_2_prime(n) __extension__ ({                            \
 	__typeof (n) tmp = (n);                                                \
-	tmp > 0 ? POWER_OF_2_PRIMES[63 - __builtin_clzll (tmp)] : (uint64_t)0; \
+	tmp > 0 ? SP_POWER_OF_2_PRIMES[63- __builtin_clzll(tmp)] : (uint64_t)0; \
 })
 
 #define sp_next_quantum(n, quant) __extension__ ({ \
@@ -65,7 +65,7 @@
 	(b) = tmp;              \
 } while (0)
 
-SP_EXPORT const uint64_t POWER_OF_2_PRIMES[64];
+SP_EXPORT const uint64_t SP_POWER_OF_2_PRIMES[64];
 
 typedef enum {
 	SP_DESCENDING,

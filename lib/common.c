@@ -1,7 +1,7 @@
 #include "../include/siphon/common.h"
 #include "../include/siphon/fmt.h"
 
-const uint64_t POWER_OF_2_PRIMES[64] = {
+const uint64_t SP_POWER_OF_2_PRIMES[64] = {
 	1ULL, 2ULL, 3ULL,
 	7ULL, 13ULL, 31ULL,
 	61ULL, 127ULL, 251ULL,
