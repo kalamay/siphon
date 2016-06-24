@@ -1,6 +1,7 @@
 #include "../include/siphon/ring.h"
 #include "../include/siphon/alloc.h"
 #include "../include/siphon/hash.h"
+#include "../include/siphon/vec.h"
 #include "../include/siphon/fmt.h"
 
 #include <errno.h>
@@ -25,6 +26,12 @@ static const SpType map_type = {
 	.iskey = node_iskey,
 	.free = node_free
 };
+
+static uint64_t
+make_hash (const SpRing *self, const void *key, size_t len)
+{
+	return self->hash (key, len, SP_SEED_DEFAULT) % 4294967291ULL;
+}
 
 int
 sp_ring_init (SpRing *self, SpHash fn)
@@ -89,7 +96,7 @@ replicate (SpRing *self, SpRingNode *node,
 	for (unsigned i = 0; i < replicas; i++) {
 		int n = snprintf (p, remain, "-%d", i);
 		sp_vec_push (self->replicas, ((SpRingReplica) {
-			.hash = self->hash (buf, len + n, SP_SEED_DEFAULT),
+			.hash = make_hash (self, buf, len + n),
 			.node = node
 		}));
 	}
@@ -161,7 +168,7 @@ sp_ring_find (const SpRing *self, const void *restrict val, size_t len)
 		return NULL;
 	}
 
-	uint64_t hash = self->hash (val, len, SP_SEED_DEFAULT);
+	uint64_t hash = make_hash (self, val, len);
 	size_t n = sp_vec_count (self->replicas);
 	SpRingReplica *base = self->replicas;
 

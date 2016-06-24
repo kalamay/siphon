@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "map.h"
-#include "vec.h"
 
 typedef struct SpRing SpRing;
 
