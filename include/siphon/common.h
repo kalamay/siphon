@@ -21,21 +21,15 @@
 #define sp_unlikely(x) __builtin_expect(!!(x), 0)
 
 #define sp_power_of_2(n) __extension__ ({ \
-	__typeof (n) tmp = (n);               \
+	uintmax_t tmp = (n);                  \
 	if (tmp > 0) {                        \
 		tmp--;                            \
 		tmp |= tmp >> 1;                  \
 		tmp |= tmp >> 2;                  \
 		tmp |= tmp >> 4;                  \
-		if (sizeof tmp > 1) {             \
-			tmp |= tmp >> 8;              \
-			if (sizeof tmp > 2) {         \
-				tmp |= tmp >> 16;         \
-				if (sizeof tmp > 4) {     \
-					tmp |= tmp >> 32;     \
-				}                         \
-			}                             \
-		}                                 \
+		tmp |= tmp >> 8;                  \
+		tmp |= tmp >> 16;                 \
+		tmp |= tmp >> 32;                 \
 		tmp++;                            \
 	}                                     \
 	tmp;                                  \
