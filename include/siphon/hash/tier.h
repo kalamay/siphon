@@ -139,7 +139,7 @@
  * @param  pref   function name prefix
  */
 #define	SP_HTIER_PROTOTYPE_STATIC(TTier, TKey, pref)                           \
-	SP_HTIER_PROTOTYPE_INTERNAL (TTier, TKey, pref, __unused static)
+	SP_HTIER_PROTOTYPE_INTERNAL (TTier, TKey, pref, static __unused)
 
 /**
  * Generates attributed function prototypes for the tier 

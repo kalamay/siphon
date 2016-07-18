@@ -39,7 +39,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                       \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __unused static, TKey k, size_t kn)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, static __unused, TKey k, size_t kn)
 
 /**
  * Generates extern function prototypes for the map using a direct key
@@ -69,7 +69,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __unused static, TKey k)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, static __unused, TKey k)
 
 /**
  * Generates attributed function prototypes for the map
