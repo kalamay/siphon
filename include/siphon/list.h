@@ -11,56 +11,56 @@ struct SpList {
 	SpList *link[2];
 };
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_init (SpList *list)
 {
 	list->link[0] = list->link[1] = list;
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_entry_clear (SpList *entry)
 {
 	entry->link[0] = NULL;
 	entry->link[1] = NULL;
 }
 
-static inline bool __attribute__((unused))
+__unused static inline bool
 sp_list_is_empty (const SpList *list)
 {
 	return list->link[1] == list;
 }
 
-static inline bool __attribute__((unused))
+__unused static inline bool
 sp_list_is_singular (const SpList *list)
 {
 	return !sp_list_is_empty (list) && (list->link[0] == list->link[1]);
 }
 
-static inline bool __attribute__((unused))
+__unused static inline bool
 sp_list_is_added (const SpList *entry)
 {
 	return entry->link[0] != NULL;
 }
 
-static inline bool __attribute__((unused))
+__unused static inline bool
 sp_list_is_first (const SpList *list, const SpList *entry, SpOrder dir)
 {
 	return list->link[dir] == entry;
 }
 
-static inline SpList * __attribute__((unused))
+__unused static inline SpList *
 sp_list_first (const SpList *list, SpOrder dir)
 {
 	return list->link[dir] == list ? NULL : list->link[dir];
 }
 
-static inline SpList * __attribute__((unused))
+__unused static inline SpList *
 sp_list_next (const SpList *list, SpList *entry, SpOrder dir)
 {
 	return entry->link[dir] == list ? NULL : entry->link[dir];
 }
 
-static inline SpList * __attribute__((unused))
+__unused static inline SpList *
 sp_list_get (const SpList *list, int idx, SpOrder dir)
 {
 	SpList *entry = sp_list_first (list, dir);
@@ -70,13 +70,13 @@ sp_list_get (const SpList *list, int idx, SpOrder dir)
 	return entry;
 }
 
-static inline bool __attribute__((unused))
+__unused static inline bool
 sp_list_has_next (const SpList *list, SpList *entry, SpOrder dir)
 {
 	return entry->link[dir] != list;
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_add (SpList *list, SpList *entry, SpOrder dir)
 {
 	SpList *link[2];
@@ -88,7 +88,7 @@ sp_list_add (SpList *list, SpList *entry, SpOrder dir)
 	link[0]->link[1] = entry;
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_del (SpList *entry)
 {
 	SpList *link[2] = { entry->link[0], entry->link[1] };
@@ -105,7 +105,7 @@ sp_list_pop (SpList *list, SpOrder dir)
 	return entry;
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_copy_head (SpList *dst, SpList *src)
 {
 	dst->link[0] = src->link[0];
@@ -114,14 +114,14 @@ sp_list_copy_head (SpList *dst, SpList *src)
 	dst->link[1]->link[0] = dst;
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_replace (SpList *dst, SpList *src)
 {
 	sp_list_copy_head (dst, src);
 	sp_list_init (src);
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_swap (SpList *a, SpList *b)
 {
 	SpList tmp;
@@ -130,7 +130,7 @@ sp_list_swap (SpList *a, SpList *b)
 	sp_list_copy_head (b, &tmp);
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_splice (SpList *list, SpList *other, SpOrder dir)
 {
 	if (!sp_list_is_empty (other)) {
@@ -145,7 +145,7 @@ sp_list_splice (SpList *list, SpList *other, SpOrder dir)
 	}
 }
 
-static inline void __attribute__((unused))
+__unused static inline void
 sp_list_insert (SpList *entry, SpList *before)
 {
 	before->link[0]->link[1] = entry;
