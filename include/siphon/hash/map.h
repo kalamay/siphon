@@ -39,7 +39,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                       \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused) static, TKey k, size_t kn)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused)) static, TKey k, size_t kn)
 
 /**
  * Generates extern function prototypes for the map using a direct key
@@ -69,7 +69,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused) static, TKey k)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused)) static, TKey k)
 
 /**
  * Generates attributed function prototypes for the map
@@ -83,6 +83,8 @@
 #define SP_HMAP_PROTOTYPE_INTERNAL(TMap, TEnt, pref, attr, ...)                \
 	attr int                                                                   \
 	pref##_init (TMap *map, double loadf, size_t hint);                        \
+	attr void                                                                  \
+	pref##_final (TMap *map);                                                  \
 	attr int                                                                   \
 	pref##_resize (TMap *map, size_t extra);                                   \
 	attr size_t                                                                \
@@ -124,7 +126,7 @@
 	}                                                                          \
 
 #define SP_HMAP_DIRECT_GENERATE(TMap, TKey, TEnt, pref)                        \
-	__attribute__((unused) static uint64_t                                     \
+	__attribute__((unused)) static uint64_t                                    \
 	pref##_hash (TKey k)                                                       \
 	{                                                                          \
 		uint64_t x = ((uint64_t)k << 1) | 1;                                   \
@@ -203,6 +205,18 @@
 		return pref##_resize (map, hint);                                      \
 	}                                                                          \
                                                                                \
+	void                                                                       \
+	pref##_final (TMap *map)                                                   \
+	{                                                                          \
+		if (map == NULL) { return; }                                           \
+		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
+			free (map->tiers[i]);                                              \
+			map->tiers[i] = NULL;                                              \
+		}                                                                      \
+		map->count = 0;                                                        \
+		map->max = 0;                                                          \
+	}                                                                          \
+                                                                               \
 	size_t                                                                     \
 	pref##_condense (TMap *map, size_t limit)                                  \
 	{                                                                          \
@@ -222,7 +236,7 @@
 		return total;                                                          \
 	}                                                                          \
                                                                                \
-	__attribute__((unused) static int                                          \
+	__attribute__((unused)) static int                                         \
 	pref##_prune_index (TMap *map, size_t tier, size_t idx)                    \
 	{                                                                          \
 		int rc = pref##_tier_remove (map->tiers[tier], idx);                   \
@@ -237,7 +251,7 @@
 		return rc;                                                             \
 	}                                                                          \
                                                                                \
-	__attribute__((unused) static TEnt *                                       \
+	__attribute__((unused)) static TEnt *                                      \
 	pref##_hget (TMap *map, TKey k, size_t kn, uint64_t h)                     \
 	{                                                                          \
 		assert (h > 0);                                                        \
@@ -264,7 +278,7 @@
 		return NULL;                                                           \
 	}                                                                          \
                                                                                \
-	__attribute__((unused) static TEnt *                                       \
+	__attribute__((unused)) static TEnt *                                      \
 	pref##_hreserve (TMap *map, TKey k, size_t kn, uint64_t h, bool *isnew)    \
 	{                                                                          \
 		assert (h > 0);                                                        \
@@ -295,7 +309,7 @@
 		return &map->tiers[0]->arr[idx].entry;                                 \
 	}                                                                          \
                                                                                \
-	__attribute__((unused) static int                                          \
+	__attribute__((unused)) static int                                         \
 	pref##_hput (TMap *map, TKey k, size_t kn, uint64_t h, TEnt *entry)        \
 	{                                                                          \
 		assert (h > 0);                                                        \
@@ -313,7 +327,7 @@
 		return 0;                                                              \
 	}                                                                          \
                                                                                \
-	__attribute__((unused) static bool                                         \
+	__attribute__((unused)) static bool                                        \
 	pref##_hremove (TMap *map, TKey k, size_t kn, uint64_t h, TEnt *entry)     \
 	{                                                                          \
 		assert (h > 0);                                                        \
