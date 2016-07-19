@@ -84,7 +84,7 @@
  * @return  anonymous struct definition
  */
 #define SP_HTIER(TEnt)                                                         \
-	SP_HTIER_NAMED (TEnt,)
+	SP_HTIER_NAMED (,TEnt)
 
 /**
  * Declares a tier structure for a given entry type
@@ -94,15 +94,15 @@
  *         int key;
  *         const char *value;
  *     };
- *     SP_HTIER_NAMED (struct Thing, ThingTier);
+ *     SP_HTIER_NAMED (ThingTier, struct Thing);
  *     ...
  *     printf ("size: %zu\n", sizeof (struct ThingTier));
  *
- * @param  TEnt  entry type
  * @param  name  struct name
+ * @param  TEnt  entry type
  * @return  struct definition
  */
-#define SP_HTIER_NAMED(TEnt, name)                                             \
+#define SP_HTIER_NAMED(name, TEnt)                                             \
 	struct name {                                                              \
 		size_t size;                                                           \
 		size_t mod;                                                            \

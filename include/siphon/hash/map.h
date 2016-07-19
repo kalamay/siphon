@@ -6,8 +6,11 @@
 #include <math.h> 
 
 #define SP_HMAP(TEnt, ntiers, pref)                                            \
-	struct {                                                                   \
-		SP_HTIER_NAMED (TEnt, pref##_tier) *tiers[ntiers];                     \
+	SP_HMAP_NAMED (, TEnt, ntiers, pref)
+
+#define SP_HMAP_NAMED(name, TEnt, ntiers, pref)                                \
+	struct name {                                                              \
+		SP_HTIER_NAMED (pref##_tier, TEnt) *tiers[ntiers];                     \
 		double loadf;                                                          \
 		size_t count;                                                          \
 		size_t max;                                                            \
