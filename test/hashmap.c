@@ -24,7 +24,7 @@ dump (const ThingMap *map)
 		if (map->tiers[n] == NULL) { break; }
 		for (size_t i = 0; i < map->tiers[n]->size; i++) {
 			if (map->tiers[n]->arr[i].h == 0) { continue; }
-			printf ("  #%zu/%zu = { key = %d, value = %d, hash = %llu }\n",
+			printf ("  #%zu/%zu = { key = %d, value = %d, hash = %" PRIu64 " }\n",
 				n, i,
 				map->tiers[n]->arr[i].entry.key,
 				map->tiers[n]->arr[i].entry.value,
