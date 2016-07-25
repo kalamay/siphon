@@ -171,6 +171,14 @@ if(BUILD_TESTING)
 	add_executable(test-hash test/hash.c)
 	target_link_libraries(test-hash siphon-static m)
 
+	add_test(NAME hashtier COMMAND test-hashtier)
+	add_executable(test-hashtier test/hashtier.c)
+	target_link_libraries(test-hashtier siphon-static m)
+
+	add_test(NAME hashmap COMMAND test-hashmap)
+	add_executable(test-hashmap test/hashmap.c)
+	target_link_libraries(test-hashmap siphon-static m)
+
 	add_test(NAME utf8 COMMAND test-utf8)
 	add_executable(test-utf8 test/utf8.c)
 	target_link_libraries(test-utf8 siphon-static m)
