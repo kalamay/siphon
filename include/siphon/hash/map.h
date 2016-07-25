@@ -292,18 +292,16 @@
 			return NULL;                                                       \
 		}                                                                      \
 		size_t idx = pref##_tier_reserve (map->tiers[0], k, kn, h, isnew);     \
-		if (isnew) {                                                           \
-			if (sp_len (map->tiers) > 1) {                                     \
-				for (size_t i = 1; i < sp_len (map->tiers); i++) {             \
-					if (map->tiers[i] == NULL) { break; }                      \
-					ssize_t sidx = pref##_tier_get (map->tiers[i], k, kn, h);  \
-					if (sidx >= 0) {                                           \
-						map->tiers[0]->arr[idx].entry                          \
-							= map->tiers[i]->arr[sidx].entry;                  \
-						pref##_prune_index (map, i, sidx);                     \
-						isnew = false;                                         \
-						goto out;                                              \
-					}                                                          \
+		if (*isnew) {                                                          \
+			for (size_t i = 1; i < sp_len (map->tiers) && map->tiers[i]; i++) {\
+				if (map->tiers[i] == NULL) { break; }                          \
+				ssize_t sidx = pref##_tier_get (map->tiers[i], k, kn, h);      \
+				if (sidx >= 0) {                                               \
+					map->tiers[0]->arr[idx].entry                              \
+						= map->tiers[i]->arr[sidx].entry;                      \
+					pref##_prune_index (map, i, sidx);                         \
+					isnew = false;                                             \
+					goto out;                                                  \
 				}                                                              \
 			}                                                                  \
 			map->count++;                                                      \
