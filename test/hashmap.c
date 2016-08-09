@@ -133,7 +133,7 @@ test_grow (void)
 		int val = rand ();
 		if (i % 2 == 0) {
 			Thing t;
-			bool removed = thing_remove (&map, key, &t);
+			bool removed = thing_del (&map, key, &t);
 			mu_assert (removed);
 			if (removed) {
 				mu_assert_int_eq (t.value, val);

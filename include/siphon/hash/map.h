@@ -94,12 +94,12 @@
 	pref##_condense (TMap *map, size_t limit);                                 \
 	attr TEnt *                                                                \
 	pref##_get (TMap *map, __VA_ARGS__);                                       \
-	attr TEnt *                                                                \
-	pref##_reserve (TMap *map, __VA_ARGS__, bool *isnew);                      \
 	attr int                                                                   \
 	pref##_put (TMap *map, __VA_ARGS__, TEnt *entry);                          \
 	attr bool                                                                  \
-	pref##_remove (TMap *map, __VA_ARGS__, TEnt *entry);                       \
+	pref##_del (TMap *map, __VA_ARGS__, TEnt *entry);                          \
+	attr TEnt *                                                                \
+	pref##_reserve (TMap *map, __VA_ARGS__, bool *isnew);                      \
 
 #define SP_HMAP_GENERATE(TMap, TKey, TEnt, pref)                               \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
@@ -110,12 +110,6 @@
 		return pref##_hget (map, k, kn, pref##_hash (k, kn));                  \
 	}                                                                          \
                                                                                \
-	TEnt *                                                                     \
-	pref##_reserve (TMap *map, TKey k, size_t kn, bool *isnew)                 \
-	{                                                                          \
-		return pref##_hreserve (map, k, kn, pref##_hash (k, kn), isnew);       \
-	}                                                                          \
-                                                                               \
 	int                                                                        \
 	pref##_put (TMap *map, TKey k, size_t kn, TEnt *entry)                     \
 	{                                                                          \
@@ -123,9 +117,15 @@
 	}                                                                          \
                                                                                \
 	bool                                                                       \
-	pref##_remove (TMap *map, TKey k, size_t kn, TEnt *entry)                  \
+	pref##_del (TMap *map, TKey k, size_t kn, TEnt *entry)                     \
 	{                                                                          \
-		return pref##_hremove (map, k, kn, pref##_hash (k, kn), entry);        \
+		return pref##_hdel (map, k, kn, pref##_hash (k, kn), entry);           \
+	}                                                                          \
+                                                                               \
+	TEnt *                                                                     \
+	pref##_reserve (TMap *map, TKey k, size_t kn, bool *isnew)                 \
+	{                                                                          \
+		return pref##_hreserve (map, k, kn, pref##_hash (k, kn), isnew);       \
 	}                                                                          \
 
 #define SP_HMAP_DIRECT_GENERATE(TMap, TKey, TEnt, pref)                        \
@@ -149,12 +149,6 @@
 		return pref##_hget (map, k, 0, pref##_hash (k));                       \
 	}                                                                          \
                                                                                \
-	TEnt *                                                                     \
-	pref##_reserve (TMap *map, TKey k, bool *isnew)                            \
-	{                                                                          \
-		return pref##_hreserve (map, k, 0, pref##_hash (k), isnew);            \
-	}                                                                          \
-                                                                               \
 	int                                                                        \
 	pref##_put (TMap *map, TKey k, TEnt *entry)                                \
 	{                                                                          \
@@ -162,9 +156,15 @@
 	}                                                                          \
                                                                                \
 	bool                                                                       \
-	pref##_remove (TMap *map, TKey k, TEnt *entry)                             \
+	pref##_del (TMap *map, TKey k, TEnt *entry)                                \
 	{                                                                          \
-		return pref##_hremove (map, k, 0, pref##_hash (k), entry);             \
+		return pref##_hdel (map, k, 0, pref##_hash (k), entry);                \
+	}                                                                          \
+                                                                               \
+	TEnt *                                                                     \
+	pref##_reserve (TMap *map, TKey k, bool *isnew)                            \
+	{                                                                          \
+		return pref##_hreserve (map, k, 0, pref##_hash (k), isnew);            \
 	}                                                                          \
 
 #define SP_HMAP_GENERATE_INTERNAL(TMap, TKey, TEnt, pref)                      \
@@ -242,7 +242,7 @@
 	__attribute__((unused)) static int                                         \
 	pref##_prune_index (TMap *map, size_t tier, size_t idx)                    \
 	{                                                                          \
-		int rc = pref##_tier_remove (map->tiers[tier], idx);                   \
+		int rc = pref##_tier_del (map->tiers[tier], idx);                      \
 		if (rc == 0 && tier > 0 && map->tiers[tier]->count == 0) {             \
 			free (map->tiers[tier]);                                           \
 			map->tiers[tier] = NULL;                                           \
@@ -329,7 +329,7 @@
 	}                                                                          \
                                                                                \
 	__attribute__((unused)) static bool                                        \
-	pref##_hremove (TMap *map, TKey k, size_t kn, uint64_t h, TEnt *entry)     \
+	pref##_hdel (TMap *map, TKey k, size_t kn, uint64_t h, TEnt *entry)        \
 	{                                                                          \
 		assert (h > 0);                                                        \
 		for (size_t i = 0; i < sp_len (map->tiers); i++) {                     \

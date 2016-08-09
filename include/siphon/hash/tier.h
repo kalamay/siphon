@@ -159,7 +159,7 @@
 	attr size_t                                                                \
 	pref##_force (TTier *tier, const TTier *src, size_t idx);                  \
 	attr int                                                                   \
-	pref##_remove (TTier *tier, size_t idx);                                   \
+	pref##_del (TTier *tier, size_t idx);                                      \
 	attr size_t                                                                \
 	pref##_remap (TTier *tier, TTier *dst);                                    \
 	attr size_t                                                                \
@@ -265,7 +265,7 @@
 	}                                                                          \
                                                                                \
 	int                                                                        \
-	pref##_remove (TTier *tier, size_t idx)                                    \
+	pref##_del (TTier *tier, size_t idx)                                       \
 	{                                                                          \
 		if (idx >= tier->size) { return -ERANGE; }                             \
 		if (tier->arr[idx].h == 0) { return -ENOENT; }                         \
@@ -310,7 +310,7 @@
 			if (tier->arr[i-1].h != 0) {                                       \
 				pref##_force (dst, tier, i-1);                                 \
 				if (sp_unlikely (i == tier->size)) {                           \
-					pref##_remove (tier, i-1);                                 \
+					pref##_del (tier, i-1);                                    \
 					i++;                                                       \
 				}                                                              \
 				else {                                                         \
