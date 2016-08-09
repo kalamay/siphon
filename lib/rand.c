@@ -7,12 +7,6 @@
 
 #if defined(BSD) || defined( __APPLE__)
 
-static void __attribute__((constructor(101)))
-init (void)
-{
-	arc4random_stir ();
-}
-
 int
 sp_rand (void *const restrict dst, size_t len)
 {
