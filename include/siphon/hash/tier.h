@@ -109,8 +109,8 @@
 		size_t count;                                                          \
 		size_t remap;                                                          \
 		struct {                                                               \
-			uint64_t h;                                                        \
 			TEnt entry;                                                        \
+			uint64_t h;                                                        \
 		} arr[1];                                                              \
 	}
 
