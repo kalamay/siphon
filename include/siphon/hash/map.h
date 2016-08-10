@@ -100,6 +100,8 @@
 	pref##_del (TMap *map, __VA_ARGS__, TEnt *entry);                          \
 	attr TEnt *                                                                \
 	pref##_reserve (TMap *map, __VA_ARGS__, bool *isnew);                      \
+	attr bool                                                                  \
+	pref##_remove (TMap *map, const TEnt *entry);                              \
 
 #define SP_HMAP_GENERATE(TMap, TKey, TEnt, pref)                               \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
@@ -338,6 +340,25 @@
 			if (idx >= 0) {                                                    \
 				if (entry != NULL) { *entry = map->tiers[i]->arr[idx].entry; } \
 				if (pref##_prune_index (map, i, idx) == 0) { map->count--; }   \
+				return true;                                                   \
+			}                                                                  \
+		}                                                                      \
+		return false;                                                          \
+	}                                                                          \
+                                                                               \
+	bool                                                                       \
+	pref##_remove (TMap *map, const TEnt *entry)                               \
+	{                                                                          \
+		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
+			if ((void *)entry > (void *)map->tiers[i]->arr &&                  \
+				(void *)entry < (void *)(map->tiers[i]->arr + map->tiers[i]->size)) { \
+				size_t idx =                                                   \
+					((uint8_t *)entry - (uint8_t *)map->tiers[i]->arr) /       \
+					sizeof (map->tiers[i]->arr[0]);                            \
+				if (pref##_prune_index (map, i, idx) < 0) {                    \
+					return false;                                              \
+				}                                                              \
+				map->count--;                                                  \
 				return true;                                                   \
 			}                                                                  \
 		}                                                                      \

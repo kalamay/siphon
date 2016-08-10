@@ -200,6 +200,30 @@ test_each (void)
 	}
 }
 
+static void
+test_remove (void)
+{
+	Thing *t;
+	ThingMap map;
+	thing_init (&map, 0.8, 10);
+
+	thing_put (&map, 1, &((Thing) { 1, 100 }));
+	thing_put (&map, 2, &((Thing) { 2, 200 }));
+	thing_put (&map, 3, &((Thing) { 3, 300 }));
+
+	mu_assert_uint_eq (map.count, 3);
+
+	t = thing_get (&map, 2);
+	mu_fassert_ptr_ne (t, NULL);
+	mu_assert_int_eq (t->value, 200);
+
+	mu_assert (thing_remove (&map, t));
+
+	mu_assert_uint_eq (map.count, 2);
+	t = thing_get (&map, 2);
+	mu_fassert_ptr_eq (t, NULL);
+}
+
 int
 main (void)
 {
@@ -209,6 +233,7 @@ main (void)
 	test_resize ();
 	test_grow ();
 	test_each ();
+	test_remove ();
 
 	return 0;
 }
