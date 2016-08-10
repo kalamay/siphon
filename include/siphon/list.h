@@ -97,7 +97,7 @@ sp_list_del (SpList *entry)
 	sp_list_entry_clear (entry);
 }
 
-static inline SpList *
+__attribute__((unused)) static inline SpList *
 sp_list_pop (SpList *list, SpOrder dir)
 {
 	SpList *entry = sp_list_first (list, dir);
