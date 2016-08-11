@@ -92,6 +92,8 @@
 	pref##_resize (TMap *map, size_t extra);                                   \
 	attr size_t                                                                \
 	pref##_condense (TMap *map, size_t limit);                                 \
+	attr bool                                                                  \
+	pref##_has (TMap *map, __VA_ARGS__);                                       \
 	attr TEnt *                                                                \
 	pref##_get (TMap *map, __VA_ARGS__);                                       \
 	attr int                                                                   \
@@ -105,6 +107,12 @@
 
 #define SP_HMAP_GENERATE(TMap, TKey, TEnt, pref)                               \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
+                                                                               \
+	bool                                                                       \
+	pref##_has (TMap *map, TKey k, size_t kn)                                  \
+	{                                                                          \
+		return pref##_hhas (map, k, kn, pref##_hash (k, kn));                  \
+	}                                                                          \
                                                                                \
 	TEnt *                                                                     \
 	pref##_get (TMap *map, TKey k, size_t kn)                                  \
@@ -144,6 +152,12 @@
 	}                                                                          \
                                                                                \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
+                                                                               \
+	bool                                                                       \
+	pref##_has (TMap *map, TKey k)                                             \
+	{                                                                          \
+		return pref##_hhas (map, k, 0, pref##_hash (k));                       \
+	}                                                                          \
                                                                                \
 	TEnt *                                                                     \
 	pref##_get (TMap *map, TKey k)                                             \
@@ -254,6 +268,19 @@
 			}                                                                  \
 		}                                                                      \
 		return rc;                                                             \
+	}                                                                          \
+                                                                               \
+	__attribute__((unused)) static bool                                        \
+	pref##_hhas (TMap *map, TKey k, size_t kn, uint64_t h)                     \
+	{                                                                          \
+		assert (h > 0);                                                        \
+		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
+			if (map->tiers[i]->count == 0 &&                                   \
+					pref##_tier_get (map->tiers[i], k, kn, h) > 0) {           \
+				return true;                                                   \
+			}                                                                  \
+		}                                                                      \
+		return false;                                                          \
 	}                                                                          \
                                                                                \
 	__attribute__((unused)) static TEnt *                                      \
