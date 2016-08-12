@@ -225,16 +225,16 @@ test_remove (void)
 }
 
 uint64_t
-hashed_hash (uint64_t key, size_t len)
+prehash_hash (uint64_t key, size_t len)
 {
 	(void)len;
 
-	// We using siphash as the only identity 😳
+	// We are using siphash as the only identity 😳
 	return key;
 }
 
 bool
-hashed_has_key (int *v, uint64_t key, size_t len)
+prehash_has_key (int *v, uint64_t key, size_t len)
 {
 	(void)v;
 	(void)key;
@@ -245,10 +245,10 @@ hashed_has_key (int *v, uint64_t key, size_t len)
 	return true;
 }
 
-typedef SP_HMAP (int, 2, hashed) HashedMap;
+typedef SP_HMAP (int, 2, prehash) PrehashMap;
 
-SP_HMAP_PROTOTYPE_STATIC (HashedMap, uint64_t, int, hashed)
-SP_HMAP_GENERATE (HashedMap, uint64_t, int, hashed)
+SP_HMAP_PROTOTYPE_STATIC (PrehashMap, uint64_t, int, prehash)
+SP_HMAP_GENERATE (PrehashMap, uint64_t, int, prehash)
 
 static uint64_t
 make_key (int n)
@@ -261,13 +261,13 @@ make_key (int n)
 static void
 test_pre_hash (size_t hint)
 {
-	HashedMap map;
-	hashed_init (&map, 0.85, hint);
+	PrehashMap map;
+	prehash_init (&map, 0.85, hint);
 
 #define CREATE(n) do {                               \
 	uint64_t key = make_key (n);                     \
 	bool new;                                        \
-	int *v = hashed_reserve (&map, key, 0, &new);    \
+	int *v = prehash_reserve (&map, key, 0, &new);   \
 	mu_assert_ptr_ne (v, NULL);                      \
 	mu_assert (new);                                 \
 	if (v != NULL) {                                 \
@@ -277,12 +277,12 @@ test_pre_hash (size_t hint)
 
 #define REMOVE(n) do {                               \
 	uint64_t key = make_key (n);                     \
-	mu_assert (hashed_del (&map, key, 0, NULL));     \
+	mu_assert (prehash_del (&map, key, 0, NULL));    \
 } while (0)
 
 #define CHECK(n) do {                                \
 	uint64_t key = make_key (n);                     \
-	int *v = hashed_get (&map, key, 0);              \
+	int *v = prehash_get (&map, key, 0);             \
 	mu_assert_ptr_ne (v, NULL);                      \
 	if (v != NULL) {                                 \
 		mu_assert_int_eq (*v, n);                    \
@@ -291,9 +291,9 @@ test_pre_hash (size_t hint)
 
 #define NONE(n) do {                                 \
 	uint64_t key = make_key (n);                     \
-	int *v = hashed_get (&map, key, 0);              \
+	int *v = prehash_get (&map, key, 0);             \
 	mu_assert_ptr_eq (v, NULL);                      \
-	mu_assert (!hashed_has (&map, key, 0));          \
+	mu_assert (!prehash_has (&map, key, 0));         \
 } while (0)
 
 	CREATE (1);
