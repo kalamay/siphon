@@ -224,6 +224,546 @@ test_remove (void)
 	mu_fassert_ptr_eq (t, NULL);
 }
 
+typedef struct {
+	uint64_t key;
+	int value;
+} Hashed;
+
+uint64_t
+hashed_hash (uint64_t key, size_t len)
+{
+	(void)len;
+
+	// We using siphash as the only identity 😳
+	return key;
+}
+
+bool
+hashed_has_key (Hashed *h, uint64_t key, size_t len)
+{
+	(void)h;
+	(void)key;
+	(void)len;
+
+	// This can just return `true` because the map won't call this function
+	// unless the hashes are equal;
+	return true;
+}
+
+typedef SP_HMAP (Hashed, 2, hashed) HashedMap;
+
+SP_HMAP_PROTOTYPE_STATIC (HashedMap, uint64_t, Hashed, hashed)
+SP_HMAP_GENERATE (HashedMap, uint64_t, Hashed, hashed)
+
+static uint64_t
+make_key (int n)
+{
+	char key[16];
+	int len = snprintf (key, sizeof key, "key%u", n);
+	return sp_siphash (key, len, SP_SEED_DEFAULT);
+}
+
+static void
+test_pre_hash (size_t hint)
+{
+	HashedMap map;
+	hashed_init (&map, 0.85, hint);
+
+#define CREATE(n) do {                               \
+	uint64_t key = make_key (n);                     \
+	bool new;                                        \
+	Hashed *h = hashed_reserve (&map, key, 0, &new); \
+	mu_assert_ptr_ne (h, NULL);                      \
+	mu_assert (new);                                 \
+	if (h != NULL) {                                 \
+		h->key = key;                                \
+		h->value = n;                                \
+	}                                                \
+} while (0)
+
+#define REMOVE(n) do {                               \
+	uint64_t key = make_key (n);                     \
+	mu_assert (hashed_del (&map, key, 0, NULL));     \
+} while (0)
+
+#define CHECK(n) do {                                \
+	uint64_t key = make_key (n);                     \
+	Hashed *h = hashed_get (&map, key, 0);           \
+	mu_assert_ptr_ne (h, NULL);                      \
+	if (h != NULL) {                                 \
+		mu_assert_int_eq (h->value, n);              \
+	}                                                \
+} while (0)
+
+#define NONE(n) do {                                 \
+	uint64_t key = make_key (n);                     \
+	Hashed *h = hashed_get (&map, key, 0);           \
+	mu_assert_ptr_eq (h, NULL);                      \
+	mu_assert (!hashed_has (&map, key, 0));          \
+} while (0)
+
+	CREATE (1);
+	CREATE (2);
+	CREATE (3);
+	CREATE (4);
+	CREATE (5);
+	CREATE (6);
+	CREATE (7);
+	CREATE (8);
+	CREATE (9);
+	CREATE (10);
+	CREATE (11);
+	CREATE (12);
+	CREATE (13);
+	CREATE (14);
+
+	CHECK (1);
+	CHECK (2);
+	CHECK (3);
+	CHECK (4);
+	CHECK (5);
+	CHECK (6);
+	CHECK (7);
+	CHECK (8);
+	CHECK (9);
+	CHECK (10);
+	CHECK (11);
+	CHECK (12);
+	CHECK (13);
+	CHECK (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (1);
+	REMOVE (2);
+	REMOVE (3);
+	REMOVE (4);
+	REMOVE (5);
+	CREATE (15);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	CHECK (6);
+	CHECK (7);
+	CHECK (8);
+	CHECK (9);
+	CHECK (10);
+	CHECK (11);
+	CHECK (12);
+	CHECK (13);
+	CHECK (14);
+	CHECK (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	CREATE (16);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	CHECK (6);
+	CHECK (7);
+	CHECK (8);
+	CHECK (9);
+	CHECK (10);
+	CHECK (11);
+	CHECK (12);
+	CHECK (13);
+	CHECK (14);
+	CHECK (15);
+	CHECK (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (6);
+	REMOVE (7);
+	REMOVE (8);
+	REMOVE (9);
+	CREATE (17);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	CHECK (10);
+	CHECK (11);
+	CHECK (12);
+	CHECK (13);
+	CHECK (14);
+	CHECK (15);
+	CHECK (16);
+	CHECK (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	CREATE (18);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	CHECK (10);
+	CHECK (11);
+	CHECK (12);
+	CHECK (13);
+	CHECK (14);
+	CHECK (15);
+	CHECK (16);
+	CHECK (17);
+	CHECK (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (10);
+	REMOVE (11);
+	REMOVE (12);
+	REMOVE (13);
+	CREATE (19);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	CHECK (14);
+	CHECK (15);
+	CHECK (16);
+	CHECK (17);
+	CHECK (18);
+	CHECK (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	CREATE (20);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	CHECK (14);
+	CHECK (15);
+	CHECK (16);
+	CHECK (17);
+	CHECK (18);
+	CHECK (19);
+	CHECK (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (14);
+	REMOVE (15);
+	CREATE (21);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	CHECK (16);
+	CHECK (17);
+	CHECK (18);
+	CHECK (19);
+	CHECK (20);
+	CHECK (21);
+	NONE (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (16);
+	REMOVE (17);
+	CREATE (22);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	CHECK (18);
+	CHECK (19);
+	CHECK (20);
+	CHECK (21);
+	CHECK (22);
+	NONE (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (18);
+	REMOVE (19);
+	CREATE (23);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	CHECK (20);
+	CHECK (21);
+	CHECK (22);
+	CHECK (23);
+	NONE (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	CREATE (24);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	CHECK (20);
+	CHECK (21);
+	CHECK (22);
+	CHECK (23);
+	CHECK (24);
+	NONE (25);
+	NONE (26);
+	NONE (27);
+
+	REMOVE (20);
+	REMOVE (21);
+	CREATE (25);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	CHECK (22);
+	CHECK (23);
+	CHECK (24);
+	CHECK (25);
+	NONE (26);
+	NONE (27);
+
+	CREATE (26);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	CHECK (22);
+	CHECK (23);
+	CHECK (24);
+	CHECK (25);
+	CHECK (26);
+	NONE (27);
+
+	REMOVE (22);
+	REMOVE (23);
+	CREATE (27);
+
+	NONE (1);
+	NONE (2);
+	NONE (3);
+	NONE (4);
+	NONE (5);
+	NONE (6);
+	NONE (7);
+	NONE (8);
+	NONE (9);
+	NONE (10);
+	NONE (11);
+	NONE (12);
+	NONE (13);
+	NONE (14);
+	NONE (15);
+	NONE (16);
+	NONE (17);
+	NONE (18);
+	NONE (19);
+	NONE (20);
+	NONE (21);
+	NONE (22);
+	NONE (23);
+	CHECK (24);
+	CHECK (25);
+	CHECK (26);
+	CHECK (27);
+
+#undef CREATE
+#undef REMOVE
+#undef CHECK
+#undef NONE
+}
+
 int
 main (void)
 {
@@ -234,6 +774,8 @@ main (void)
 	test_grow ();
 	test_each ();
 	test_remove ();
+	test_pre_hash (0);
+	test_pre_hash (100);
 
 	return 0;
 }
