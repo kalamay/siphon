@@ -104,6 +104,8 @@
 	pref##_reserve (TMap *map, __VA_ARGS__, bool *isnew);                      \
 	attr bool                                                                  \
 	pref##_remove (TMap *map, const TEnt *entry);                              \
+	attr void                                                                  \
+	pref##_print (TMap *map, FILE *out, void (*fn)(TEnt *, FILE *));           \
 
 #define SP_HMAP_GENERATE(TMap, TKey, TEnt, pref)                               \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
@@ -390,6 +392,36 @@
 			}                                                                  \
 		}                                                                      \
 		return false;                                                          \
+	}                                                                          \
+                                                                               \
+	void                                                                       \
+	pref##_print (TMap *map, FILE *out, void (*fn)(TEnt *, FILE *out))         \
+	{                                                                          \
+		if (out == NULL) { out = stdout; }                                     \
+		if (map == NULL) {                                                     \
+			fprintf (out, "#<" #TMap "<" #TKey "," #TEnt ">:(null)>\n");       \
+			return;                                                            \
+		}                                                                      \
+		flockfile (out);                                                       \
+		fprintf (out,                                                          \
+				"#<" #TMap "<" #TKey ", " #TEnt ">:%p count=%zu max=%zu> {\n", \
+				(void *)map, map->count, map->max);                            \
+		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
+			struct pref##_tier *t = map->tiers[i];                             \
+			fprintf (out,                                                      \
+					"    #<tier[%zu] count=%zu, size=%zu, remap=%zu> {\n",     \
+					i, t->count, t->size, t->remap);                           \
+			for (size_t j = 0; j < t->size; j++) {                             \
+				if (t->arr[j].h) {                                             \
+					fprintf (out, "        %020" PRIu64 " = ", t->arr[j].h);   \
+					fn (&t->arr[j].entry, out);                                \
+					fprintf (out, "\n");                                       \
+				}                                                              \
+			}                                                                  \
+			fprintf (out, "    }\n");                                          \
+		}                                                                      \
+		fprintf (out, "}\n");                                                  \
+		funlockfile (out);                                                     \
 	}                                                                          \
 
 #endif
