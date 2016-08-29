@@ -5,6 +5,9 @@
 
 #include <math.h> 
 
+#define SP_EXTERN extern
+#define SP_STATIC __attribute__((unused)) static
+
 #define SP_HMAP(TEnt, ntiers, pref)                                            \
 	SP_HMAP_NAMED (, TEnt, ntiers, pref)
 
@@ -31,7 +34,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_PROTOTYPE(TMap, TKey, TEnt, pref)                              \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, extern, TKey k, size_t kn)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_EXTERN, TKey k, size_t kn)
 
 /**
  * Generates static function prototypes for the map
@@ -42,7 +45,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                       \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused)) static, TKey k, size_t kn)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_STATIC, TKey k, size_t kn)
 
 /**
  * Generates extern function prototypes for the map using a direct key
@@ -57,7 +60,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE(TMap, TKey, TEnt, pref)                       \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, extern, TKey k)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_EXTERN, TKey k)
 
 /**
  * Generates static function prototypes for the map using a direct key
@@ -72,7 +75,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, __attribute__((unused)) static, TKey k)
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_STATIC, TKey k)
 
 /**
  * Generates attributed function prototypes for the map
@@ -379,11 +382,11 @@
 	pref##_remove (TMap *map, const TEnt *entry)                               \
 	{                                                                          \
 		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
-			if ((void *)entry > (void *)map->tiers[i]->arr &&                  \
-				(void *)entry < (void *)(map->tiers[i]->arr + map->tiers[i]->size)) { \
-				size_t idx =                                                   \
-					((uint8_t *)entry - (uint8_t *)map->tiers[i]->arr) /       \
-					sizeof (map->tiers[i]->arr[0]);                            \
+			void *begin = (void *)map->tiers[i]->arr;                          \
+			void *end = (void *)(map->tiers[i]->arr + map->tiers[i]->size);    \
+			if ((void *)entry > begin && (void *)entry < end) {                \
+				size_t idx = ((uint8_t *)entry - (uint8_t *)begin)             \
+				           / sizeof (map->tiers[i]->arr[0]);                   \
 				if (pref##_prune_index (map, i, idx) < 0) {                    \
 					return false;                                              \
 				}                                                              \
@@ -413,7 +416,7 @@
 					i, t->count, t->size, t->remap);                           \
 			for (size_t j = 0; j < t->size; j++) {                             \
 				if (t->arr[j].h) {                                             \
-					fprintf (out, "        %020" PRIu64 " = ", t->arr[j].h);   \
+					fprintf (out, "        %016" PRIx64 " = ", t->arr[j].h);   \
 					fn (&t->arr[j].entry, out);                                \
 					fprintf (out, "\n");                                       \
 				}                                                              \
