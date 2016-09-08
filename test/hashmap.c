@@ -224,6 +224,50 @@ test_remove (void)
 	mu_fassert_ptr_eq (t, NULL);
 }
 
+static void
+test_remove_all (void)
+{
+	Thing *t;
+	ThingMap map;
+	thing_init (&map, 0.8, 10);
+
+	srand (0);
+	for (int i = 0; i < 1000; i++) {
+		int key = rand ();
+		int val = rand ();
+		thing_put (&map, key, &((Thing) { key, val }));
+	}
+
+	mu_assert_uint_eq (map.count, 1000);
+
+	srand (0);
+	for (int i = 0; i < 1000; i++) {
+		int key = rand ();
+		int val = rand ();
+		t = thing_get (&map, key);
+		mu_fassert_ptr_ne (t, NULL);
+		mu_assert_int_eq (t->value, val);
+		mu_assert (thing_remove (&map, t));
+	}
+
+	mu_fassert_uint_eq (map.count, 0);
+
+	for (int i = 0; i < 1000; i++) {
+		thing_put (&map, i, &((Thing) { i, i * 100 }));
+	}
+
+	mu_assert_uint_eq (map.count, 1000);
+
+	for (int i = 0; i < 1000; i++) {
+		t = thing_get (&map, i);
+		mu_fassert_ptr_ne (t, NULL);
+		mu_assert_int_eq (t->value, i * 100);
+		mu_assert (thing_remove (&map, t));
+	}
+
+	mu_fassert_uint_eq (map.count, 0);
+}
+
 uint64_t
 prehash_hash (uint64_t key, size_t len)
 {
@@ -768,6 +812,7 @@ main (void)
 	test_grow ();
 	test_each ();
 	test_remove ();
+	test_remove_all ();
 	test_pre_hash (0);
 	test_pre_hash (100);
 
