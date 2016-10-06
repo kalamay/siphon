@@ -1,6 +1,250 @@
 #include "../include/siphon/hash/map.h"
 #include "mu.h"
 
+
+
+uint64_t
+junk_hash (const char *key)
+{
+	return (uint64_t)*key + 1;
+}
+
+bool
+junk_has_key (const char **junk, const char *key, size_t kn)
+{
+	(void)kn;
+	return strcmp (*junk, key) == 0;
+}
+
+typedef SP_HMAP (const char *, 2, junk) JunkMap;
+
+SP_HMAP_VALUE_PROTOTYPE_STATIC (JunkMap, const char *, const char *, junk)
+SP_HMAP_VALUE_GENERATE (JunkMap, const char *, const char *, junk)
+
+#define TEST_ADD_NEW(map, key, resultcount) do {       \
+	const char *k = key;                               \
+	int rc = junk_put (map, k, &k);                    \
+	mu_assert_int_eq (rc, 0);                          \
+	mu_assert_uint_eq ((map)->count, resultcount);     \
+} while (0)
+
+#define TEST_ADD_OLD(map, key, resultcount) do {       \
+	const char *k = key;                               \
+	int rc = junk_put (map, k, &k);                    \
+	mu_assert_int_eq (rc, 1);                          \
+	mu_assert_str_eq (k, key);                         \
+	mu_assert_uint_eq ((map)->count, resultcount);     \
+} while (0)
+
+#define TEST_REM_NEW(map, key, resultcount) do {       \
+	const char *old = NULL;                            \
+	bool rc = junk_del (map, key, &old);               \
+	mu_assert_int_eq (rc, false);                      \
+	mu_assert_ptr_eq (old, NULL);                      \
+	mu_assert_uint_eq ((map)->count, resultcount);     \
+} while (0)
+
+#define TEST_REM_OLD(map, key, resultcount) do {       \
+	const char *old = NULL;                            \
+	bool rc = junk_del (map, key, &old);               \
+	mu_assert_int_eq (rc, true);                       \
+	mu_assert_str_eq (old, key);                       \
+	mu_assert_uint_eq ((map)->count, resultcount);     \
+} while (0)
+
+static void
+test_empty (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+	mu_assert_ptr_eq (junk_get (&map, "test"), NULL);
+}
+
+static void
+test_single_collision (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	TEST_ADD_NEW (&map, "a1", 1);
+	TEST_ADD_NEW (&map, "a2", 2);
+	TEST_REM_OLD (&map, "a1", 1);
+	TEST_REM_OLD (&map, "a2", 0);
+
+	TEST_ADD_NEW (&map, "a1", 1);
+	TEST_ADD_NEW (&map, "a2", 2);
+	TEST_REM_OLD (&map, "a2", 1);
+	TEST_REM_OLD (&map, "a1", 0);
+
+	junk_final (&map);
+}
+
+static void
+test_single_bucket_collision (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	TEST_ADD_NEW (&map, "a", 1);
+	TEST_ADD_NEW (&map, "q", 2);
+	TEST_REM_OLD (&map, "a", 1);
+	TEST_REM_OLD (&map, "q", 0);
+
+	TEST_ADD_NEW (&map, "a", 1);
+	TEST_ADD_NEW (&map, "q", 2);
+	TEST_REM_OLD (&map, "q", 1);
+	TEST_REM_OLD (&map, "a", 0);
+
+	junk_final (&map);
+}
+
+static void
+test_single_collision_wrap (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	// o1 and o2 will result in a hash collision
+
+	TEST_ADD_NEW (&map, "o1", 1);
+	TEST_ADD_NEW (&map, "o2", 2);
+	TEST_REM_OLD (&map, "o1", 1);
+	TEST_REM_OLD (&map, "o2", 0);
+
+	TEST_ADD_NEW (&map, "o1", 1);
+	TEST_ADD_NEW (&map, "o2", 2);
+	TEST_REM_OLD (&map, "o2", 1);
+	TEST_REM_OLD (&map, "o1", 0);
+
+	junk_final (&map);
+}
+
+static void
+test_bucket_collision_steal (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	// c and j will collide in bucket positions
+	// d will sit after c
+
+	TEST_ADD_NEW (&map, "d", 1);
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+	TEST_ADD_NEW (&map, "j", 2);
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "j");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+	TEST_ADD_NEW (&map, "c", 3);
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "j");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[4].entry, "d");
+
+	TEST_REM_OLD (&map, "c", 2);
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "j");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+	TEST_REM_OLD (&map, "j", 1);
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+	TEST_REM_OLD (&map, "d", 0);
+
+	junk_final (&map);
+}
+
+static void
+test_hash_to_bucket_collision (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	// a1 and a2 should hash collide
+	// a2 should bucket collide with b
+
+	TEST_ADD_NEW (&map, "b", 1);
+	TEST_ADD_NEW (&map, "c", 2);
+	TEST_ADD_NEW (&map, "d", 3);
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+	TEST_ADD_NEW (&map, "a1", 4);
+	TEST_ADD_NEW (&map, "a2", 5);
+	mu_assert_str_eq (map.tiers[0]->arr[0].entry, "a1");
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "a2");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[4].entry, "d");
+
+	TEST_REM_OLD (&map, "a2", 4);
+	TEST_REM_OLD (&map, "a1", 3);
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+
+	junk_final (&map);
+}
+
+static void
+test_hash_to_bucket_collision2 (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.95, 0);
+
+	// a1, a2, a3, and a4 should hash collide
+	// a2+ should bucket collide with c+
+
+	TEST_ADD_NEW (&map, "a1", 1);
+	TEST_ADD_NEW (&map, "a2", 2);
+	TEST_ADD_NEW (&map, "b", 3);
+	TEST_ADD_NEW (&map, "c", 4);
+	TEST_ADD_NEW (&map, "d", 5);
+
+	mu_assert_str_eq (map.tiers[0]->arr[0].entry, "a1");
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "a2");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[4].entry, "d");
+
+	TEST_ADD_NEW (&map, "a3", 6);
+	TEST_ADD_NEW (&map, "a4", 7);
+
+	mu_assert_str_eq (map.tiers[0]->arr[0].entry, "a1");
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "a2");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "a3");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "a4");
+	mu_assert_str_eq (map.tiers[0]->arr[4].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[5].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[6].entry, "d");
+
+	TEST_REM_OLD (&map, "a2", 6);
+	TEST_REM_OLD (&map, "a4", 5);
+
+	mu_assert_str_eq (map.tiers[0]->arr[0].entry, "a1");
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "a3");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[4].entry, "d");
+
+	TEST_REM_OLD (&map, "a1", 4);
+	TEST_REM_OLD (&map, "a3", 3);
+
+	mu_assert_str_eq (map.tiers[0]->arr[1].entry, "b");
+	mu_assert_str_eq (map.tiers[0]->arr[2].entry, "c");
+	mu_assert_str_eq (map.tiers[0]->arr[3].entry, "d");
+
+	junk_final (&map);
+}
+
+static void
+test_lookup_collision (void)
+{
+	JunkMap map;
+	junk_init (&map, 0.8, 0);
+
+	TEST_ADD_NEW (&map, "a1", 1);
+	mu_assert_ptr_eq (junk_get (&map, "a2"), NULL);
+
+	junk_final (&map);
+}
+
+
+
 typedef struct {
 	int key, value;
 } Thing;
@@ -16,22 +260,6 @@ typedef SP_HMAP (Thing, 2, thing) ThingMap;
 
 SP_HMAP_DIRECT_PROTOTYPE_STATIC (ThingMap, int, Thing, thing)
 SP_HMAP_DIRECT_GENERATE (ThingMap, int, Thing, thing)
-
-void
-dump (const ThingMap *map)
-{
-	for (size_t n = 0; n < sp_len (map->tiers); n++) {
-		if (map->tiers[n] == NULL) { break; }
-		for (size_t i = 0; i < map->tiers[n]->size; i++) {
-			if (map->tiers[n]->arr[i].h == 0) { continue; }
-			printf ("  #%zu/%zu = { key = %d, value = %d, hash = %" PRIu64 " }\n",
-				n, i,
-				map->tiers[n]->arr[i].entry.key,
-				map->tiers[n]->arr[i].entry.value,
-				map->tiers[n]->arr[i].h);
-		}
-	}
-}
 
 static void
 test_set (void)
@@ -158,6 +386,28 @@ test_grow (void)
 		}
 	}
 }
+
+#if 0
+static void
+test_downsize (void)
+{
+	SpMap map = SP_MAP_MAKE (&good_type);
+
+	TEST_ADD_NEW (&map, "k1", 1);
+	TEST_ADD_NEW (&map, "k2", 2);
+	TEST_ADD_NEW (&map, "k3", 3);
+	TEST_ADD_NEW (&map, "k4", 4);
+
+	sp_map_resize (&map, sp_map_count (&map));
+	mu_assert_uint_eq (sp_map_count (&map), 4);
+	mu_assert_uint_eq (sp_map_size (&map), 8);
+	mu_assert_str_eq (sp_map_get (&map, "k1", 2), "k1");
+	mu_assert_str_eq (sp_map_get (&map, "k2", 2), "k2");
+	mu_assert_str_eq (sp_map_get (&map, "k3", 2), "k3");
+	mu_assert_str_eq (sp_map_get (&map, "k4", 2), "k4");
+	sp_map_final (&map);
+}
+#endif
 
 static void
 test_each (void)
@@ -807,6 +1057,14 @@ main (void)
 {
 	mu_init ("hash/map");
 
+	test_empty ();
+	test_single_collision ();
+	test_single_bucket_collision ();
+	test_single_collision_wrap ();
+	test_bucket_collision_steal ();
+	test_hash_to_bucket_collision ();
+	test_hash_to_bucket_collision2 ();
+	test_lookup_collision ();
 	test_set ();
 	test_resize ();
 	test_grow ();

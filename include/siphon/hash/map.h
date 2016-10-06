@@ -48,6 +48,30 @@
 	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_STATIC, TKey k, size_t kn)
 
 /**
+ * Generates extern function prototypes for the map using a value key with
+ * no externally specified length
+ *
+ * @param  TMap  map structure type
+ * @param  TKey  key type
+ * @param  TEnt  entry type
+ * @param  pref  function name prefix
+ */
+#define SP_HMAP_VALUE_PROTOTYPE(TMap, TKey, TEnt, pref)                        \
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_EXTERN, TKey k)
+
+/**
+ * Generates static function prototypes for the map using a value key with
+ * no externally specified length
+ *
+ * @param  TMap  map structure type
+ * @param  TKey  key type
+ * @param  TEnt  entry type
+ * @param  pref  function name prefix
+ */
+#define SP_HMAP_VALUE_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                 \
+	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_STATIC, TKey k)
+
+/**
  * Generates extern function prototypes for the map using a direct key
  *
  * The direct key variant uses an integer-like value as the key. This includes
@@ -60,7 +84,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE(TMap, TKey, TEnt, pref)                       \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_EXTERN, TKey k)
+	SP_HMAP_VALUE_PROTOTYPE (TMap, TKey, TEnt, pref)
 
 /**
  * Generates static function prototypes for the map using a direct key
@@ -75,7 +99,7 @@
  * @param  pref  function name prefix
  */
 #define SP_HMAP_DIRECT_PROTOTYPE_STATIC(TMap, TKey, TEnt, pref)                \
-	SP_HMAP_PROTOTYPE_INTERNAL (TMap, TEnt, pref, SP_STATIC, TKey k)
+	SP_HMAP_VALUE_PROTOTYPE_STATIC (TMap, TKey, TEnt, pref)
 
 /**
  * Generates attributed function prototypes for the map
@@ -106,7 +130,7 @@
 	attr TEnt *                                                                \
 	pref##_reserve (TMap *map, __VA_ARGS__, bool *isnew);                      \
 	attr bool                                                                  \
-	pref##_remove (TMap *map, const TEnt *entry);                              \
+	pref##_remove (TMap *map, TEnt *entry);                                    \
 	attr void                                                                  \
 	pref##_print (TMap *map, FILE *out, void (*fn)(TEnt *, FILE *));           \
 
@@ -143,19 +167,7 @@
 		return pref##_hreserve (map, k, kn, pref##_hash (k, kn), isnew);       \
 	}                                                                          \
 
-#define SP_HMAP_DIRECT_GENERATE(TMap, TKey, TEnt, pref)                        \
-	__attribute__((unused)) static uint64_t                                    \
-	pref##_hash (TKey k)                                                       \
-	{                                                                          \
-		uint64_t x = ((uint64_t)k << 1) | 1;                                   \
-		x ^= x >> 33;                                                          \
-		x *= 0xff51afd7ed558ccdULL;                                            \
-		x ^= x >> 33;                                                          \
-		x *= 0xc4ceb9fe1a85ec53ULL;                                            \
-		x ^= x >> 33;                                                          \
-		return x;                                                              \
-	}                                                                          \
-                                                                               \
+#define SP_HMAP_VALUE_GENERATE(TMap, TKey, TEnt, pref)                         \
 	SP_HMAP_GENERATE_INTERNAL (TMap, TKey, TEnt, pref)                         \
                                                                                \
 	bool                                                                       \
@@ -187,6 +199,21 @@
 	{                                                                          \
 		return pref##_hreserve (map, k, 0, pref##_hash (k), isnew);            \
 	}                                                                          \
+
+#define SP_HMAP_DIRECT_GENERATE(TMap, TKey, TEnt, pref)                        \
+	__attribute__((unused)) static uint64_t                                    \
+	pref##_hash (TKey k)                                                       \
+	{                                                                          \
+		uint64_t x = ((uint64_t)k << 1) | 1;                                   \
+		x ^= x >> 33;                                                          \
+		x *= 0xff51afd7ed558ccdULL;                                            \
+		x ^= x >> 33;                                                          \
+		x *= 0xc4ceb9fe1a85ec53ULL;                                            \
+		x ^= x >> 33;                                                          \
+		return x;                                                              \
+	}                                                                          \
+                                                                               \
+	SP_HMAP_VALUE_GENERATE (TMap, TKey, TEnt, pref)                            \
 
 #define SP_HMAP_GENERATE_INTERNAL(TMap, TKey, TEnt, pref)                      \
 	SP_HTIER_PROTOTYPE_STATIC (struct pref##_tier, TKey, pref##_tier)          \
@@ -221,7 +248,7 @@
 		for (size_t i = 0; i < sp_len (map->tiers); i++) {                     \
 			map->tiers[i] = NULL;                                              \
 		}                                                                      \
-		if (loadf <= 0.0 || isnan (loadf)) { map->loadf = 0.9; }               \
+		if (isnan (loadf) || loadf <= 0.0) { map->loadf = 0.9; }               \
 		else if (loadf > 0.99) { map->loadf = 0.99; }                          \
 		else { map->loadf = loadf; }                                           \
 		map->count = 0;                                                        \
@@ -379,7 +406,7 @@
 	}                                                                          \
                                                                                \
 	bool                                                                       \
-	pref##_remove (TMap *map, const TEnt *entry)                               \
+	pref##_remove (TMap *map, TEnt *entry)                                     \
 	{                                                                          \
 		for (size_t i = 0; i < sp_len (map->tiers) && map->tiers[i]; i++) {    \
 			void *begin = (void *)map->tiers[i]->arr;                          \
