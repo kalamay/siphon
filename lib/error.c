@@ -57,6 +57,7 @@
 	XX(EPIPE,              "broken pipe") \
 	XX(ERANGE,             "result too large") \
 	XX(EAGAIN,             "resource temporarily unavailable") \
+	XX(EINPROGRESS,        "operation now in progress") \
 	XX(EALREADY,           "connection already in progress") \
 	XX(ENOTSOCK,           "socket operation on non-socket") \
 	XX(EDESTADDRREQ,       "destination address required") \
