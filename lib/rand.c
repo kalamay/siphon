@@ -32,7 +32,7 @@ static void __attribute__((constructor(101)))
 init (void)
 {
 	while (true) {
-		fd = open ("/dev/urandom", O_RDONLY);
+		fd = open ("/dev/urandom", O_RDONLY|O_CLOEXEC);
 		if (fd >= 0) {
 			break;
 		}
