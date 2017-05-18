@@ -12,7 +12,7 @@ struct SpHttpMap {
 struct SpHttpEntry {
 	uint16_t **values;
 	uint16_t len;
-} __attribute__((packed));
+};
 
 static void
 pstr_assign (uint16_t *s, const void *val, uint16_t len)
