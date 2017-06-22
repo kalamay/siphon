@@ -141,17 +141,17 @@ sp_http_map_free (SpHttpMap *m);
 
 SP_EXPORT int
 sp_http_map_put (SpHttpMap *m,
-		const void *name, uint16_t nlen,
-		const void *value, uint16_t vlen);
+		const void *name, size_t nlen,
+		const void *value, size_t vlen);
 
 SP_EXPORT bool
-sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen);
+sp_http_map_del (SpHttpMap *m, const void *name, size_t nlen);
 
 SP_EXPORT void
 sp_http_map_clear (SpHttpMap *m);
 
 SP_EXPORT const SpHttpEntry *
-sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen);
+sp_http_map_get (const SpHttpMap *m, const void *name, size_t nlen);
 
 SP_EXPORT size_t
 sp_http_map_encode_size (const SpHttpMap *m);

@@ -10,12 +10,13 @@ struct SpHttpMap {
 };
 
 struct SpHttpEntry {
-	uint16_t **values;
-	uint16_t len;
+	size_t **values;
+	size_t len;
+	char data[];
 };
 
 static void
-pstr_assign (uint16_t *s, const void *val, uint16_t len)
+pstr_assign (size_t *s, const void *val, size_t len)
 {
 	*s = len;
 	uint8_t *buf = (uint8_t *)(s+1);
@@ -23,10 +24,10 @@ pstr_assign (uint16_t *s, const void *val, uint16_t len)
 	buf[len] = 0;
 }
 
-static uint16_t *
-pstr_new (const void *val, uint16_t len)
+static size_t *
+pstr_new (const void *val, size_t len)
 {
-	uint16_t *s = sp_malloc (sizeof *s + len + 1);
+	size_t *s = sp_malloc (sizeof *s + len + 1);
 	if (s != NULL) {
 		pstr_assign (s, val, len);
 	}
@@ -34,7 +35,7 @@ pstr_new (const void *val, uint16_t len)
 }
 
 static void
-pstr_free (uint16_t *s)
+pstr_free (size_t *s)
 {
 	if (s != NULL) {
 		sp_free (s, sizeof *s + *s + 1);
@@ -42,20 +43,20 @@ pstr_free (uint16_t *s)
 }
 
 static bool
-pstr_case_eq (const uint16_t *s, const void *val, uint16_t len)
+pstr_case_eq (const size_t *s, const void *val, size_t len)
 {
 	return *s == len && strncasecmp ((const char *)(s+1), val, len) == 0;
 }
 
 static void
-pstr_set (const uint16_t *s, struct iovec *iov)
+pstr_set (const size_t *s, struct iovec *iov)
 {
 	iov->iov_len = *s;
 	iov->iov_base = (void *)(s+1);
 }
 
 static void
-pstr_copy (const uint16_t *s, void *dst)
+pstr_copy (const size_t *s, void *dst)
 {
 	memcpy (dst, s+1, *s);
 }
@@ -68,7 +69,7 @@ entry_iskey (const void *val, const void *key, size_t len)
 }
 
 static SpHttpEntry *
-entry_new (const void *name, uint16_t len)
+entry_new (const void *name, size_t len)
 {
 	SpHttpEntry *e = sp_malloc (sizeof *e + len + 1);
 	if (e != NULL) {
@@ -120,14 +121,14 @@ sp_http_map_free (SpHttpMap *m)
 
 int
 sp_http_map_put (SpHttpMap *m,
-		const void *name, uint16_t nlen,
-		const void *value, uint16_t vlen)
+		const void *name, size_t nlen,
+		const void *value, size_t vlen)
 {
 	assert (m != NULL);
 	assert (name != NULL);
 	assert (value != NULL);
 
-	uint16_t *s = pstr_new (value, vlen);
+	size_t *s = pstr_new (value, vlen);
 	bool new = false;
 	SpHttpEntry *e = NULL;
 	void **loc;
@@ -177,7 +178,7 @@ err:
 }
 
 bool
-sp_http_map_del (SpHttpMap *m, const void *name, uint16_t nlen)
+sp_http_map_del (SpHttpMap *m, const void *name, size_t nlen)
 {
 	SpHttpEntry *e = sp_map_steal (&m->map, name, nlen);
 	if (e == NULL) {
@@ -202,7 +203,7 @@ sp_http_map_clear (SpHttpMap *m)
 }
 
 const SpHttpEntry *
-sp_http_map_get (const SpHttpMap *m, const void *name, uint16_t nlen)
+sp_http_map_get (const SpHttpMap *m, const void *name, size_t nlen)
 {
 	return sp_map_get (&m->map, name, nlen);
 }
@@ -229,7 +230,7 @@ sp_http_map_encode (const SpHttpMap *m, void *buf)
 		size_t i;
 
 		sp_vec_each (e->values, i) {
-			const uint16_t *s = e->values[i];
+			const size_t *s = e->values[i];
 
 			pstr_copy (&e->len, p);
 			p += e->len;
@@ -264,7 +265,7 @@ sp_http_map_scatter (const SpHttpMap *m, struct iovec *iov)
 		size_t i;
 
 		sp_vec_each (e->values, i) {
-			const uint16_t *s = e->values[i];
+			const size_t *s = e->values[i];
 
 			iov[0].iov_base = (void *)(e+1);
 			iov[0].iov_len = e->len;
@@ -323,7 +324,7 @@ sp_http_map_print (const SpHttpMap *m, FILE *out)
 			const SpHttpEntry *e = me->value;
 			size_t i;
 			sp_vec_each (e->values, i) {
-				const uint16_t *s = e->values[i];
+				const size_t *s = e->values[i];
 				fprintf (out, "    %.*s: %.*s\n",
 					(int)e->len, (char *)(e+1),
 					(int)*s, (char *)(s+1));
